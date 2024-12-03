@@ -19,3 +19,7 @@ const sessionSchema = new mongoose.Schema<SessionDocument>({
   createdAt: { type: Date, required: true, default: Date.now },
   expiresAt: { type: Date, default: thirtyDaysFromNow(), required: true },
 });
+
+const SessionModel = mongoose.model<SessionDocument>("Session", sessionSchema);
+
+export default SessionModel;
