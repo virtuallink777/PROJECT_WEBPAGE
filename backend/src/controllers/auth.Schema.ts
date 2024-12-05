@@ -17,3 +17,5 @@ export const loginSchema = z.object({
   password: z.string().min(6).max(255),
   userAgent: z.string().optional(),
 });
+
+export const verificationCodeSchema = z.string().min(1).max(255);

@@ -1,5 +1,5 @@
 import { now } from "mongoose";
-import { CONFLICT, UNAUTHORIZED } from "../constans/http";
+import { CONFLICT, NOT_FOUND, UNAUTHORIZED } from "../constans/http";
 import VerificationCodeType from "../constans/verificationCodeTypes";
 import SessionModel from "../models/session.model";
 import UserModel from "../models/user.models";
@@ -12,6 +12,7 @@ import {
   signToken,
   verifyToken,
 } from "../utils/jwt";
+import { sendVerificationEmail } from "../utils/sendVerificationEmail";
 
 export type createAccountParams = {
   email: string;
@@ -44,6 +45,7 @@ export const createAccount = async (data: createAccountParams) => {
   });
 
   // send verification email
+  await sendVerificationEmail(user, verificationCode);
 
   // create session
   const session = await SessionModel.create({
@@ -153,5 +155,38 @@ export const refreshUserAccessToken = async (refreshToken: string) => {
   return {
     accessToken,
     newRefreshToken,
+  };
+};
+
+export const verifyEmail = async (code: string) => {
+  // get verification code
+  const validCode = await VerificationCodeModel.findOne({
+    _id: code,
+    type: VerificationCodeType.EmailVerification,
+    expiresAt: { $gt: new Date() },
+  });
+
+  appAssert(validCode, NOT_FOUND, "Invalid OR EXPIRED verification code");
+
+  // update user to verified true
+
+  const updateUser = await UserModel.findByIdAndUpdate(
+    validCode.userId,
+    {
+      verified: true,
+    },
+    {
+      new: true,
+    }
+  );
+
+  appAssert(updateUser, NOT_FOUND, "User not found");
+
+  // delete verification cod
+  await validCode.deleteOne();
+
+  // return user
+  return {
+    user: updateUser.omitPassword(),
   };
 };
