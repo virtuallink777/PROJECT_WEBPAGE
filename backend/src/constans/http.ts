@@ -5,7 +5,9 @@ export const UNAUTHORIZED = 401;
 export const FORBIDDEN = 403;
 export const NOT_FOUND = 404;
 export const CONFLICT = 409;
+export const UNPROCESSABLE_CONTENT = 422;
 export const TOO__MANY_REQUESTS = 429;
+export const INTERNAL_SERVER_ERROR = 500;
 export const SERVER_ERROR = 500;
 
 export type HttpStatusCode =
@@ -16,5 +18,6 @@ export type HttpStatusCode =
   | typeof FORBIDDEN
   | typeof NOT_FOUND
   | typeof CONFLICT
+  | typeof UNPROCESSABLE_CONTENT
   | typeof TOO__MANY_REQUESTS
-  | typeof SERVER_ERROR;
+  | typeof INTERNAL_SERVER_ERROR;
