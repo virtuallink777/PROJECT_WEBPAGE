@@ -198,7 +198,11 @@ export const verifyEmailCode = async (code: string) => {
     expiresAt: { $gt: new Date() },
   });
 
-  appAssert(validCode, NOT_FOUND, "Invalid OR EXPIRED verification code");
+  appAssert(
+    validCode,
+    NOT_FOUND,
+    "Codigo de verificacion no valido o ya expiró"
+  );
 
   // update user to verified true
 
@@ -361,7 +365,11 @@ export const resetPassword = async ({
   console.log("Found verification code:", validCode);
   console.log("Current date:", new Date());
 
-  appAssert(validCode, NOT_FOUND, "Invalid OR EXPIRED verification code");
+  appAssert(
+    validCode,
+    NOT_FOUND,
+    "Código de verificación no encontrado o ya expiró"
+  );
 
   // update the user password
   const updateUser = await UserModel.findByIdAndUpdate(validCode.userId, {

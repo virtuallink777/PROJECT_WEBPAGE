@@ -37,6 +37,12 @@ app.use("/auth", authRoutes);
 app.use("/user", authenticate, userRoutes);
 app.use("/sessions", authenticate, sessionRoutes);
 
+// Ruta protegida para /controlPanel
+app.use("/controlPanel", authenticate, (req, res, next) => {
+  res.status(200).json({ message: "Panel de control, Acceso protegido" });
+  next();
+});
+
 app.use(errorHandler);
 
 app.listen(PORT, async () => {

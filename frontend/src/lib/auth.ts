@@ -103,3 +103,26 @@ export const forgotPassword = async (email: string) => {
     throw error;
   }
 };
+
+export const logout = async () => {
+  try {
+    const response = await axios.get(
+      "http://localhost:4004/auth/logout",
+
+      {
+        withCredentials: true,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    console.log(response.data);
+
+    return response;
+  } catch (error) {
+    console.error("Error durante el logout:", error);
+
+    throw error;
+  }
+};

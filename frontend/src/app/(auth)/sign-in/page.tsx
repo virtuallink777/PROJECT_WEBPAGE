@@ -10,7 +10,7 @@ import { isAxiosError } from "axios";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { JSX, useState } from "react";
+import { JSX, useEffect, useState } from "react";
 
 const LoginPage = () => {
   const [errors, setErrors] = useState<Partial<LoginInput>>({});
@@ -98,8 +98,6 @@ const LoginPage = () => {
       // Aquí llamamos a la función de API para solicitar restablecimiento
       const response = await forgotPassword(email);
       setMessage(response.data.message);
-
-      setMessage("Se han enviado instrucciones a tu correo electrónico");
     } catch (error) {
       if (error instanceof Error) {
         setError(error.message);
@@ -109,9 +107,25 @@ const LoginPage = () => {
     }
   };
 
+  // Redirigir a la página de sign-in después de 5 segundos
+  useEffect(() => {
+    console.log("Message changed:", message);
+
+    if (message) {
+      console.log("Mensaje recibido, preparando redireccionamiento");
+      const timer = setTimeout(() => {
+        console.log("Refrescando la pagina");
+        window.location.reload(); // Esto recargará completamente la página
+      }, 5000);
+
+      // Limpiar el temporizador para evitar fugas de memoria
+      return () => clearTimeout(timer);
+    }
+  }, [message, router]);
+
   return (
     <>
-      <div className="container relative flex pt-20 flex-col items-center justify-center lg:px-0">
+      <div className="container relative flex pt-10 flex-col items-center justify-center lg:px-0">
         <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
           <div className="flex flex-col items-center space-y-2 text-center">
             <h1 className="text-2xl font-semibold tracking-tight">Logueate</h1>

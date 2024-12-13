@@ -4,10 +4,14 @@ import Link from "next/link";
 import { Icons } from "./Icons";
 import { buttonVariants } from "./ui/button";
 import Cities from "./NavItem";
+import UserAccountNav from "./UserAccountNav";
+import { cookies } from "next/headers";
+import { getServerSideUser } from "@/lib/serverSideUser";
 
-export const Navbar = () => {
-  const user = null;
-
+export const Navbar = async () => {
+  const nextCookies = cookies();
+  const { user } = await getServerSideUser(nextCookies);
+  console.log("Usuario desde Navbar:", user);
   return (
     <div className="bg-white sticky top-0 z-50 inset-x-0 h-16">
       <header className="relative bg-rose-300">
@@ -33,7 +37,7 @@ export const Navbar = () => {
                     <span className="h-6 w-px bg-gray-500" aria-hidden="true" />
                   )}
                   {user ? (
-                    <p></p>
+                    <UserAccountNav user={user} />
                   ) : (
                     <Link href="/sign-up" className={buttonVariants()}>
                       Crea una Cuenta

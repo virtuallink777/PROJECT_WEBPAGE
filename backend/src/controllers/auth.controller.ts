@@ -97,7 +97,12 @@ export const sendPasswordResetEmailHandler = catchErros(async (req, res) => {
 
   await sendPasswordResetEmail(email);
 
-  return res.status(OK).json({ message: "Password reset email sent" });
+  return res
+    .status(OK)
+    .json({
+      message:
+        "Se ha enviado instrucciones a tu correo para el reestablecimiento de la contraseña",
+    });
 });
 
 export const resetPasswordHandler = catchErros(async (req, res) => {
