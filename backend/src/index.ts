@@ -10,6 +10,7 @@ import authRoutes from "./routes/auth.route";
 import authenticate from "./middleware/authenticate";
 import userRoutes from "./routes/user.route";
 import sessionRoutes from "./routes/session.route";
+import dashboardRoutes from "./routes/dashboard.route";
 
 const app = express();
 
@@ -37,11 +38,8 @@ app.use("/auth", authRoutes);
 app.use("/user", authenticate, userRoutes);
 app.use("/sessions", authenticate, sessionRoutes);
 
-// Ruta protegida para /controlPanel
-app.use("/controlPanel", authenticate, (req, res, next) => {
-  res.status(200).json({ message: "Panel de control, Acceso protegido" });
-  next();
-});
+// prefix: /dashboard
+app.use("/dashboard", authenticate, dashboardRoutes);
 
 app.use(errorHandler);
 

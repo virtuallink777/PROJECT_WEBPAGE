@@ -6,7 +6,13 @@ import { verifyToken } from "../utils/jwt";
 import mongoose from "mongoose";
 
 const authenticate: RequestHandler = (req, res, next) => {
+  console.log("Cookies in request:", req.cookies); // Aquí verificamos las cookies enviadas
   const accessToken = req.cookies.accessToken as string | undefined;
+
+  if (!accessToken) {
+    return res.status(UNAUTHORIZED).json({ message: "Not authorized" });
+  }
+
   appAssert(
     accessToken,
     UNAUTHORIZED,

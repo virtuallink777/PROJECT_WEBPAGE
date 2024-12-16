@@ -31,10 +31,9 @@ const LoginPage = () => {
     try {
       setIsLoading(true);
       const response = await login(formData);
-      console.log("Usuario registrado:", response);
 
       if (response.status === 200) {
-        router.push("/controlPanel");
+        router.push("/dashboard");
         router.refresh();
       }
     } catch (error: unknown) {
@@ -109,12 +108,8 @@ const LoginPage = () => {
 
   // Redirigir a la página de sign-in después de 5 segundos
   useEffect(() => {
-    console.log("Message changed:", message);
-
     if (message) {
-      console.log("Mensaje recibido, preparando redireccionamiento");
       const timer = setTimeout(() => {
-        console.log("Refrescando la pagina");
         window.location.reload(); // Esto recargará completamente la página
       }, 5000);
 
