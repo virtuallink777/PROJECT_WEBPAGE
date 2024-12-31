@@ -7,8 +7,10 @@ import { useCategoriesData } from "../../../../categoriesData/categoriesdata";
 import { Button } from "@/components/ui/button";
 import VideoUploadComponent from "@/components/DownloadVideo";
 import HandleFileChange from "@/components/DownloadPhoto";
+import api from "@/lib/api";
 
 interface FormData {
+  userId: string;
   nombre: string;
   edad: string;
   telefono: string;
@@ -22,12 +24,30 @@ interface FormData {
   titulo: string;
   descripcion: string;
   adicionales: string;
-
+  images: File[];
+  fotoPrincipal: File | null;
+  videos: File[];
   esMayorDeEdad: boolean;
 }
 
+async function obtenerIdCliente() {
+  try {
+    const response = await fetch("/api/userId");
+    const data = await response.json();
+    return data.userId; // Esto te devolverá directamente el ID alfanumérico
+  } catch (error) {
+    console.error("Error al obtener el ID del usuario:", error);
+    return null;
+  }
+}
+
+// Uso:
+const id = await obtenerIdCliente();
+console.log(id); // Aquí tendrás el ID de 16 cifras
+
 const CreatePublications: React.FC = () => {
   const [formData, setFormData] = useState<FormData>({
+    userId: id,
     nombre: "",
     edad: "",
     telefono: "",
@@ -41,7 +61,9 @@ const CreatePublications: React.FC = () => {
     titulo: "",
     descripcion: "",
     adicionales: "",
-
+    images: [],
+    fotoPrincipal: null,
+    videos: [],
     esMayorDeEdad: false,
   });
 
@@ -74,16 +96,101 @@ const CreatePublications: React.FC = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!formData.esMayorDeEdad) {
-      alert("Debes ser mayor de edad para publicar");
+      alert("Debes ser mayor de edad para publicar.");
       return;
     }
-    console.log("Datos del formulario:", formData);
-    window.location.href = "/dashboard/validate";
-  };
 
+    if (!formData.images || formData.images.length < 4) {
+      alert("Debes subir al menos 4 fotos.");
+      return;
+    }
+
+    if (!formData.fotoPrincipal) {
+      alert("Por favor, selecciona una foto principal.");
+      return;
+    }
+
+    const formDataToSend = new FormData();
+
+    try {
+      // primero subimos las imagenes
+      const imageFormData = new FormData();
+      // Añadir la foto principal primero
+      imageFormData.append("files", formData.fotoPrincipal);
+
+      // Añadir las demás fotos
+      formData.images.forEach((image) => {
+        if (image !== formData.fotoPrincipal) {
+          imageFormData.append("files", image);
+        }
+      });
+
+      imageFormData.append("userId", formData.userId);
+
+      // Subir las imagenes primero
+      const imageResponse = await fetch(
+        `http://localhost:4004/api/publicaciones/upload/${formData.userId}`,
+        {
+          method: "POST",
+          body: imageFormData,
+        }
+      );
+
+      if (!imageResponse.ok) {
+        throw new Error("Error al subir las imágenes");
+      }
+
+      const imageData = await imageResponse.json();
+
+      // Agregar campos básicos
+      Object.entries(formData).forEach(([key, value]) => {
+        if (
+          key !== "images" &&
+          key !== "videos" &&
+          key !== "fotoPrincipal" &&
+          value != null
+        ) {
+          formDataToSend.append(key, value.toString());
+        }
+      });
+
+      // Agregar las URLs de las imágenes recibidas del servidor
+      imageData.files.forEach(
+        (file: { url: string; filename: string }, index: number) => {
+          formDataToSend.append("imageUrls", file.url);
+          formDataToSend.append("isPrincipal", index === 0 ? "true" : "false");
+        }
+      );
+
+      // Agregar videos (si hay)
+      if (formData.videos.length > 0) {
+        formData.videos.forEach((video) => {
+          formDataToSend.append("videos", video);
+        });
+      }
+
+      console.log("Verificando datos antes de enviar:");
+      for (const pair of formDataToSend.entries()) {
+        console.log(pair[0] + ": " + pair[1]);
+      }
+
+      // Hacer la petición final para crear la publicación
+      const response = await api.post(
+        "http://localhost:4004/publications",
+        formDataToSend
+      );
+      console.log("Publicación creada:", response.data);
+      alert("¡Publicación creada con éxito!, pasa ahora a validarla.");
+      window.location.href = "/dashboard/validate";
+    } catch (error) {
+      console.error("Error al crear la publicación:", error);
+      alert("Error al crear la publicación. Por favor, intenta de nuevo.");
+    }
+  };
   // Estilos comunes
   const fieldContainerStyle =
     "flex flex-col space-y-2 max-w-2xl max-w-md mx-auto";
@@ -91,7 +198,7 @@ const CreatePublications: React.FC = () => {
   const inputStyle = "w-full border border-gray-300 rounded p-2 bg-white";
   const selectStyle = "w-full border border-gray-300 rounded p-2 bg-white";
   const textareaStyle =
-    "w-full border border-gray-300 rounded p-2 min-h-[100px] resize-y";
+    "w-full border border-gray-300 rounded p-2 min-h-[200px] resize-y";
   const checkboxContainerStyle = "flex items-center space-x-2";
 
   return (
@@ -352,9 +459,9 @@ const CreatePublications: React.FC = () => {
           <div className="border-b border-gray-500" />
 
           {/* Título de la publicación */}
-          <div className={fieldContainerStyle}>
+          <div className="flex flex-col space-y-2 mx-auto">
             <label htmlFor="titulo" className={labelStyle}>
-              Título de la publicación:
+              Título de la publicación (min:50, max:120):
             </label>
             <Input
               id="titulo"
@@ -365,18 +472,18 @@ const CreatePublications: React.FC = () => {
               value={formData.titulo}
               onChange={handleInputChange}
               required
-              minLength={20}
-              maxLength={80}
+              minLength={50}
+              maxLength={120}
             />
             <span className="text-sm text-gray-500">
-              {formData.titulo.length}/80 caracteres
+              {formData.titulo.length}/120 caracteres
             </span>
           </div>
 
           {/* Descripción de la publicación */}
-          <div className={fieldContainerStyle}>
+          <div className="flex flex-col space-y-2 mx-auto">
             <label htmlFor="descripcion" className={labelStyle}>
-              Descripción de la publicación:
+              Descripción de la publicación (min:200, max:400):
             </label>
             <textarea
               id="descripcion"
@@ -396,14 +503,14 @@ const CreatePublications: React.FC = () => {
           </div>
 
           {/* Adicionales */}
-          <div className={fieldContainerStyle}>
+          <div className="flex flex-col space-y-2 mx-auto">
             <label htmlFor="adicionales" className={labelStyle}>
-              ¿Qué adicionales haces?
+              ¿Qué adicionales haces? (min:50, max:300):
             </label>
             <textarea
               id="adicionales"
               name="adicionales"
-              className={textareaStyle}
+              className="w-full border border-gray-300 rounded p-2 min-h-[100px] resize-y"
               value={formData.adicionales}
               onChange={handleInputChange}
               required
@@ -420,7 +527,15 @@ const CreatePublications: React.FC = () => {
           <div className="border-b border-gray-500" />
 
           {/* Subir Fotos */}
-          <HandleFileChange />
+          <HandleFileChange
+            onImagesChange={(images, mainPhoto) =>
+              setFormData({
+                ...formData,
+                images: images,
+                fotoPrincipal: mainPhoto,
+              })
+            }
+          />
 
           {/* Subir Videos */}
 

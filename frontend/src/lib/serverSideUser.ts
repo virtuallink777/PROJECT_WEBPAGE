@@ -19,7 +19,6 @@ export interface JWTPayload {
 
 // Definimos los nombres de las cookies exactamente como están en el backend
 const ACCESS_TOKEN_COOKIE = "accessToken";
-const REFRESH_TOKEN_COOKIE = "refreshToken";
 
 export async function getServerSideUser(
   cookieStore: ReturnType<typeof cookies>

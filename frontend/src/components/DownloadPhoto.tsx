@@ -1,21 +1,25 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 
-interface FormData {
-  fotos: File[];
-  fotoPrincipal: string | null;
+interface FileChangeProps {
+  onImagesChange: (files: File[], mainPhoto: File | null) => void;
+  userId?: string;
 }
 
-const HandleFileChange = () => {
-  const [formData, setFormData] = useState<FormData>({
-    fotos: [],
-    fotoPrincipal: null,
-  });
-  const [previews, setPreviews] = useState<string[]>([]);
+const HandleFileChange: React.FC<FileChangeProps> = ({
+  onImagesChange,
+  userId,
+}) => {
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+  const [mainPhoto, setMainPhoto] = useState<string | null>(null);
+  const [mainPhotoFile, setMainPhotoFile] = useState<File | null>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newFiles = Array.from(event.target.files || []);
-    const totalFiles = [...formData.fotos, ...newFiles];
+    const totalFiles = [...photos, ...newFiles];
+
+    // Validación de cantidad de fotos
 
     if (totalFiles.length < 4) {
       alert("Debes tener al menos 4 fotos en total");
@@ -44,56 +48,62 @@ const HandleFileChange = () => {
       return;
     }
 
-    // Generar previews para las nuevas imágenes manteniendo las existentes
+    // Actualizar previews y estado
     const newPreviews = newFiles.map((file) => URL.createObjectURL(file));
+    setPhotoPreviews((prev) => [...prev, ...newPreviews]);
+    setPhotos((prev) => [...prev, ...newFiles]);
+    setMainPhoto((prev) => prev || newPreviews[0]);
+    setMainPhotoFile((prev) => prev || newFiles[0]);
 
-    setPreviews((prev) => [...prev, ...newPreviews]);
-
-    setFormData((prev) => ({
-      ...prev,
-      fotos: totalFiles,
-      fotoPrincipal: prev.fotoPrincipal || newPreviews[0], // Primera foto como principal si no hay una
-    }));
+    onImagesChange(totalFiles, newFiles[0] || null); // Notificar al padre
   };
 
   const setPrincipalPhoto = (previewUrl: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      fotoPrincipal: previewUrl,
-    }));
+    setMainPhoto(previewUrl);
+    const mainFile = photos.find(
+      (_, index) => photoPreviews[index] === previewUrl
+    );
+    setMainPhotoFile(mainFile || null);
+
+    onImagesChange(photos, mainFile || null);
   };
 
   const removePhoto = (previewUrl: string) => {
-    setPreviews((prev) => {
+    // Eliminar preview y foto correspondiente
+    setPhotoPreviews((prev) => {
       const updatedPreviews = prev.filter((url) => url !== previewUrl);
-      URL.revokeObjectURL(previewUrl);
+      URL.revokeObjectURL(previewUrl); // Limpieza
       return updatedPreviews;
     });
 
-    setFormData((prev) => {
-      const updatedFotos = prev.fotos.filter(
-        (_, index) => previews[index] !== previewUrl
-      );
+    setPhotos((prev) =>
+      prev.filter((_, index) => photoPreviews[index] !== previewUrl)
+    );
 
-      const newPrincipal =
-        prev.fotoPrincipal === previewUrl
-          ? previews[0] || null
-          : prev.fotoPrincipal;
+    const updatePhotos = photos.filter(
+      (_, index) => photoPreviews[index] !== previewUrl
+    );
+    setPhotos(updatePhotos);
 
-      return {
-        ...prev,
-        fotos: updatedFotos,
-        fotoPrincipal: newPrincipal,
-      };
-    });
+    // Actualizar foto principal
+    setMainPhoto((prev) =>
+      prev === previewUrl ? photoPreviews[0] || null : prev
+    );
+
+    const mainFile = updatePhotos.find(
+      (_, index) => photoPreviews[index] === photoPreviews[0]
+    );
+    setMainPhotoFile(mainFile || null);
+
+    onImagesChange(updatePhotos, mainFile || null);
   };
 
-  // Limpieza de URLs al desmontar el componente
+  // Limpieza de URLs al desmontar
   useEffect(() => {
     return () => {
-      previews.forEach((url) => URL.revokeObjectURL(url));
+      photoPreviews.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [previews]); // previews como dependencia
+  }, [photoPreviews]);
 
   return (
     <div className="w-full">
@@ -116,7 +126,7 @@ const HandleFileChange = () => {
             htmlFor="fileInput"
             className="w-full border p-2 rounded bg-red-300 text-black text-center cursor-pointer hover:bg-red-400 transition-colors"
           >
-            Fotos subidas: {formData.fotos.length}
+            Fotos subidas: {photos.length}
           </label>
           <p className="text-sm text-gray-500 mt-1">
             Puedes cargar entre 4 y 12 fotos.
@@ -124,46 +134,46 @@ const HandleFileChange = () => {
         </div>
       </div>
 
-      {previews.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
-          {previews.map((preview, index) => (
-            <div
-              key={preview}
-              className={`relative aspect-square border rounded-lg overflow-hidden ${
-                formData.fotoPrincipal === preview ? "ring-4 ring-blue-500" : ""
-              }`}
-            >
-              <Image
-                src={preview}
-                alt={`Preview ${index + 1}`}
-                className="w-full h-full object-cover"
-                width={400}
-                height={400}
-                layout="responsive"
-              />
-              <button
-                type="button"
-                onClick={() => setPrincipalPhoto(preview)}
-                className={`absolute bottom-0 left-0 right-0 p-2 text-sm text-center transition-colors ${
-                  formData.fotoPrincipal === preview
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-500 bg-opacity-70 text-white hover:bg-blue-500"
+      {photoPreviews.length > 0 && (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
+            {photoPreviews.map((preview, index) => (
+              <div
+                key={preview}
+                className={`relative aspect-square border rounded-lg overflow-hidden ${
+                  mainPhoto === preview ? "ring-4 ring-blue-500" : ""
                 }`}
               >
-                {formData.fotoPrincipal === preview
-                  ? "Principal"
-                  : "Hacer Principal"}
-              </button>
-              <button
-                type="button"
-                onClick={() => removePhoto(preview)}
-                className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full text-sm hover:bg-red-600 transition-colors"
-              >
-                ×
-              </button>
-            </div>
-          ))}
-        </div>
+                <Image
+                  src={preview}
+                  alt={`Preview ${index + 1}`}
+                  className="w-full h-full object-cover"
+                  width={400}
+                  height={400}
+                  layout="responsive"
+                />
+                <button
+                  type="button"
+                  onClick={() => setPrincipalPhoto(preview)}
+                  className={`absolute bottom-0 left-0 right-0 p-2 text-sm text-center transition-colors ${
+                    mainPhoto === preview
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-500 bg-opacity-70 text-white hover:bg-blue-500"
+                  }`}
+                >
+                  {mainPhoto === preview ? "Principal" : "Hacer Principal"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removePhoto(preview)}
+                  className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full text-sm hover:bg-red-600 transition-colors"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
