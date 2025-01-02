@@ -7,6 +7,9 @@ const publicationsRouter = express.Router();
 
 publicationsRouter.post("/", async (req: Request, res: Response) => {
   try {
+    console.log("Datos recibidos en el backend:", req.body);
+    console.log("imageUrls en backend:", req.body.imageUrls);
+    console.log("isPrincipal en backend:", req.body.isPrincipal);
     const {
       userId,
       esMayorDeEdad,
@@ -23,9 +26,21 @@ publicationsRouter.post("/", async (req: Request, res: Response) => {
       titulo,
       descripcion,
       adicionales,
-      imagenes,
+      imageUrls,
+      isPrincipal,
       videos,
     } = req.body;
+
+    // Parsear los datos
+    const parsedImageUrls = JSON.parse(imageUrls);
+    const parsedIsPrincipal = JSON.parse(isPrincipal);
+
+    // Procesar las URLs de las imágenes
+    const images = parsedImageUrls.map((url: string, index: number) => ({
+      url: url,
+      isPrincipal: parsedIsPrincipal[index] === "true", // Comprobamos si es la principal
+      filename: url.split("/").pop() || "",
+    }));
 
     const nuevaPublicacion = new Publicacion({
       userId,
@@ -43,7 +58,7 @@ publicationsRouter.post("/", async (req: Request, res: Response) => {
       titulo,
       descripcion,
       adicionales,
-      imagenes,
+      images,
       videos,
     });
 

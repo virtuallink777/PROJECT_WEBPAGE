@@ -158,13 +158,20 @@ const CreatePublications: React.FC = () => {
         }
       });
 
-      // Agregar las URLs de las imágenes recibidas del servidor
+      // Crear un array para las URLs de las imágenes
+      const imageUrls: string[] = [];
+      const isPrincipalFlags: string[] = [];
+
       imageData.files.forEach(
         (file: { url: string; filename: string }, index: number) => {
-          formDataToSend.append("imageUrls", file.url);
-          formDataToSend.append("isPrincipal", index === 0 ? "true" : "false");
+          imageUrls.push(file.url);
+          isPrincipalFlags.push(index === 0 ? "true" : "false");
         }
       );
+
+      // Ahora añadimos todos los valores de una vez
+      formDataToSend.append("imageUrls", JSON.stringify(imageUrls));
+      formDataToSend.append("isPrincipal", JSON.stringify(isPrincipalFlags));
 
       // Agregar videos (si hay)
       if (formData.videos.length > 0) {
