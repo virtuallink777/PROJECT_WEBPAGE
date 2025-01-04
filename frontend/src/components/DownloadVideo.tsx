@@ -6,36 +6,35 @@ type VideoPreview = {
   file: File;
 };
 
-type FormState = {
-  videos: File[];
+type VideoUploadComponentProps = {
+  onChange: (videos: File[]) => void;
 };
 
-const VideoUploadComponent = () => {
+const VideoUploadComponent: React.FC<VideoUploadComponentProps> = ({
+  onChange,
+}) => {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [videos, setVideos] = useState<FormState>({ videos: [] });
+  const [videos, setVideos] = useState<File[]>([]);
   const [previews, setPreviews] = useState<VideoPreview[]>([]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files?.length) return;
 
     const files = Array.from(event.target.files);
-    const totalCount = videos.videos.length + files.length;
+    const totalCount = videos.length + files.length;
 
-    // Validar cantidad máxima
     if (totalCount > 4) {
       alert("El máximo permitido es 4 videos.");
       if (inputRef.current) inputRef.current.value = "";
       return;
     }
 
-    // Validar tipo de archivo
     if (files.some((file) => !file.type.startsWith("video/"))) {
       alert("Por favor, selecciona solo archivos de video");
       if (inputRef.current) inputRef.current.value = "";
       return;
     }
 
-    // Crear nuevos previews
     const newPreviews = files.map((file) => ({
       id: crypto.randomUUID(),
       url: URL.createObjectURL(file),
@@ -43,9 +42,7 @@ const VideoUploadComponent = () => {
     }));
 
     setPreviews((current) => [...current, ...newPreviews]);
-    setVideos((current) => ({
-      videos: [...current.videos, ...files],
-    }));
+    setVideos((current) => [...current, ...files]);
 
     if (inputRef.current) inputRef.current.value = "";
   };
@@ -57,10 +54,17 @@ const VideoUploadComponent = () => {
       return current.filter((p) => p.id !== id);
     });
 
-    setVideos((current) => ({
-      videos: current.videos.filter((_, index) => previews[index].id !== id),
-    }));
+    setVideos((current) =>
+      current.filter((_, index) => previews[index].id !== id)
+    );
   };
+
+  // Usar useEffect para llamar a onChange solo cuando se actualiza el estado de videos
+  useEffect(() => {
+    if (videos.length > 0) {
+      onChange(videos); // Pasamos los videos actualizados al componente padre
+    }
+  }, [videos, onChange]); // Dependencias correctamente configuradas
 
   useEffect(() => {
     return () => {
@@ -89,7 +93,8 @@ const VideoUploadComponent = () => {
             htmlFor="videoInput"
             className="w-full border p-2 rounded bg-red-300 text-black text-center cursor-pointer hover:bg-red-400 transition-colors"
           >
-            Videos subidos: {videos.videos.length}
+            Videos subidos: {videos.length}{" "}
+            {/* Mostrar la cantidad de videos correctamente */}
           </label>
           <p className="text-sm text-gray-500 mt-1">
             Puedes subir hasta 4 videos.

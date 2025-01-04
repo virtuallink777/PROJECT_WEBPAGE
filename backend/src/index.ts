@@ -12,7 +12,10 @@ import userRoutes from "./routes/user.route";
 import sessionRoutes from "./routes/session.route";
 import dashboardRoutes from "./routes/dashboard.route";
 import publicationsRouter from "./routes/publication.route";
-import publicacionesUpload from "./routes/publicaciones.upload";
+import {
+  publicacionesUpload,
+  videosUpload,
+} from "./routes/publicaciones.upload";
 
 const app = express();
 
@@ -46,6 +49,9 @@ app.use("/dashboard", authenticate, dashboardRoutes);
 app.use("/publications", publicationsRouter);
 
 app.use("/api/publicaciones", publicacionesUpload);
+console.log("Ruta de publicaciones registrada correctamente");
+
+app.use("/api/publicaciones", videosUpload);
 console.log("Ruta de publicaciones registrada correctamente");
 
 app.use(errorHandler);

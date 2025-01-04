@@ -1,7 +1,7 @@
 "use client";
 
 import { Input } from "@/components/ui/input";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useCategoriesData } from "../../../../categoriesData/categoriesdata";
 
 import { Button } from "@/components/ui/button";
@@ -34,20 +34,16 @@ async function obtenerIdCliente() {
   try {
     const response = await fetch("/api/userId");
     const data = await response.json();
-    return data.userId; // Esto te devolverá directamente el ID alfanumérico
+    return data.userId; // Esto devuelve directamente el ID alfanumérico
   } catch (error) {
     console.error("Error al obtener el ID del usuario:", error);
     return null;
   }
 }
 
-// Uso:
-const id = await obtenerIdCliente();
-console.log(id); // Aquí tendrás el ID de 16 cifras
-
 const CreatePublications: React.FC = () => {
   const [formData, setFormData] = useState<FormData>({
-    userId: id,
+    userId: "",
     nombre: "",
     edad: "",
     telefono: "",
@@ -66,6 +62,18 @@ const CreatePublications: React.FC = () => {
     videos: [],
     esMayorDeEdad: false,
   });
+
+  // Obtenemos el ID del cliente al montar el componente
+  useEffect(() => {
+    async function fetchUserId() {
+      const id = await obtenerIdCliente();
+      if (id) {
+        setFormData((prev) => ({ ...prev, userId: id }));
+        console.log("ID del usuario obtenido:", id); // Este console.log debería aparecer en la consola
+      }
+    }
+    fetchUserId();
+  }, []);
 
   const categoriesData = useCategoriesData();
 
@@ -93,6 +101,12 @@ const CreatePublications: React.FC = () => {
         }
         return newData;
       });
+    }
+  };
+
+  const handleVideosChange = (videos: File[]) => {
+    if (videos !== formData.videos) {
+      setFormData((prev) => ({ ...prev, videos }));
     }
   };
 
@@ -174,10 +188,44 @@ const CreatePublications: React.FC = () => {
       formDataToSend.append("isPrincipal", JSON.stringify(isPrincipalFlags));
 
       // Agregar videos (si hay)
-      if (formData.videos.length > 0) {
+      if (formData.videos && formData.videos.length > 0) {
+        console.log("Videos para enviar:", formData.videos);
+
+        // Definimos el tipo de respuesta que esperamos del servidor
+        interface VideoResponse {
+          message: string;
+          files: Array<{
+            url: string;
+            filename: string;
+          }>;
+        }
+
+        const videoFormData = new FormData();
         formData.videos.forEach((video) => {
-          formDataToSend.append("videos", video);
+          videoFormData.append("videos", video);
         });
+
+        // enviar videos al backend
+        const videoResponse = await fetch(
+          `http://localhost:4004/api/publicaciones/upload-videos/${formData.userId}`,
+          {
+            method: "POST",
+            body: videoFormData,
+          }
+        );
+
+        if (!videoResponse.ok) {
+          throw new Error("Error al subir los videos");
+        }
+
+        const videoData: VideoResponse = await videoResponse.json();
+        console.log("Videos subidos:", videoData);
+
+        // Guardar las URLs de los videos en formDataToSend
+        if (videoData.files && videoData.files.length > 0) {
+          const videoUrls = videoData.files.map((file) => file.url);
+          formDataToSend.append("videoUrls", JSON.stringify(videoUrls));
+        }
       }
 
       console.log("Verificando datos antes de enviar:");
@@ -546,7 +594,7 @@ const CreatePublications: React.FC = () => {
 
           {/* Subir Videos */}
 
-          <VideoUploadComponent />
+          <VideoUploadComponent onChange={handleVideosChange} />
 
           {/* Botón de envío */}
           <div className="flex justify-center">
