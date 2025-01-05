@@ -1,36 +1,44 @@
+// src/app/(auth)/dashboard/pruebas/page.tsx
 "use client";
+import { useEffect, useState } from "react";
+import GoogleMapView from "@/components/GoogleMapView";
 
-import { Button } from "@/components/ui/button";
-import { useState } from "react";
-
-async function obtenerIdCliente() {
-  try {
-    const response = await fetch("/api/userId");
-    const data = await response.json();
-    return data.userId; // Esto te devolverá directamente el ID alfanumérico
-  } catch (error) {
-    console.error("Error al obtener el ID del usuario:", error);
-    return null;
-  }
+interface Publication {
+  Pais: string;
+  ciudad: string;
+  direccion?: string;
+  mostrarEnMaps?: boolean;
 }
 
-// Uso:
-const id = await obtenerIdCliente();
-console.log(id); // Aquí tendrás el ID de 16 cifras
-
-const Envio = () => {
-  const [id, setId] = useState(null);
-  const handleSubmit = async () => {
-    const clienteId = await obtenerIdCliente();
-    setId(clienteId);
-  };
+const PruebasPage = () => {
+  const [publication, setPublication] = useState<Publication>({
+    Pais: "Colombia",
+    ciudad: "Bogotá",
+    direccion: "Carrera 72A No. 9-22",
+    mostrarEnMaps: true,
+  });
 
   return (
-    <div>
-      <Button onClick={handleSubmit}>Publicar</Button>
-      <h1>{id}</h1>
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl mb-4">Prueba de Google Maps</h1>
+
+      {/* Para pruebas, mostramos la dirección */}
+      <div className="mb-4">
+        <p>País: {publication.Pais}</p>
+        <p>Ciudad: {publication.ciudad}</p>
+        <p>Dirección: {publication.direccion}</p>
+        <p>Mostrar en Maps: {publication.mostrarEnMaps ? "Sí" : "No"}</p>
+      </div>
+
+      {/* Componente del mapa */}
+      <GoogleMapView
+        pais={publication.Pais}
+        ciudad={publication.ciudad}
+        direccion={publication.direccion || ""}
+        isVisible={!!publication.mostrarEnMaps}
+      />
     </div>
   );
 };
 
-export default Envio;
+export default PruebasPage;
