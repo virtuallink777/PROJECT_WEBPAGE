@@ -2,6 +2,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import GoogleMapView from "@/components/GoogleMapView";
+import MaxWidthWrapper from "@/components/MaxWidthWrapper";
 
 interface Publication {
   Pais: string;
@@ -19,25 +20,27 @@ const PruebasPage = () => {
   });
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl mb-4">Prueba de Google Maps</h1>
+    <MaxWidthWrapper>
+      <div className="container mx-auto p-4">
+        <h1 className="text-2xl mb-4">Prueba de Google Maps</h1>
 
-      {/* Para pruebas, mostramos la dirección */}
-      <div className="mb-4">
-        <p>País: {publication.Pais}</p>
-        <p>Ciudad: {publication.ciudad}</p>
-        <p>Dirección: {publication.direccion}</p>
-        <p>Mostrar en Maps: {publication.mostrarEnMaps ? "Sí" : "No"}</p>
+        {/* Para pruebas, mostramos la dirección */}
+        <div className="mb-4">
+          <p>País: {publication.Pais}</p>
+          <p>Ciudad: {publication.ciudad}</p>
+          <p>Dirección: {publication.direccion}</p>
+          <p>Mostrar en Maps: {publication.mostrarEnMaps ? "Sí" : "No"}</p>
+        </div>
+
+        {/* Componente del mapa */}
+        <GoogleMapView
+          pais={publication.Pais}
+          ciudad={publication.ciudad}
+          direccion={publication.direccion || ""}
+          isVisible={!!publication.mostrarEnMaps}
+        />
       </div>
-
-      {/* Componente del mapa */}
-      <GoogleMapView
-        pais={publication.Pais}
-        ciudad={publication.ciudad}
-        direccion={publication.direccion || ""}
-        isVisible={!!publication.mostrarEnMaps}
-      />
-    </div>
+    </MaxWidthWrapper>
   );
 };
 

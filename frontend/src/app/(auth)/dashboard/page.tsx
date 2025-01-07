@@ -13,6 +13,9 @@ const ControlPanel = () => {
           <Link href="/dashboard/createPublications" className="w-full text-lg">
             <Button className="w-full text-lg">Crear Publicaciones</Button>
           </Link>
+          <Link href="/dashboard/viewPublications" className="w-full text-lg">
+            <Button className="w-full text-lg">Tus Publicaciones</Button>
+          </Link>
 
           <Button className="w-full text-lg">Pagar Publicaciones</Button>
           <Button className="w-full text-lg">Estadísticas</Button>

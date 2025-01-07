@@ -59,8 +59,8 @@ const PublicacionSchema = new mongoose.Schema<IPublication>({
   ],
   videos: [
     {
-      url: { type: String, required: true },
-      filename: { type: String, required: true },
+      url: { type: String },
+      filename: { type: String },
     },
   ],
   createdAt: { type: Date, required: true, default: Date.now },

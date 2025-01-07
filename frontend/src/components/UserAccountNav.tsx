@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Button } from "./ui/button";
+import Link from "next/link";
 
 const UserAccountNav = ({ user }: { user: User }) => {
   const router = useRouter();
@@ -36,13 +37,23 @@ const UserAccountNav = ({ user }: { user: User }) => {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent className="bg-white w-60" align="end">
-        <div className="flex items-center justify-start gap-2">
-          <div className="flex flex-col space-y-0.5 leading-none">
-            <p className="font-medium text-sm text-black">{user.email}</p>
+        <div className="flex items-center justify-center gap-2">
+          <div className="flex flex-col space-y-0.5 leading-none text-center">
+            <p className="font-medium text-sm  text-gray-500">{user.email}</p>
           </div>
         </div>
 
         <DropdownMenuSeparator />
+
+        <DropdownMenuItem
+          className="cursor-pointer"
+          onClick={() => router.push("/dashboard")}
+        >
+          Ir a mi panel de control
+        </DropdownMenuItem>
+
+        <DropdownMenuSeparator />
+
         <DropdownMenuItem className="cursor-pointer" onClick={handleLogOut}>
           Deslogueate
         </DropdownMenuItem>

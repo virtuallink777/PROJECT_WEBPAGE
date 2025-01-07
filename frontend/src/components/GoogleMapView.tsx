@@ -3,6 +3,7 @@
 "use client";
 import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api";
 import { useState, useCallback, useEffect } from "react";
+import MaxWidthWrapper from "./MaxWidthWrapper";
 
 interface GoogleMapViewProps {
   pais: string;
@@ -23,8 +24,9 @@ const GoogleMapView = ({
   } | null>(null);
 
   const containerStyle = {
-    width: "100%",
+    width: "60%",
     height: "400px",
+    margin: "0 auto",
   };
 
   const defaultCenter = {

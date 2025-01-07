@@ -147,7 +147,7 @@ const CreatePublications: React.FC = () => {
 
       // Subir las imagenes primero
       const imageResponse = await fetch(
-        `http://localhost:4004/api/publicaciones/upload/${formData.userId}`,
+        `http://localhost:4004/api/publicacionesImage/upload/${formData.userId}`,
         {
           method: "POST",
           body: imageFormData,
@@ -207,7 +207,7 @@ const CreatePublications: React.FC = () => {
 
         // enviar videos al backend
         const videoResponse = await fetch(
-          `http://localhost:4004/api/publicaciones/upload-videos/${formData.userId}`,
+          `http://localhost:4004/api/publicacionesVideo/upload-videos/${formData.userId}`,
           {
             method: "POST",
             body: videoFormData,

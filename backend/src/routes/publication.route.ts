@@ -36,7 +36,12 @@ publicationsRouter.post("/", async (req: Request, res: Response) => {
     const parsedImageUrls = JSON.parse(imageUrls);
     const parsedIsPrincipal = JSON.parse(isPrincipal);
 
-    const parsedVideosUrls = JSON.parse(videoUrls);
+    // Comprobar si videoUrls existe y es un valor válido
+    let parsedVideosUrls: string[] = [];
+
+    if (videoUrls) {
+      parsedVideosUrls = JSON.parse(videoUrls); // Si existe, se parsea
+    }
 
     // Procesar las URLs de las imágenes
     const images = parsedImageUrls.map((url: string, index: number) => ({

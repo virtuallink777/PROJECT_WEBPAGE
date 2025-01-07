@@ -16,8 +16,13 @@ import {
   publicacionesUpload,
   videosUpload,
 } from "./routes/publicaciones.upload";
+import getPublicationsThumbnailsByUserId from "./routes/publication.thumbnails.route";
+import path from "node:path";
 
 const app = express();
+
+// Servir la carpeta "uploads"
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -48,11 +53,13 @@ app.use("/dashboard", authenticate, dashboardRoutes);
 
 app.use("/publications", publicationsRouter);
 
-app.use("/api/publicaciones", publicacionesUpload);
+app.use("/api/publicacionesImage", publicacionesUpload);
 console.log("Ruta de publicaciones registrada correctamente");
 
-app.use("/api/publicaciones", videosUpload);
-console.log("Ruta de publicaciones registrada correctamente");
+app.use("/api/publicacionesVideo", videosUpload);
+console.log("Ruta de subida de videos registrada correctamente");
+
+app.use("/api/publicationsThumbnails", getPublicationsThumbnailsByUserId);
 
 app.use(errorHandler);
 app.listen(PORT, async () => {

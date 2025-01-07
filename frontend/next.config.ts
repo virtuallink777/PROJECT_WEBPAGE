@@ -1,11 +1,20 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   experimental: {
     serverActions: {
-      bodySizeLimit: "100mb", // Cambia el tamaño según tus necesidades
+      bodySizeLimit: "100mb", // Ajusta según tus necesidades
     },
+  },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "http",
+        hostname: "localhost",
+        port: "4004",
+        pathname: "/uploads/**", // Ajusta según tu estructura de URLs
+      },
+    ],
   },
 };
 
-export default nextConfig;
+module.exports = nextConfig;
