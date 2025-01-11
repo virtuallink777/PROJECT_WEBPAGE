@@ -18,8 +18,13 @@ import {
 } from "./routes/publicaciones.upload";
 import getPublicationsThumbnailsByUserId from "./routes/publication.thumbnails.route";
 import path from "node:path";
+import { getPublicationById } from "./routes/editPublication";
+import updatePublicationRoutes from "./routes/updatedPublication.route";
 
 const app = express();
+
+// Middleware para parsear JSON
+app.use(express.json()); // Esto está bien para rutas POST/PUT
 
 // Servir la carpeta "uploads"
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
@@ -60,6 +65,10 @@ app.use("/api/publicacionesVideo", videosUpload);
 console.log("Ruta de subida de videos registrada correctamente");
 
 app.use("/api/publicationsThumbnails", getPublicationsThumbnailsByUserId);
+
+app.use("/api/editPublications/:id", getPublicationById);
+
+app.use("/api/updatePublications", updatePublicationRoutes);
 
 app.use(errorHandler);
 app.listen(PORT, async () => {
