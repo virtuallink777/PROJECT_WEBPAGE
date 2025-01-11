@@ -110,7 +110,7 @@ export const FirstBlockPublication: React.FC<FirstBlockPublicationProps> = ({
           </div>
         </div>
       </div>
-      <div className="border-b border-gray-500 mt-2" />
+      <div className="border-b border-gray-500 mt-2 mb-2" />
     </>
   );
 };

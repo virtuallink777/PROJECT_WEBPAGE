@@ -1,6 +1,9 @@
 "use client";
 
 import { FirstBlockPublication } from "@/components/FirstBlockPublication";
+import { FourthBlockPublication } from "@/components/FourthBlockPublication";
+import { SecondBlockPublication } from "@/components/SecondBlockPublication";
+import { ThirdBlockPublications } from "@/components/ThirdBlockPublications";
 import { Button } from "@/components/ui/button";
 import { useParams, useRouter } from "next/navigation";
 
@@ -10,6 +13,16 @@ interface FormData {
   nombre: string;
   edad: string;
   telefono: string;
+  Categorias: string;
+  Pais: string;
+  Departamento: string;
+  ciudad: string;
+  Localidad: string;
+  direccion: string;
+  mostrarEnMaps: boolean;
+  titulo: string;
+  descripcion: string;
+  adicionales: string;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -19,11 +32,31 @@ const EditPublication: React.FC = () => {
     nombre: "",
     edad: "",
     telefono: "",
+    Categorias: "",
+    Pais: "",
+    Departamento: "",
+    ciudad: "",
+    Localidad: "",
+    direccion: "",
+    mostrarEnMaps: false,
+    titulo: "",
+    descripcion: "",
+    adicionales: "",
   });
   const [errors, setErrors] = useState<Record<keyof FormData, string>>({
     nombre: "",
     edad: "",
     telefono: "",
+    Categorias: "",
+    Pais: "",
+    Departamento: "",
+    ciudad: "",
+    Localidad: "",
+    direccion: "",
+    mostrarEnMaps: "",
+    titulo: "",
+    descripcion: "",
+    adicionales: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +75,16 @@ const EditPublication: React.FC = () => {
           nombre: data.nombre || "",
           edad: data.edad || "",
           telefono: data.telefono || "",
+          Categorias: data.Categorias || "",
+          Pais: data.Pais || "",
+          Departamento: data.Departamento || "",
+          ciudad: data.ciudad || "",
+          Localidad: data.Localidad || "",
+          direccion: data.direccion || "",
+          mostrarEnMaps: data.mostrarEnMaps || false,
+          titulo: data.titulo || "",
+          descripcion: data.descripcion || "",
+          adicionales: data.adicionales || "",
         });
       } catch (err) {
         console.error("Error al obtener la publicación:", err);
@@ -97,6 +140,27 @@ const EditPublication: React.FC = () => {
             />
 
             {error && <div className="mt-4 text-red-600">{error}</div>}
+
+            <SecondBlockPublication
+              formData={formData} // PASA EL ESTADO DEL PADRE
+              errors={errors}
+              onFormChange={
+                (name, value) =>
+                  setFormData((prev) => ({ ...prev, [name]: value })) // Actualiza el estado del padre
+              }
+            />
+
+            {error && <div className="mt-4 text-red-600">{error}</div>}
+
+            <ThirdBlockPublications
+              formData={formData}
+              errors={errors}
+              onFormChange={handleFormChange}
+            />
+
+            {error && <div className="mt-4 text-red-600">{error}</div>}
+
+            <FourthBlockPublication />
 
             <div className="mt-6 flex justify-center">
               <Button
