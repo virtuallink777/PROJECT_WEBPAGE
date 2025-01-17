@@ -7,6 +7,8 @@ export const updatePublicationById = async (req: Request, res: Response) => {
     const { id } = req.params; // Obtener el ID de los parámetros de la ruta
     const updates = req.body; // Obtener los datos actualizados del cuerpo de la solicitud
 
+    console.log(updates);
+
     // Actualizar la publicación en la base de datos
     const updatedPublication = await Publicacion.findByIdAndUpdate(
       id,

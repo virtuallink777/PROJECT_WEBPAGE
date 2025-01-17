@@ -29,21 +29,12 @@ const upload = multer({
   storage,
   limits: { fileSize: 1024 * 1024 * 1000 },
   fileFilter: (req, file, cb) => {
-    // Array de tipos MIME permitidos
-    const allowedTypes = [
-      // Imágenes
-      "image/jpeg",
-      "image/png",
-      "image/gif",
-      // Videos
-      "video/mp4",
-      "video/mpeg",
-      "video/quicktime",
-      "video/x-msvideo", // .avi
-    ];
-
-    if (allowedTypes.includes(file.mimetype)) {
-      cb(null, true);
+    // Verificar si el archivo es una imagen
+    if (
+      file.mimetype.startsWith("image/") ||
+      file.mimetype.startsWith("video/")
+    ) {
+      cb(null, true); // Aceptar archivo
     } else {
       cb(new Error("Invalid file type. Only images are allowed."));
     }

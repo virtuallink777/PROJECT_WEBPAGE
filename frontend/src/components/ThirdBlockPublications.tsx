@@ -8,13 +8,13 @@ interface FormData {
 
 interface FirstBlockPublicationProps {
   formData: FormData;
-  errors: Record<keyof FormData, string>;
+
   onFormChange: (name: keyof FormData, value: string | boolean) => void;
 }
 
 export const ThirdBlockPublications: React.FC<FirstBlockPublicationProps> = ({
   formData,
-  errors,
+
   onFormChange,
 }) => {
   // Estilos comunes

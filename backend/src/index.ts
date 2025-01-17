@@ -33,8 +33,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(
   cors({
-    origin: APP_ORIGIN,
+    origin: "http://localhost:3000",
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE"], // Métodos permitidos
+    allowedHeaders: ["Content-Type", "Authorization"], // Encabezados permitidos
   })
 );
 app.use(cookieParser());

@@ -12,13 +12,13 @@ interface FormData {
 
 interface SecondBlockPublicationProps {
   formData: FormData;
-  errors: Record<keyof FormData, string>;
+
   onFormChange: (name: keyof FormData, value: string | boolean) => void;
 }
 
 export const SecondBlockPublication: React.FC<SecondBlockPublicationProps> = ({
   formData, // Viene del padre
-  errors,
+
   onFormChange,
 }) => {
   const categoriesData = useCategoriesData();

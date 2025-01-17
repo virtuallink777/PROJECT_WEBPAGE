@@ -9,13 +9,13 @@ interface FormData {
 
 interface FirstBlockPublicationProps {
   formData: FormData;
-  errors: Record<keyof FormData, string>;
+
   onFormChange: (name: keyof FormData, value: string | boolean) => void;
 }
 
 export const FirstBlockPublication: React.FC<FirstBlockPublicationProps> = ({
   formData,
-  errors,
+
   onFormChange,
 }) => {
   return (
@@ -57,9 +57,6 @@ export const FirstBlockPublication: React.FC<FirstBlockPublicationProps> = ({
               required
               className="w-full bg-white"
             />
-            {errors.nombre && (
-              <p className="text-red-500 text-sm">{errors.nombre}</p>
-            )}
           </div>
         </div>
 
@@ -81,9 +78,6 @@ export const FirstBlockPublication: React.FC<FirstBlockPublicationProps> = ({
               required
               className="w-fit bg-white"
             />
-            {errors.edad && (
-              <p className="text-red-500 text-sm">{errors.edad}</p>
-            )}
           </div>
           <div>
             <label
@@ -104,9 +98,6 @@ export const FirstBlockPublication: React.FC<FirstBlockPublicationProps> = ({
               title="Ingrese un número de teléfono válido de 10 dígitos"
               className="w-full bg-white"
             />
-            {errors.telefono && (
-              <p className="text-red-500 text-sm">{errors.telefono}</p>
-            )}
           </div>
         </div>
       </div>

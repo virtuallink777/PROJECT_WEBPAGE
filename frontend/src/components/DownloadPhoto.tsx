@@ -3,32 +3,16 @@ import Image from "next/image";
 
 interface FileChangeProps {
   onImagesChange: (files: File[], mainPhoto: File | null) => void;
-  userId?: string;
 }
 
-const HandleFileChange: React.FC<FileChangeProps> = ({
-  onImagesChange,
-  userId,
-}) => {
+const HandleFileChange: React.FC<FileChangeProps> = ({ onImagesChange }) => {
   const [photos, setPhotos] = useState<File[]>([]);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
   const [mainPhoto, setMainPhoto] = useState<string | null>(null);
-  const [mainPhotoFile, setMainPhotoFile] = useState<File | null>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newFiles = Array.from(event.target.files || []);
     const totalFiles = [...photos, ...newFiles];
-
-    // Validación de cantidad de fotos
-
-    if (totalFiles.length < 4) {
-      alert("Debes tener al menos 4 fotos en total");
-      // Limpiar el input para evitar archivos de menos
-      if (event.target) {
-        event.target.value = "";
-      }
-      return;
-    }
 
     if (totalFiles.length > 12) {
       alert("El máximo permitido son 12 fotos");
@@ -53,7 +37,6 @@ const HandleFileChange: React.FC<FileChangeProps> = ({
     setPhotoPreviews((prev) => [...prev, ...newPreviews]);
     setPhotos((prev) => [...prev, ...newFiles]);
     setMainPhoto((prev) => prev || newPreviews[0]);
-    setMainPhotoFile((prev) => prev || newFiles[0]);
 
     onImagesChange(totalFiles, newFiles[0] || null); // Notificar al padre
   };
@@ -63,7 +46,6 @@ const HandleFileChange: React.FC<FileChangeProps> = ({
     const mainFile = photos.find(
       (_, index) => photoPreviews[index] === previewUrl
     );
-    setMainPhotoFile(mainFile || null);
 
     onImagesChange(photos, mainFile || null);
   };
@@ -90,12 +72,7 @@ const HandleFileChange: React.FC<FileChangeProps> = ({
       prev === previewUrl ? photoPreviews[0] || null : prev
     );
 
-    const mainFile = updatePhotos.find(
-      (_, index) => photoPreviews[index] === photoPreviews[0]
-    );
-    setMainPhotoFile(mainFile || null);
-
-    onImagesChange(updatePhotos, mainFile || null);
+    onImagesChange(updatePhotos, null);
   };
 
   // Limpieza de URLs al desmontar

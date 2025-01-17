@@ -75,7 +75,11 @@ const ViewPublications = () => {
             className="overflow-hidden hover:shadow-lg transition-shadow"
           >
             <Image
-              src={`${baseURL}${pub.images[0]?.url}` || "/default-image.png"}
+              src={
+                pub.images[0]?.url
+                  ? `${baseURL}${pub.images[0].url}`
+                  : "/default-image.png"
+              }
               width={300}
               height={300}
               alt="ppalImages"

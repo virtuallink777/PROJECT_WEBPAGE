@@ -1,15 +1,22 @@
 "use client";
 
 import { FirstBlockPublication } from "@/components/FirstBlockPublication";
-import { FourthBlockPublication } from "@/components/FourthBlockPublication";
 import { SecondBlockPublication } from "@/components/SecondBlockPublication";
 import { ThirdBlockPublications } from "@/components/ThirdBlockPublications";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
-
 import React, { useState, useEffect } from "react";
 
+interface ImageData {
+  url: string;
+  isPrincipal: boolean;
+  filename: string;
+  _id: string;
+}
+
 interface FormData {
+  userId: string;
   nombre: string;
   edad: string;
   telefono: string;
@@ -23,12 +30,26 @@ interface FormData {
   titulo: string;
   descripcion: string;
   adicionales: string;
+  images: ImageData[]; // Ahora solo acepta datos en el formato proporcionado por el backend
+  fotoPrincipal: ImageData | null; // Actualizado para reflejar la estructura de la imagen principal
 }
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
-const EditPublication: React.FC = () => {
+async function obtenerIdCliente() {
+  try {
+    const response = await fetch("/api/userId");
+    const data = await response.json();
+    return data.userId; // Esto devuelve directamente el ID alfanumérico
+  } catch (error) {
+    console.error("Error al obtener el ID del usuario:", error);
+    return null;
+  }
+}
+
+const EditPublication: React.FC = ({}) => {
   const [formData, setFormData] = useState<FormData>({
+    userId: "",
     nombre: "",
     edad: "",
     telefono: "",
@@ -42,27 +63,44 @@ const EditPublication: React.FC = () => {
     titulo: "",
     descripcion: "",
     adicionales: "",
+    images: [],
+    fotoPrincipal: null,
   });
-  const [errors, setErrors] = useState<Record<keyof FormData, string>>({
-    nombre: "",
-    edad: "",
-    telefono: "",
-    Categorias: "",
-    Pais: "",
-    Departamento: "",
-    ciudad: "",
-    Localidad: "",
-    direccion: "",
-    mostrarEnMaps: "",
-    titulo: "",
-    descripcion: "",
-    adicionales: "",
-  });
+
+  // Obtenemos el ID del cliente al montar el componente
+  useEffect(() => {
+    async function fetchUserId() {
+      const id = await obtenerIdCliente();
+      if (id) {
+        setFormData((prev) => ({ ...prev, userId: id }));
+        console.log("ID del usuario obtenido:", id); // Este console.log debería aparecer en la consola
+      }
+    }
+    fetchUserId();
+  }, []);
+
+  // constantes de los 3 bloques
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const { id } = useParams();
   const router = useRouter();
+
+  // ordenar las imagenes
+  function orderImages(images: ImageData[]): ImageData[] {
+    if (!images || images.length === 0) return [];
+
+    // Separa la imagen principal y el resto
+    const principalImage = images.find((img) => img.isPrincipal);
+    const otherImages = images.filter((img) => !img.isPrincipal);
+
+    // Si hay una imagen principal, colócala al inicio
+    if (principalImage) {
+      return [principalImage, ...otherImages];
+    }
+
+    // Si no hay imagen principal, devuelve el array original
+    return images;
+  }
 
   useEffect(() => {
     const fetchPublication = async () => {
@@ -71,7 +109,13 @@ const EditPublication: React.FC = () => {
         if (!response.ok) throw new Error("No se pudo obtener la publicación");
 
         const data = await response.json();
+        console.log(data);
+
+        // Ordena las imágenes para que la principal esté primero
+        const orderedImages = orderImages(data.images);
+
         setFormData({
+          userId: data.userId || "",
           nombre: data.nombre || "",
           edad: data.edad || "",
           telefono: data.telefono || "",
@@ -85,14 +129,21 @@ const EditPublication: React.FC = () => {
           titulo: data.titulo || "",
           descripcion: data.descripcion || "",
           adicionales: data.adicionales || "",
+          images: orderedImages, // Asigna las imágenes ordenadas
+          fotoPrincipal: orderedImages[0] || null, // Primera imagen como principal
         });
-      } catch (err) {
-        console.error("Error al obtener la publicación:", err);
+
+        const imagesData = data.images;
+        console.log("imagesData:", imagesData);
+      } catch (error) {
+        console.error("Error al obtener la publicación:", error);
       }
     };
 
     fetchPublication();
   }, [id]);
+
+  // Elimina dependencias innecesarias
 
   const handleFormChange = (name: keyof FormData, value: string | boolean) => {
     setFormData((prev) => ({
@@ -108,24 +159,27 @@ const EditPublication: React.FC = () => {
     setError(null);
 
     try {
-      const response = await fetch(`${API_URL}/api/updatePublications/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
+      const dataResponse = await fetch(
+        `${API_URL}/api/updatePublications/${id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(formData),
+        }
+      );
 
-      if (!response.ok) throw new Error("Error al actualizar la publicación");
-
-      alert("Publicación actualizada exitosamente");
-
-      router.push("/dashboard/viewPublications");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al actualizar");
-    } finally {
-      setIsSubmitting(false);
+      if (!dataResponse.ok) {
+        throw new Error("Error al subir los Datos");
+      }
+    } catch (error) {
+      console.error("Error al subir las imágenes:", error);
     }
+
+    setIsSubmitting(false);
+
+    router.push("/dashboard/viewPublications");
   };
 
   return (
@@ -135,7 +189,6 @@ const EditPublication: React.FC = () => {
           <div>
             <FirstBlockPublication
               formData={formData}
-              errors={errors}
               onFormChange={handleFormChange}
             />
 
@@ -143,7 +196,6 @@ const EditPublication: React.FC = () => {
 
             <SecondBlockPublication
               formData={formData} // PASA EL ESTADO DEL PADRE
-              errors={errors}
               onFormChange={
                 (name, value) =>
                   setFormData((prev) => ({ ...prev, [name]: value })) // Actualiza el estado del padre
@@ -154,13 +206,27 @@ const EditPublication: React.FC = () => {
 
             <ThirdBlockPublications
               formData={formData}
-              errors={errors}
               onFormChange={handleFormChange}
             />
 
             {error && <div className="mt-4 text-red-600">{error}</div>}
 
-            <FourthBlockPublication />
+            <div className="image-gallery">
+              {formData.images.map((image) => (
+                <div key={image._id} className="image-item">
+                  <Image
+                    src={`${API_URL}${image.url}`}
+                    alt={image.filename}
+                    className="image-preview"
+                    width={200}
+                    height={200}
+                  />
+                  {image.isPrincipal && (
+                    <span className="badge">Principal</span>
+                  )}
+                </div>
+              ))}
+            </div>
 
             <div className="mt-6 flex justify-center">
               <Button
