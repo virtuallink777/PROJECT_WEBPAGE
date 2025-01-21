@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 
 interface ImageData {
@@ -9,17 +9,13 @@ interface ImageData {
 }
 
 interface FileChangeProps {
-  onImagesChange: (files: File[], mainPhoto: string | null) => void;
+  onImagesChange: (files: ImageData[], mainPhoto: string | null) => void;
   images: ImageData[];
-  existingPhotos?: string[];
 }
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
-const getImageUrl = (url: string, isNewImage: boolean) => {
-  if (isNewImage) {
-    return url;
-  }
+const getImageUrl = (url: string) => {
   if (url.startsWith("http")) {
     return url;
   }
@@ -30,7 +26,6 @@ interface ImageItemProps {
   url: string;
   isPrincipal: boolean;
   alt: string;
-  isNewImage?: boolean;
   onSetPrincipal: (url: string) => void;
   onRemove: (url: string) => void;
 }
@@ -39,7 +34,6 @@ const ImageItem: React.FC<ImageItemProps> = ({
   url,
   isPrincipal,
   alt,
-  isNewImage = false,
   onSetPrincipal,
   onRemove,
 }) => (
@@ -49,12 +43,11 @@ const ImageItem: React.FC<ImageItemProps> = ({
     }`}
   >
     <Image
-      src={getImageUrl(url, isNewImage)}
+      src={getImageUrl(url)}
       alt={alt}
       className="w-full h-full object-cover"
       width={400}
       height={400}
-      unoptimized={isNewImage}
     />
     <button
       type="button"
@@ -77,162 +70,89 @@ const ImageItem: React.FC<ImageItemProps> = ({
   </div>
 );
 
+const MIN_IMAGES = 4; // Número mínimo de imágenes permitidas
+
 const HandleFileChangeEdit: React.FC<FileChangeProps> = ({
   onImagesChange,
-  existingPhotos = [],
   images = [],
 }) => {
-  const [photos, setPhotos] = useState<File[]>([]);
-  const [photoPreviews, setPhotoPreviews] = useState<string[]>(() => {
-    const dbImages = images.map((img) => img.url);
-    return [...dbImages, ...existingPhotos];
-  });
+  const [mainPhoto, setMainPhoto] = useState<string | null>(null);
 
-  // Inicializar mainPhoto solo con la imagen principal de la BD
-  const [mainPhoto, setMainPhoto] = useState<string | null>(() => {
+  // Asegurar que siempre haya una imagen principal al cargar
+  useEffect(() => {
     const principalImage = images.find((img) => img.isPrincipal);
-    return principalImage ? principalImage.url : null;
-  });
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const newFiles = Array.from(event.target.files || []);
-    const totalFiles = [...photos, ...newFiles];
-
-    if (totalFiles.length + existingPhotos.length > 12) {
-      alert("El máximo permitido son 12 fotos");
-      if (event.target) event.target.value = "";
-      return;
+    if (principalImage) {
+      setMainPhoto(principalImage.url);
+    } else if (images.length > 0) {
+      const updatedImages = images.map((img, index) => ({
+        ...img,
+        isPrincipal: index === 0,
+      }));
+      setMainPhoto(updatedImages[0].url);
+      onImagesChange(updatedImages, updatedImages[0].url);
     }
-
-    const invalidFiles = newFiles.filter(
-      (file) => !file.type.startsWith("image/")
-    );
-    if (invalidFiles.length > 0) {
-      alert("Por favor, selecciona solo archivos de imagen");
-      return;
-    }
-
-    const newPreviews = newFiles.map((file) => URL.createObjectURL(file));
-    setPhotoPreviews((prev) => [...prev, ...newPreviews]);
-    setPhotos((prev) => [...prev, ...newFiles]);
-
-    // No establecer una nueva imagen principal si ya existe una
-    if (!mainPhoto) {
-      setMainPhoto(newPreviews[0]);
-      onImagesChange(totalFiles, newPreviews[0]);
-    } else {
-      onImagesChange(totalFiles, mainPhoto);
-    }
-  };
+  }, [images, onImagesChange]);
 
   const handleSetPrincipal = (url: string) => {
-    // Desmarcar la imagen principal anterior en images si existe
     const updatedImages = images.map((img) => ({
       ...img,
       isPrincipal: img.url === url,
     }));
 
     setMainPhoto(url);
-    onImagesChange(photos, url);
+    onImagesChange(updatedImages, url);
   };
 
   const handleRemove = (url: string) => {
-    setPhotoPreviews((prev) => {
-      const updatedPreviews = prev.filter((preview) => preview !== url);
-      if (!existingPhotos.includes(url)) {
-        URL.revokeObjectURL(url);
-      }
-      return updatedPreviews;
-    });
-
-    const updatePhotos = photos.filter(
-      (_, index) => photoPreviews[index] !== url
-    );
-    setPhotos(updatePhotos);
-
-    // Si la imagen eliminada era la principal, establecer la primera imagen disponible como principal
-    if (mainPhoto === url) {
-      const newMainPhoto = images[0]?.url || photoPreviews[0] || null;
-      setMainPhoto(newMainPhoto);
-      onImagesChange(updatePhotos, newMainPhoto);
-    } else {
-      onImagesChange(updatePhotos, mainPhoto);
+    if (images.length <= MIN_IMAGES) {
+      alert(
+        `Debes dejar un mínimo de ${MIN_IMAGES} fotos. Si deseas eliminar las que tienes, agregas nuevas fotos y despues elimina las que necesites`
+      );
+      return;
     }
+
+    const updatedImages = images.filter((img) => img.url !== url);
+
+    let newMainPhoto = mainPhoto;
+    if (mainPhoto === url) {
+      // Si se elimina la imagen principal, asignar otra como principal (si existe)
+      if (updatedImages.length > 0) {
+        updatedImages[0].isPrincipal = true;
+        newMainPhoto = updatedImages[0].url;
+      } else {
+        newMainPhoto = null;
+      }
+      setMainPhoto(newMainPhoto);
+    }
+
+    onImagesChange(updatedImages, newMainPhoto);
   };
 
-  useEffect(() => {
-    return () => {
-      photoPreviews.forEach((url) => {
-        if (!existingPhotos.includes(url)) URL.revokeObjectURL(url);
-      });
-    };
-  }, [photoPreviews, existingPhotos]);
-
   return (
-    <>
-      <div>
-        <label className="text-gray-700 font-semibold items-center mb-4 mt-2 flex">
-          Fotos (mínimo 4, máximo 12):
-        </label>
+    <div>
+      <label className="text-gray-700 font-semibold items-center mb-4 mt-2 flex">
+        Fotos (manejando las imágenes de la base de datos):
+      </label>
 
-        <div className="w-full">
-          {(photoPreviews.length > 0 || images.length > 0) && (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
-              {/* Imágenes de la BD */}
-              {images.map((img) => (
-                <ImageItem
-                  key={img._id}
-                  url={img.url}
-                  isPrincipal={mainPhoto === img.url}
-                  alt={img.filename}
-                  isNewImage={false}
-                  onSetPrincipal={handleSetPrincipal}
-                  onRemove={handleRemove}
-                />
-              ))}
+      <p className="text-gray-600">Total de fotos: {images.length}</p>
 
-              {/* Imágenes nuevas */}
-              {photoPreviews
-                .filter((preview) => !images.some((img) => img.url === preview))
-                .map((preview, index) => (
-                  <ImageItem
-                    key={preview}
-                    url={preview}
-                    isPrincipal={mainPhoto === preview}
-                    alt={`Preview ${index + 1}`}
-                    isNewImage={true}
-                    onSetPrincipal={handleSetPrincipal}
-                    onRemove={handleRemove}
-                  />
-                ))}
-            </div>
-          )}
-
-          <div className="flex flex-col mt-4">
-            <div className="relative">
-              <input
-                id="fileInput"
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleFileChange}
-                className="hidden"
-                required
+      <div className="w-full">
+        {images.length > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
+            {images.map((img) => (
+              <ImageItem
+                key={img._id}
+                url={img.url}
+                isPrincipal={img.isPrincipal}
+                alt={img.filename}
+                onSetPrincipal={handleSetPrincipal}
+                onRemove={handleRemove}
               />
-              <label
-                htmlFor="fileInput"
-                className="w-full border p-2 rounded bg-red-300 text-black text-center cursor-pointer hover:bg-red-400 transition-colors"
-              >
-                Fotos subidas: {images.length + photoPreviews.length}
-              </label>
-              <p className="text-sm text-gray-500 mt-1">
-                Puedes cargar entre 4 y 12 fotos.
-              </p>
-            </div>
+            ))}
           </div>
-        </div>
+        )}
       </div>
-    </>
+    </div>
   );
 };
 

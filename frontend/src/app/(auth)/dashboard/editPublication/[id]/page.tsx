@@ -68,6 +68,13 @@ const EditPublication: React.FC = ({}) => {
     fotoPrincipal: null,
   });
 
+  const handleImagesChange = (updatedImages: ImageData[]) => {
+    setFormData((prev) => ({
+      ...prev,
+      images: updatedImages, // Actualiza solo el campo de imágenes
+    }));
+  };
+
   // Obtenemos el ID del cliente al montar el componente
   useEffect(() => {
     async function fetchUserId() {
@@ -197,7 +204,7 @@ const EditPublication: React.FC = ({}) => {
             {/* Subir Fotos */}
             <HandleFileChangeEdit
               images={formData.images}
-              onImagesChange={handleFormChange}
+              onImagesChange={handleImagesChange}
             />
 
             <div className="mt-6 flex justify-center">
