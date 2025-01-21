@@ -1,10 +1,11 @@
 "use client";
 
+import HandleFileChangeEdit from "@/components/ChargerImagenPub";
 import { FirstBlockPublication } from "@/components/FirstBlockPublication";
 import { SecondBlockPublication } from "@/components/SecondBlockPublication";
 import { ThirdBlockPublications } from "@/components/ThirdBlockPublications";
 import { Button } from "@/components/ui/button";
-import Image from "next/image";
+
 import { useParams, useRouter } from "next/navigation";
 import React, { useState, useEffect } from "react";
 
@@ -30,8 +31,8 @@ interface FormData {
   titulo: string;
   descripcion: string;
   adicionales: string;
-  images: ImageData[]; // Ahora solo acepta datos en el formato proporcionado por el backend
-  fotoPrincipal: ImageData | null; // Actualizado para reflejar la estructura de la imagen principal
+  images: ImageData[]; // Cambiamos de `File[]` a `ImageData[]`
+  fotoPrincipal: File | null;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -85,23 +86,6 @@ const EditPublication: React.FC = ({}) => {
   const { id } = useParams();
   const router = useRouter();
 
-  // ordenar las imagenes
-  function orderImages(images: ImageData[]): ImageData[] {
-    if (!images || images.length === 0) return [];
-
-    // Separa la imagen principal y el resto
-    const principalImage = images.find((img) => img.isPrincipal);
-    const otherImages = images.filter((img) => !img.isPrincipal);
-
-    // Si hay una imagen principal, colócala al inicio
-    if (principalImage) {
-      return [principalImage, ...otherImages];
-    }
-
-    // Si no hay imagen principal, devuelve el array original
-    return images;
-  }
-
   useEffect(() => {
     const fetchPublication = async () => {
       try {
@@ -111,8 +95,7 @@ const EditPublication: React.FC = ({}) => {
         const data = await response.json();
         console.log(data);
 
-        // Ordena las imágenes para que la principal esté primero
-        const orderedImages = orderImages(data.images);
+        // Guardar los datos en el estado
 
         setFormData({
           userId: data.userId || "",
@@ -129,8 +112,8 @@ const EditPublication: React.FC = ({}) => {
           titulo: data.titulo || "",
           descripcion: data.descripcion || "",
           adicionales: data.adicionales || "",
-          images: orderedImages, // Asigna las imágenes ordenadas
-          fotoPrincipal: orderedImages[0] || null, // Primera imagen como principal
+          images: data.images || [],
+          fotoPrincipal: data.fotoPrincipal || null,
         });
 
         const imagesData = data.images;
@@ -211,22 +194,11 @@ const EditPublication: React.FC = ({}) => {
 
             {error && <div className="mt-4 text-red-600">{error}</div>}
 
-            <div className="image-gallery">
-              {formData.images.map((image) => (
-                <div key={image._id} className="image-item">
-                  <Image
-                    src={`${API_URL}${image.url}`}
-                    alt={image.filename}
-                    className="image-preview"
-                    width={200}
-                    height={200}
-                  />
-                  {image.isPrincipal && (
-                    <span className="badge">Principal</span>
-                  )}
-                </div>
-              ))}
-            </div>
+            {/* Subir Fotos */}
+            <HandleFileChangeEdit
+              images={formData.images}
+              onImagesChange={handleFormChange}
+            />
 
             <div className="mt-6 flex justify-center">
               <Button
