@@ -130,11 +130,7 @@ const HandleFileChangeEdit: React.FC<FileChangeProps> = ({
 
   return (
     <div>
-      <label className="text-gray-700 font-semibold items-center mb-4 mt-2 flex">
-        Fotos (manejando las imágenes de la base de datos):
-      </label>
-
-      <p className="text-gray-600">Total de fotos: {images.length}</p>
+      <p className="text-gray-600 mt-3">Total de fotos: {images.length}</p>
 
       <div className="w-full">
         {images.length > 0 && (

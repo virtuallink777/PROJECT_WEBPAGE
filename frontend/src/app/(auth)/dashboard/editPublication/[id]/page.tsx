@@ -5,6 +5,8 @@ import { FirstBlockPublication } from "@/components/FirstBlockPublication";
 import { SecondBlockPublication } from "@/components/SecondBlockPublication";
 import { ThirdBlockPublications } from "@/components/ThirdBlockPublications";
 import { Button } from "@/components/ui/button";
+import ChargerVideosPubEdit from "@/components/ui/ChargerVideosPub";
+import Link from "next/link";
 
 import { useParams, useRouter } from "next/navigation";
 import React, { useState, useEffect } from "react";
@@ -16,7 +18,14 @@ interface ImageData {
   _id: string;
 }
 
+interface VideoData {
+  url: string;
+  filename: string;
+  _id: string;
+}
+
 interface FormData {
+  _id: string;
   userId: string;
   nombre: string;
   edad: string;
@@ -33,9 +42,16 @@ interface FormData {
   adicionales: string;
   images: ImageData[]; // Cambiamos de `File[]` a `ImageData[]`
   fotoPrincipal: File | null;
+  videos: VideoData[];
 }
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+// Crea una variable fuera del componente para almacenar los valores
+let imagesCount = 0;
+let videosCount = 0;
+
+let _Id = "";
 
 async function obtenerIdCliente() {
   try {
@@ -50,6 +66,7 @@ async function obtenerIdCliente() {
 
 const EditPublication: React.FC = ({}) => {
   const [formData, setFormData] = useState<FormData>({
+    _id: "",
     userId: "",
     nombre: "",
     edad: "",
@@ -66,12 +83,20 @@ const EditPublication: React.FC = ({}) => {
     adicionales: "",
     images: [],
     fotoPrincipal: null,
+    videos: [],
   });
 
   const handleImagesChange = (updatedImages: ImageData[]) => {
     setFormData((prev) => ({
       ...prev,
       images: updatedImages, // Actualiza solo el campo de imágenes
+    }));
+  };
+
+  const handleVideosChange = (updatedVideos: VideoData[]) => {
+    setFormData((prev) => ({
+      ...prev,
+      videos: updatedVideos, // Actualiza solo el campo de videos
     }));
   };
 
@@ -105,6 +130,7 @@ const EditPublication: React.FC = ({}) => {
         // Guardar los datos en el estado
 
         setFormData({
+          _id: data._id || "",
           userId: data.userId || "",
           nombre: data.nombre || "",
           edad: data.edad || "",
@@ -121,10 +147,20 @@ const EditPublication: React.FC = ({}) => {
           adicionales: data.adicionales || "",
           images: data.images || [],
           fotoPrincipal: data.fotoPrincipal || null,
+          videos: data.videos || [],
         });
 
         const imagesData = data.images;
         console.log("imagesData:", imagesData);
+        console.log("VideosData:", data.videos);
+
+        // Actualiza las variables globales
+        imagesCount = data.images?.length || 0;
+        videosCount = data.videos?.length || 0;
+        _Id = data._id || "";
+
+        console.log("imagesCount:", imagesCount);
+        console.log("videosCount:", videosCount);
       } catch (error) {
         console.error("Error al obtener la publicación:", error);
       }
@@ -207,15 +243,33 @@ const EditPublication: React.FC = ({}) => {
               onImagesChange={handleImagesChange}
             />
 
+            {/* Subir Videos */}
+            <ChargerVideosPubEdit
+              videos={formData.videos}
+              onVideosChange={handleVideosChange}
+            />
+
+            <div className="border-b border-gray-500 mt-2 mb-2" />
+
             <div className="mt-6 flex justify-center">
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className={`"min-w-[20rem]"
+                className={`className="w-full text-lg
               ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 {isSubmitting ? "Guardando..." : "Guardar cambios"}
               </Button>
+            </div>
+
+            {/* Enlace para subir nuevas fotos y videos*/}
+
+            <div className="flex justify-center mt-6">
+              <Link href={`/dashboard/uploadImagesVideos/${_Id}`} passHref>
+                <Button className="w-full text-lg">
+                  Si deseas añadir nuevas fotos o videos has Click aca:
+                </Button>
+              </Link>
             </div>
           </div>
         </form>
@@ -225,3 +279,8 @@ const EditPublication: React.FC = ({}) => {
 };
 
 export default EditPublication;
+
+// Y ahora puedes exportar una función que use estos valores
+export const getMediaCounts = () => {
+  return { imagesCount, videosCount };
+};
