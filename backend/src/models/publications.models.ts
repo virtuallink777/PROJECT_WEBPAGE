@@ -30,6 +30,7 @@ interface IPublication extends Document {
       filename: string;
     }
   ];
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -63,6 +64,7 @@ const PublicacionSchema = new mongoose.Schema<IPublication>({
       filename: { type: String },
     },
   ],
+
   createdAt: { type: Date, required: true, default: Date.now },
   updatedAt: { type: Date, required: true, default: Date.now },
 });

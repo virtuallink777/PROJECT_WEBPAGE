@@ -1,13 +1,29 @@
 "use client";
-import HandleFileChange from "@/components/DownloadPhoto";
-import { getMediaCounts } from "../../editPublication/[id]/page";
-import React from "react";
-import HandleFileChangeEditPhotosUpload from "@/components/ui/UploadImagesVideosEdit";
+
+import React, { useEffect, useState } from "react";
+import HandleFileChangeEditPhotosUpload from "@/components/UploadImagesVideosEdit";
+import { Button } from "@/components/ui/button";
+import { useMediaCounts } from "@/hooks/useFetchMediaCounts";
+import VideoUploadComponentEdit from "@/components/UploadVideosEdit";
+
+import { useParams, useRouter } from "next/navigation";
+
+async function obtenerIdCliente() {
+  try {
+    const response = await fetch("/api/userId");
+    const data = await response.json();
+    console.log("Full response data:", data);
+    console.log("ID del usuario obtenido:", data.userId); // Este console.log debería aparecer en la consola
+    return data.userId; // Esto devuelve directamente el ID alfanumérico
+  } catch (error) {
+    console.error("Error al obtener el ID del usuario:", error);
+    return null;
+  }
+}
 
 // Componente para mostrar el conteo de imágenes y videos
 export const CountImagesVideos: React.FC = () => {
-  // Llamamos a la función getMediaCounts para obtener los valores
-  const { imagesCount, videosCount } = getMediaCounts();
+  const { imagesCount, videosCount } = useMediaCounts();
 
   return (
     <div className="container mx-auto mt-6">
@@ -29,27 +45,187 @@ export const CountImagesVideos: React.FC = () => {
   );
 };
 
+interface FormData {
+  userId: string;
+  id: string;
+  images: File[];
+  videos: File[];
+  imageUrls?: string[];
+  videoUrls?: string[];
+}
+
+const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
 const UploadImagesVideos = () => {
-  const [formData, setFormData] = React.useState({
+  const [formData, setFormData] = useState<FormData>({
+    userId: "",
+    id: "",
     images: [],
-    fotoPrincipal: "",
+    videos: [],
   });
+
+  const router = useRouter();
+  const { id } = useParams();
+
+  console.log("ID de la publicación:", id);
+
+  // Agrega este useEffect para llamar a obtenerIdCliente cuando el componente se monte
+  useEffect(() => {
+    const fetchUserId = async () => {
+      const userId = await obtenerIdCliente();
+      if (userId) {
+        setFormData((prev) => ({
+          ...prev,
+          userId: userId,
+        }));
+      }
+    };
+    fetchUserId();
+  }, []); // El array vacío significa que esto se ejecutará solo una vez al montar el componente
+
+  const handleVideosChange = (videos: File[]) => {
+    if (videos !== formData.videos) {
+      setFormData((prev) => ({ ...prev, videos }));
+    }
+  };
+
+  const handleImagesChange = (images: File[]) => {
+    if (images !== formData.images) {
+      setFormData((prev) => ({ ...prev, images }));
+    }
+  };
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    try {
+      // Subir imágenes
+      const images: string[] = [];
+      if (formData.images.length > 0) {
+        const imageFormData = new FormData();
+        formData.images.forEach((image) => {
+          imageFormData.append("files", image);
+        });
+        imageFormData.append("userId", formData.userId);
+
+        const imageResponse = await fetch(
+          `http://localhost:4004/api/publicacionesImage/upload/${formData.userId}`,
+          {
+            method: "POST",
+            body: imageFormData,
+          }
+        );
+
+        if (!imageResponse.ok) {
+          throw new Error("Error al subir las imágenes");
+        }
+
+        const imageData = await imageResponse.json();
+
+        images.push(
+          ...imageData.files.map((file: { url: string }) => file.url)
+        );
+
+        console.log("Imagenes con Urls:", images);
+      }
+
+      // Subir videos
+      const videos: string[] = [];
+      if (formData.videos.length > 0) {
+        const videoFormData = new FormData();
+        formData.videos.forEach((video) => {
+          videoFormData.append("videos", video);
+        });
+
+        const videoResponse = await fetch(
+          `http://localhost:4004/api/publicacionesVideo/upload-videos/${formData.userId}`,
+          {
+            method: "POST",
+            body: videoFormData,
+          }
+        );
+
+        if (!videoResponse.ok) {
+          throw new Error("Error al subir los videos");
+        }
+
+        const videoData = await videoResponse.json();
+        videos.push(
+          ...videoData.files.map((file: { url: string }) => file.url)
+        );
+      }
+
+      console.log("Videos con Urls:", videos);
+
+      // Preparar datos para actualizar
+      const dataToUpdate = {
+        images: images.map((url) => ({
+          url,
+          filename: url.split("/").pop(), // Extrae el nombre del archivo
+        })),
+        videos: videos.map((url) => ({
+          url,
+          filename: url.split("/").pop(), // Extrae el nombre del archivo
+        })),
+      };
+
+      console.log("Datos para actualizar:", dataToUpdate);
+      console.log("Datos en JSON:", JSON.stringify(dataToUpdate));
+
+      try {
+        const dataResponse = await fetch(
+          `http://localhost:4004/api/updatePublicationImagesVideos/${id}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(dataToUpdate),
+          }
+        );
+
+        if (!dataResponse.ok) {
+          throw new Error("Error al subir los Datos");
+        }
+      } catch (error) {
+        console.error("Error al subir los archivos:", error);
+      }
+
+      // Redirigir a la ruta deseada
+      router.push("/dashboard/validate");
+    } catch (error) {
+      console.error("Error al subir los archivos:", error);
+    }
+  };
+
   return (
     <>
       <div>
         <CountImagesVideos />
       </div>
+
       <div className="container mx-auto mt-6">
-        {/* Subir Fotos */}
-        <HandleFileChangeEditPhotosUpload
-          onImagesChange={(images, mainPhoto) =>
-            setFormData({
-              ...formData,
-              images: images,
-              fotoPrincipal: mainPhoto,
-            })
-          }
-        />
+        <div className="max-w-4xl mx-auto">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Subir Fotos */}
+            <HandleFileChangeEditPhotosUpload
+              onImagesChange={handleImagesChange}
+            />
+
+            {/* Subir Videos */}
+
+            <VideoUploadComponentEdit onChange={handleVideosChange} />
+
+            <div className="mt-6 flex justify-center">
+              {/* Botón de envío */}
+              <div className="flex justify-center ">
+                <Button type="submit" className="min-w-[20rem] text-lg">
+                  Enviar y seguir con la validación
+                </Button>
+              </div>
+            </div>
+          </form>
+        </div>
       </div>
     </>
   );

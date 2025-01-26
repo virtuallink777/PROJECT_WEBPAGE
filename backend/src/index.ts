@@ -20,6 +20,7 @@ import getPublicationsThumbnailsByUserId from "./routes/publication.thumbnails.r
 import path from "node:path";
 import { getPublicationById } from "./routes/editPublication";
 import updatePublicationRoutes from "./routes/updatedPublication.route";
+import { updatePublicationImagesVideos } from "./controllers/updatePublicationImagesVideos";
 
 const app = express();
 
@@ -71,6 +72,11 @@ app.use("/api/publicationsThumbnails", getPublicationsThumbnailsByUserId);
 app.use("/api/editPublications/:id", getPublicationById);
 
 app.use("/api/updatePublications", updatePublicationRoutes);
+
+app.put(
+  "/api/updatePublicationImagesVideos/:id",
+  updatePublicationImagesVideos
+);
 
 app.use(errorHandler);
 app.listen(PORT, async () => {

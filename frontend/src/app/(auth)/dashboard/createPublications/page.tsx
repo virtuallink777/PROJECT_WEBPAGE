@@ -34,6 +34,7 @@ async function obtenerIdCliente() {
   try {
     const response = await fetch("/api/userId");
     const data = await response.json();
+    console.log("ID del usuario obtenido:", data.userId); // Este console.log debería aparecer en la consola
     return data.userId; // Esto devuelve directamente el ID alfanumérico
   } catch (error) {
     console.error("Error al obtener el ID del usuario:", error);

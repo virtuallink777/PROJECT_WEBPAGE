@@ -27,6 +27,9 @@ export async function GET() {
     }
 
     const decode = jwt.verify(userCookie.value, secret) as JwtPayloadCustom;
+
+    console.log("Decoded token:", decode);
+
     return NextResponse.json({ userId: decode.userId });
   } catch (error) {
     console.error("Error al obtener el ID del usuario:", error);

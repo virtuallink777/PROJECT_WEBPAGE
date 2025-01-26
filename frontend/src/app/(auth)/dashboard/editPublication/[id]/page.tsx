@@ -5,7 +5,7 @@ import { FirstBlockPublication } from "@/components/FirstBlockPublication";
 import { SecondBlockPublication } from "@/components/SecondBlockPublication";
 import { ThirdBlockPublications } from "@/components/ThirdBlockPublications";
 import { Button } from "@/components/ui/button";
-import ChargerVideosPubEdit from "@/components/ui/ChargerVideosPub";
+import ChargerVideosPubEdit from "@/components/ChargerVideosPub";
 import Link from "next/link";
 
 import { useParams, useRouter } from "next/navigation";
@@ -117,6 +117,8 @@ const EditPublication: React.FC = ({}) => {
   const [error, setError] = useState<string | null>(null);
   const { id } = useParams();
   const router = useRouter();
+
+  console.log("ID de la publicación:", id);
 
   useEffect(() => {
     const fetchPublication = async () => {
@@ -279,8 +281,3 @@ const EditPublication: React.FC = ({}) => {
 };
 
 export default EditPublication;
-
-// Y ahora puedes exportar una función que use estos valores
-export const getMediaCounts = () => {
-  return { imagesCount, videosCount };
-};
