@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import VideoUploadComponent from "@/components/DownloadVideo";
 import HandleFileChange from "@/components/DownloadPhoto";
 import api from "@/lib/api";
+import CheckDuplicateImages from "@/components/CheckDuplicateImages";
 
 interface FormData {
   userId: string;
@@ -132,6 +133,22 @@ const CreatePublications: React.FC = () => {
     const formDataToSend = new FormData();
 
     try {
+      // Verificar imágenes repetidas antes de subirlas
+      const imagesRepeated = await CheckDuplicateImages(formData.images);
+
+      // Filtrar imágenes no repetidas
+      const imagesNoRepeated = formData.images.filter(
+        (_, index) => !imagesRepeated[index]
+      );
+
+      // Si todas las imágenes son repetidas, detener el flujo
+      if (imagesNoRepeated.length === 0) {
+        alert(
+          "La imagen o las imagenes que estas seleccionando ya existen en el sistema. Por favor, selecciona otras imágenes."
+        );
+        return;
+      }
+
       // primero subimos las imagenes
       const imageFormData = new FormData();
       // Añadir la foto principal primero

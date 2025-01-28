@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
-
+import crypto from "crypto";
+import axios from "axios";
 import Publicacion from "../models/publications.models";
 
 export const updatePublicationImagesVideos = async (
@@ -16,18 +17,35 @@ export const updatePublicationImagesVideos = async (
         .json({ message: "No se enviaron imágenes o videos." });
     }
 
+    // Función para generar hash de imagen desde URL
+    const generateImageHash = async (imageUrl: string): Promise<string> => {
+      try {
+        const response = await axios.get(imageUrl, {
+          responseType: "arraybuffer",
+        });
+        return crypto.createHash("md5").update(response.data).digest("hex");
+      } catch (error) {
+        console.error("Error generando hash", error);
+        return "";
+      }
+    };
+
+    // Generar hashes para imágenes
+    const imagesWithHashes = await Promise.all(
+      images.map(async (img: { url: string; filename: string }) => ({
+        url: img.url,
+        filename: img.filename,
+        isPrincipal: false,
+        hash: await generateImageHash(img.url),
+      }))
+    );
+
     const updatedPublication = await Publicacion.findByIdAndUpdate(
       id,
       {
         $push: {
           ...(images && {
-            images: {
-              $each: images.map((img: { url: string; filename: string }) => ({
-                url: img.url,
-                filename: img.filename,
-                isPrincipal: false,
-              })),
-            },
+            images: { $each: imagesWithHashes },
           }),
           ...(videos && { videos: { $each: videos } }),
         },

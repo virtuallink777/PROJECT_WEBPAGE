@@ -21,6 +21,7 @@ import path from "node:path";
 import { getPublicationById } from "./routes/editPublication";
 import updatePublicationRoutes from "./routes/updatedPublication.route";
 import { updatePublicationImagesVideos } from "./controllers/updatePublicationImagesVideos";
+import imageVerificationRoutes from "./routes/calcularHash";
 
 const app = express();
 
@@ -77,6 +78,8 @@ app.put(
   "/api/updatePublicationImagesVideos/:id",
   updatePublicationImagesVideos
 );
+
+app.use("/api", imageVerificationRoutes);
 
 app.use(errorHandler);
 app.listen(PORT, async () => {

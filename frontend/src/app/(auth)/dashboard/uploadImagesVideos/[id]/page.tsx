@@ -7,6 +7,7 @@ import { useMediaCounts } from "@/hooks/useFetchMediaCounts";
 import VideoUploadComponentEdit from "@/components/UploadVideosEdit";
 
 import { useParams, useRouter } from "next/navigation";
+import CheckDuplicateImages from "@/components/CheckDuplicateImages";
 
 async function obtenerIdCliente() {
   try {
@@ -99,6 +100,22 @@ const UploadImagesVideos = () => {
     event.preventDefault();
 
     try {
+      // Verificar imágenes repetidas antes de subirlas
+      const imagesRepeated = await CheckDuplicateImages(formData.images);
+
+      // Filtrar imágenes no repetidas
+      const imagesNoRepeated = formData.images.filter(
+        (_, index) => !imagesRepeated[index]
+      );
+
+      // Si todas las imágenes son repetidas, detener el flujo
+      if (imagesNoRepeated.length === 0) {
+        alert(
+          "La imagen o las imagenes que estas seleccionando ya existen en el sistema. Por favor, selecciona otras imágenes."
+        );
+        return;
+      }
+
       // Subir imágenes
       const images: string[] = [];
       if (formData.images.length > 0) {
