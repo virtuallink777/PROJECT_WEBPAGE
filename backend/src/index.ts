@@ -21,7 +21,6 @@ import path from "node:path";
 import { getPublicationById } from "./routes/editPublication";
 import updatePublicationRoutes from "./routes/updatedPublication.route";
 import { updatePublicationImagesVideos } from "./controllers/updatePublicationImagesVideos";
-import imageVerificationRoutes from "./routes/calcularHash";
 
 const app = express();
 
@@ -60,16 +59,21 @@ app.use("/sessions", authenticate, sessionRoutes);
 // prefix: /dashboard
 app.use("/dashboard", authenticate, dashboardRoutes);
 
-app.use("/publications", publicationsRouter);
-
+// ruta para subir las imagenes NUEVAS DE CREATE PUB A uploads y uploadsbackup
 app.use("/api/publicacionesImage", publicacionesUpload);
-console.log("Ruta de publicaciones registrada correctamente");
+console.log("Ruta de uploads por pirmeravez ok registrada correctamente");
 
+// ruta para subir los videos NUEVOS A uploads y uploadsbackup
 app.use("/api/publicacionesVideo", videosUpload);
 console.log("Ruta de subida de videos registrada correctamente");
 
+// ruta para subir la publicacion nuevas a mongodb
+app.use("/publications", publicationsRouter);
+
+// ruta para MONTAR LA MINIATURA DE LA PUBLICACION
 app.use("/api/publicationsThumbnails", getPublicationsThumbnailsByUserId);
 
+// RUTA PARA ENCONTRAR LA PUBLICACION POR ID
 app.use("/api/editPublications/:id", getPublicationById);
 
 app.use("/api/updatePublications", updatePublicationRoutes);
@@ -78,8 +82,6 @@ app.put(
   "/api/updatePublicationImagesVideos/:id",
   updatePublicationImagesVideos
 );
-
-app.use("/api", imageVerificationRoutes);
 
 app.use(errorHandler);
 app.listen(PORT, async () => {

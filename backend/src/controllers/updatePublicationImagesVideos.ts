@@ -20,7 +20,13 @@ export const updatePublicationImagesVideos = async (
     // Función para generar hash de imagen desde URL
     const generateImageHash = async (imageUrl: string): Promise<string> => {
       try {
-        const response = await axios.get(imageUrl, {
+        // Si la URL es relativa, completa con la URL base del servidor
+
+        const fullUrl = imageUrl.startsWith("http")
+          ? imageUrl
+          : `http://localhost:4004${imageUrl}`;
+
+        const response = await axios.get(fullUrl, {
           responseType: "arraybuffer",
         });
         return crypto.createHash("md5").update(response.data).digest("hex");

@@ -3,6 +3,7 @@ import { Document } from "mongoose";
 
 interface IPublication extends Document {
   userId: mongoose.Schema.Types.ObjectId; // relacion con el usuario
+
   esMayorDeEdad: boolean;
   nombre: string;
   edad: number;
@@ -17,26 +18,22 @@ interface IPublication extends Document {
   titulo: string;
   descripcion: string;
   adicionales: string;
-  images: [
-    {
-      url: string;
-      isPrincipal: boolean;
-      filename: string;
-    }
-  ];
-  videos: [
-    {
-      url: string;
-      filename: string;
-    }
-  ];
-
+  images: Array<{
+    url: string;
+    isPrincipal: boolean;
+    filename: string;
+  }>;
+  videos: Array<{
+    url: string;
+    filename: string;
+  }>;
   createdAt: Date;
   updatedAt: Date;
 }
 
 const PublicacionSchema = new mongoose.Schema<IPublication>({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+
   esMayorDeEdad: { type: Boolean, required: true },
   nombre: { type: String, required: true },
   edad: { type: Number, required: true },
