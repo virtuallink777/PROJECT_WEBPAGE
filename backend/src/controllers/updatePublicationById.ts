@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import Publicacion from "../models/publications.models";
 import fs from "fs";
 import path from "path";
-import { ImageHashUser } from "../models/imageHashesGlobalAndUser";
+import { UserHash } from "../models/hashImagesVideos";
 
 // Controlador para actualizar una publicación
 export const updatePublicationById = async (req: Request, res: Response) => {
@@ -58,6 +58,28 @@ export const updatePublicationById = async (req: Request, res: Response) => {
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath); // Eliminar archivo fisico
         console.log(`Video eliminado: ${filePath}`);
+      }
+    }
+
+    // Ruta para eliminar los hashes de las imagenes de UserHash
+    const userHashes = await UserHash.findOne({ userId });
+    if (userHashes) {
+      for (const filename of imagesToDelete) {
+        await UserHash.findOneAndUpdate(
+          { userId },
+          { $pull: { hashes: { fileName: filename } } }
+        );
+      }
+    }
+
+    // Ruta para eliminar los hashes de los videos de UserHash
+    const userHashesVideos = await UserHash.findOne({ userId });
+    if (userHashesVideos) {
+      for (const filename of videosToDelete) {
+        await UserHash.findOneAndUpdate(
+          { userId },
+          { $pull: { hashes: { fileName: filename } } }
+        );
       }
     }
 

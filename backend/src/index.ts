@@ -21,6 +21,7 @@ import path from "node:path";
 import { getPublicationById } from "./routes/editPublication";
 import updatePublicationRoutes from "./routes/updatedPublication.route";
 import { updatePublicationImagesVideos } from "./controllers/updatePublicationImagesVideos";
+import checkHashesCreatePub from "./routes/checkHashesCreatePub";
 
 const app = express();
 
@@ -76,12 +77,16 @@ app.use("/api/publicationsThumbnails", getPublicationsThumbnailsByUserId);
 // RUTA PARA ENCONTRAR LA PUBLICACION POR ID
 app.use("/api/editPublications/:id", getPublicationById);
 
+// RUTA PARA ACTUALIZAR LA PUBLICACION
 app.use("/api/updatePublications", updatePublicationRoutes);
 
 app.put(
   "/api/updatePublicationImagesVideos/:id",
   updatePublicationImagesVideos
 );
+
+//RUTA PARA COMPARAR HASHES DE CREATEPUB
+app.use("/api/check-hashes", checkHashesCreatePub);
 
 app.use(errorHandler);
 app.listen(PORT, async () => {

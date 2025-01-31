@@ -3,7 +3,7 @@
 import { Input } from "@/components/ui/input";
 import React, { useEffect, useState } from "react";
 import { useCategoriesData } from "../../../../categoriesData/categoriesdata";
-
+import { generateFileHash } from "../../../../lib/hashFile";
 import { Button } from "@/components/ui/button";
 import VideoUploadComponent from "@/components/DownloadVideo";
 import HandleFileChange from "@/components/DownloadPhoto";
@@ -132,121 +132,170 @@ const CreatePublications: React.FC = () => {
     const formDataToSend = new FormData();
 
     try {
-      // primero subimos las imagenes
-      const imageFormData = new FormData();
-      // Añadir la foto principal primero
-      imageFormData.append("files", formData.fotoPrincipal);
+      // Generar hashes para las imágenes
+      const imageHashes = await Promise.all(
+        formData.images.map((image) => generateFileHash(image))
+      );
 
-      // Añadir las demás fotos
-      formData.images.forEach((image) => {
-        if (image !== formData.fotoPrincipal) {
-          imageFormData.append("files", image);
-        }
-      });
-
-      imageFormData.append("userId", formData.userId);
-
-      // Subir las imagenes primero
-      const imageResponse = await fetch(
-        `http://localhost:4004/api/publicacionesImage/upload/${formData.userId}`,
+      // Verificar si los hashes ya existen en el backend antes de subirlos
+      const hashCheckResponse = await fetch(
+        "http://localhost:4004/api/check-hashes",
         {
           method: "POST",
-          body: imageFormData,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ hashes: imageHashes }),
         }
       );
+      const hashCheckData = await hashCheckResponse.json();
 
-      if (!imageResponse.ok) {
-        throw new Error("Error al subir las imágenes");
+      if (hashCheckData.existingHashes.length > 0) {
+        alert(
+          "Algunas de las fotos ya existen en alguna de tus publicaciones, por favor cámbialas."
+        );
+        return;
       }
 
-      const imageData = await imageResponse.json();
+      // Si hay videos, verificar duplicados y subirlos
 
-      // Agregar campos básicos
-      Object.entries(formData).forEach(([key, value]) => {
-        if (
-          key !== "images" &&
-          key !== "videos" &&
-          key !== "fotoPrincipal" &&
-          value != null
-        ) {
-          formDataToSend.append(key, value.toString());
-        }
-      });
-
-      // Crear un array para las URLs de las imágenes
-      const imageUrls: string[] = [];
-      const isPrincipalFlags: string[] = [];
-
-      imageData.files.forEach(
-        (file: { url: string; filename: string }, index: number) => {
-          imageUrls.push(file.url);
-          isPrincipalFlags.push(index === 0 ? "true" : "false");
-        }
-      );
-
-      // Ahora añadimos todos los valores de una vez
-      formDataToSend.append("imageUrls", JSON.stringify(imageUrls));
-      formDataToSend.append("isPrincipal", JSON.stringify(isPrincipalFlags));
-
-      // Agregar videos (si hay)
       if (formData.videos && formData.videos.length > 0) {
-        console.log("Videos para enviar:", formData.videos);
+        const videoHashes = await Promise.all(
+          formData.videos.map((video) => generateFileHash(video))
+        );
 
-        // Definimos el tipo de respuesta que esperamos del servidor
-        interface VideoResponse {
-          message: string;
-          files: Array<{
-            url: string;
-            filename: string;
-          }>;
-        }
-
-        const videoFormData = new FormData();
-        formData.videos.forEach((video) => {
-          videoFormData.append("videos", video);
-        });
-
-        // enviar videos al backend
-        const videoResponse = await fetch(
-          `http://localhost:4004/api/publicacionesVideo/upload-videos/${formData.userId}`,
+        const videoHashCheckResponse = await fetch(
+          "http://localhost:4004/api/check-hashes",
           {
             method: "POST",
-            body: videoFormData,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ hashes: videoHashes }),
+          }
+        );
+        const videoHashCheckData = await videoHashCheckResponse.json();
+
+        if (videoHashCheckData.existingHashes.length > 0) {
+          alert(
+            "Algunos videos ya existen en alguna de tus publicaciones, por favor cámbialos."
+          );
+          return;
+        }
+
+        // primero subimos las imagenes
+        const imageFormData = new FormData();
+        // Añadir la foto principal primero
+        imageFormData.append("files", formData.fotoPrincipal);
+
+        // Añadir las demás fotos
+        formData.images.forEach((image) => {
+          if (image !== formData.fotoPrincipal) {
+            imageFormData.append("files", image);
+          }
+        });
+
+        imageFormData.append("userId", formData.userId);
+
+        // Subir las imagenes primero
+        const imageResponse = await fetch(
+          `http://localhost:4004/api/publicacionesImage/upload/${formData.userId}`,
+          {
+            method: "POST",
+            body: imageFormData,
           }
         );
 
-        if (!videoResponse.ok) {
-          throw new Error("Error al subir los videos");
+        if (!imageResponse.ok) {
+          throw new Error("Error al subir las imágenes");
         }
 
-        const videoData: VideoResponse = await videoResponse.json();
-        console.log("Videos subidos:", videoData);
+        const imageData = await imageResponse.json();
 
-        // Guardar las URLs de los videos en formDataToSend
-        if (videoData.files && videoData.files.length > 0) {
-          const videoUrls = videoData.files.map((file) => file.url);
-          formDataToSend.append("videoUrls", JSON.stringify(videoUrls));
+        // Agregar campos básicos
+        Object.entries(formData).forEach(([key, value]) => {
+          if (
+            key !== "images" &&
+            key !== "videos" &&
+            key !== "fotoPrincipal" &&
+            value != null
+          ) {
+            formDataToSend.append(key, value.toString());
+          }
+        });
+
+        // Crear un array para las URLs de las imágenes
+        const imageUrls: string[] = [];
+        const isPrincipalFlags: string[] = [];
+
+        imageData.files.forEach(
+          (file: { url: string; filename: string }, index: number) => {
+            imageUrls.push(file.url);
+            isPrincipalFlags.push(index === 0 ? "true" : "false");
+          }
+        );
+
+        // Ahora añadimos todos los valores de una vez
+        formDataToSend.append("imageUrls", JSON.stringify(imageUrls));
+        formDataToSend.append("isPrincipal", JSON.stringify(isPrincipalFlags));
+
+        // Agregar videos (si hay)
+        if (formData.videos && formData.videos.length > 0) {
+          console.log("Videos para enviar:", formData.videos);
+
+          // Definimos el tipo de respuesta que esperamos del servidor
+          interface VideoResponse {
+            message: string;
+            files: Array<{
+              url: string;
+              filename: string;
+            }>;
+          }
+
+          const videoFormData = new FormData();
+          formData.videos.forEach((video) => {
+            videoFormData.append("videos", video);
+          });
+
+          // enviar videos al backend
+          const videoResponse = await fetch(
+            `http://localhost:4004/api/publicacionesVideo/upload-videos/${formData.userId}`,
+            {
+              method: "POST",
+              body: videoFormData,
+            }
+          );
+
+          if (!videoResponse.ok) {
+            throw new Error("Error al subir los videos");
+          }
+
+          const videoData: VideoResponse = await videoResponse.json();
+          console.log("Videos subidos:", videoData);
+
+          // Guardar las URLs de los videos en formDataToSend
+          if (videoData.files && videoData.files.length > 0) {
+            const videoUrls = videoData.files.map((file) => file.url);
+            formDataToSend.append("videoUrls", JSON.stringify(videoUrls));
+          }
         }
-      }
 
-      console.log("Verificando datos antes de enviar:");
-      for (const pair of formDataToSend.entries()) {
-        console.log(pair[0] + ": " + pair[1]);
-      }
+        console.log("Verificando datos antes de enviar:");
+        for (const pair of formDataToSend.entries()) {
+          console.log(pair[0] + ": " + pair[1]);
+        }
 
-      // Hacer la petición final para crear la publicación
-      const response = await api.post(
-        "http://localhost:4004/publications",
-        formDataToSend
-      );
-      console.log("Publicación creada:", response.data);
-      alert("¡Publicación creada con éxito!, pasa ahora a validarla.");
-      window.location.href = "/dashboard/validate";
+        // Hacer la petición final para crear la publicación
+        const response = await api.post(
+          "http://localhost:4004/publications",
+          formDataToSend
+        );
+        console.log("Publicación creada:", response.data);
+        alert("¡Publicación creada con éxito!, pasa ahora a validarla.");
+        window.location.href = "/dashboard/validate";
+      }
     } catch (error) {
       console.error("Error al crear la publicación:", error);
       alert("Error al crear la publicación. Por favor, intenta de nuevo.");
     }
   };
+
   // Estilos comunes
   const fieldContainerStyle =
     "flex flex-col space-y-2 max-w-2xl max-w-md mx-auto";
