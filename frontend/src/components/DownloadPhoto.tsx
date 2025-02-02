@@ -93,11 +93,11 @@ const HandleFileChange: React.FC<FileChangeProps> = ({ onImagesChange }) => {
           <input
             id="fileInput"
             type="file"
+            name="file"
             accept="image/*"
             multiple
             onChange={handleFileChange}
             className="hidden"
-            required
           />
           <label
             htmlFor="fileInput"

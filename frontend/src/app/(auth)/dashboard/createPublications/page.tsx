@@ -63,6 +63,7 @@ const CreatePublications: React.FC = () => {
     videos: [],
     esMayorDeEdad: false,
   });
+  const [error, setError] = useState<string>("");
 
   // Obtenemos el ID del cliente al montar el componente
   useEffect(() => {
@@ -113,6 +114,9 @@ const CreatePublications: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+
+    console.log("primer CONSOLE.LOG DE HANDLESUBMIT", formData);
 
     if (!formData.esMayorDeEdad) {
       alert("Debes ser mayor de edad para publicar.");
@@ -130,6 +134,7 @@ const CreatePublications: React.FC = () => {
     }
 
     const formDataToSend = new FormData();
+    const userId = formData.userId;
 
     try {
       // Generar hashes para las imágenes
@@ -137,159 +142,160 @@ const CreatePublications: React.FC = () => {
         formData.images.map((image) => generateFileHash(image))
       );
 
+      // Generar hashes para los videos (si hay)
+      const videoHashes = formData.videos
+        ? await Promise.all(
+            formData.videos.map((video) => generateFileHash(video))
+          )
+        : [];
+
       // Verificar si los hashes ya existen en el backend antes de subirlos
       const hashCheckResponse = await fetch(
         "http://localhost:4004/api/check-hashes",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ hashes: imageHashes }),
+          body: JSON.stringify({ imageHashes, videoHashes, userId }),
         }
       );
+
       const hashCheckData = await hashCheckResponse.json();
 
-      if (hashCheckData.existingHashes.length > 0) {
+      if (!hashCheckResponse.ok) {
+        // Si hay duplicados, mostrar mensaje específico
+
         alert(
-          "Algunas de las fotos ya existen en alguna de tus publicaciones, por favor cámbialas."
+          "Se encontraron Imagenes o Videos duplicados en otras de tus Publicaciones . Por favor, sube otros archivos."
         );
+
+        // Opcional: Remover automáticamente los archivos duplicados
+        setFormData((prev) => ({
+          ...prev,
+          images: prev.images.filter(
+            (image, index) =>
+              !hashCheckData.duplicateImageHashes?.includes(imageHashes[index]) // Ojo con el "!"
+          ),
+          videos: prev.videos?.filter(
+            (video, index) =>
+              !hashCheckData.duplicateVideoHashes?.includes(videoHashes[index]) // Ojo con el "!"
+          ),
+        }));
         return;
       }
 
-      // Si hay videos, verificar duplicados y subirlos
+      // primero subimos las imagenes
+      const imageFormData = new FormData();
+      // Añadir la foto principal primero
+      imageFormData.append("files", formData.fotoPrincipal);
 
-      if (formData.videos && formData.videos.length > 0) {
-        const videoHashes = await Promise.all(
-          formData.videos.map((video) => generateFileHash(video))
-        );
-
-        const videoHashCheckResponse = await fetch(
-          "http://localhost:4004/api/check-hashes",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ hashes: videoHashes }),
-          }
-        );
-        const videoHashCheckData = await videoHashCheckResponse.json();
-
-        if (videoHashCheckData.existingHashes.length > 0) {
-          alert(
-            "Algunos videos ya existen en alguna de tus publicaciones, por favor cámbialos."
-          );
-          return;
+      // Añadir las demás fotos
+      formData.images.forEach((image) => {
+        if (image !== formData.fotoPrincipal) {
+          imageFormData.append("files", image);
         }
+      });
 
-        // primero subimos las imagenes
-        const imageFormData = new FormData();
-        // Añadir la foto principal primero
-        imageFormData.append("files", formData.fotoPrincipal);
+      imageFormData.append("userId", formData.userId);
 
-        // Añadir las demás fotos
-        formData.images.forEach((image) => {
-          if (image !== formData.fotoPrincipal) {
-            imageFormData.append("files", image);
-          }
-        });
+      console.log("CUARTO CONSOLE.LOG DE HANDLESUBMIT", imageFormData);
 
-        imageFormData.append("userId", formData.userId);
-
-        // Subir las imagenes primero
-        const imageResponse = await fetch(
-          `http://localhost:4004/api/publicacionesImage/upload/${formData.userId}`,
-          {
-            method: "POST",
-            body: imageFormData,
-          }
-        );
-
-        if (!imageResponse.ok) {
-          throw new Error("Error al subir las imágenes");
+      // Subir las imagenes primero
+      const imageResponse = await fetch(
+        `http://localhost:4004/api/publicacionesImage/upload/${formData.userId}`,
+        {
+          method: "POST",
+          body: imageFormData,
         }
+      );
 
-        const imageData = await imageResponse.json();
-
-        // Agregar campos básicos
-        Object.entries(formData).forEach(([key, value]) => {
-          if (
-            key !== "images" &&
-            key !== "videos" &&
-            key !== "fotoPrincipal" &&
-            value != null
-          ) {
-            formDataToSend.append(key, value.toString());
-          }
-        });
-
-        // Crear un array para las URLs de las imágenes
-        const imageUrls: string[] = [];
-        const isPrincipalFlags: string[] = [];
-
-        imageData.files.forEach(
-          (file: { url: string; filename: string }, index: number) => {
-            imageUrls.push(file.url);
-            isPrincipalFlags.push(index === 0 ? "true" : "false");
-          }
-        );
-
-        // Ahora añadimos todos los valores de una vez
-        formDataToSend.append("imageUrls", JSON.stringify(imageUrls));
-        formDataToSend.append("isPrincipal", JSON.stringify(isPrincipalFlags));
-
-        // Agregar videos (si hay)
-        if (formData.videos && formData.videos.length > 0) {
-          console.log("Videos para enviar:", formData.videos);
-
-          // Definimos el tipo de respuesta que esperamos del servidor
-          interface VideoResponse {
-            message: string;
-            files: Array<{
-              url: string;
-              filename: string;
-            }>;
-          }
-
-          const videoFormData = new FormData();
-          formData.videos.forEach((video) => {
-            videoFormData.append("videos", video);
-          });
-
-          // enviar videos al backend
-          const videoResponse = await fetch(
-            `http://localhost:4004/api/publicacionesVideo/upload-videos/${formData.userId}`,
-            {
-              method: "POST",
-              body: videoFormData,
-            }
-          );
-
-          if (!videoResponse.ok) {
-            throw new Error("Error al subir los videos");
-          }
-
-          const videoData: VideoResponse = await videoResponse.json();
-          console.log("Videos subidos:", videoData);
-
-          // Guardar las URLs de los videos en formDataToSend
-          if (videoData.files && videoData.files.length > 0) {
-            const videoUrls = videoData.files.map((file) => file.url);
-            formDataToSend.append("videoUrls", JSON.stringify(videoUrls));
-          }
-        }
-
-        console.log("Verificando datos antes de enviar:");
-        for (const pair of formDataToSend.entries()) {
-          console.log(pair[0] + ": " + pair[1]);
-        }
-
-        // Hacer la petición final para crear la publicación
-        const response = await api.post(
-          "http://localhost:4004/publications",
-          formDataToSend
-        );
-        console.log("Publicación creada:", response.data);
-        alert("¡Publicación creada con éxito!, pasa ahora a validarla.");
-        window.location.href = "/dashboard/validate";
+      if (!imageResponse.ok) {
+        throw new Error("Error al subir las imágenes");
       }
+
+      const imageData = await imageResponse.json();
+
+      // Agregar campos básicos
+      Object.entries(formData).forEach(([key, value]) => {
+        if (
+          key !== "images" &&
+          key !== "videos" &&
+          key !== "fotoPrincipal" &&
+          value != null
+        ) {
+          formDataToSend.append(key, value.toString());
+        }
+      });
+
+      // Crear un array para las URLs de las imágenes
+      const imageUrls: string[] = [];
+      const isPrincipalFlags: string[] = [];
+
+      imageData.files.forEach(
+        (file: { url: string; filename: string }, index: number) => {
+          imageUrls.push(file.url);
+          isPrincipalFlags.push(index === 0 ? "true" : "false");
+        }
+      );
+
+      // Ahora añadimos todos los valores de una vez
+      formDataToSend.append("imageUrls", JSON.stringify(imageUrls));
+      formDataToSend.append("isPrincipal", JSON.stringify(isPrincipalFlags));
+
+      console.log("QUINTO CONSOLE.LOG DE HANDLESUBMIT", formDataToSend);
+
+      // Agregar videos (si hay)
+      if (formData.videos && formData.videos.length > 0) {
+        console.log("Videos para enviar:", formData.videos);
+
+        // Definimos el tipo de respuesta que esperamos del servidor
+        interface VideoResponse {
+          message: string;
+          files: Array<{
+            url: string;
+            filename: string;
+          }>;
+        }
+
+        const videoFormData = new FormData();
+        formData.videos.forEach((video) => {
+          videoFormData.append("videos", video);
+        });
+
+        // enviar videos al backend
+        const videoResponse = await fetch(
+          `http://localhost:4004/api/publicacionesVideo/upload-videos/${formData.userId}`,
+          {
+            method: "POST",
+            body: videoFormData,
+          }
+        );
+
+        if (!videoResponse.ok) {
+          throw new Error("Error al subir los videos");
+        }
+
+        const videoData: VideoResponse = await videoResponse.json();
+        console.log("Videos subidos:", videoData);
+
+        // Guardar las URLs de los videos en formDataToSend
+        if (videoData.files && videoData.files.length > 0) {
+          const videoUrls = videoData.files.map((file) => file.url);
+          formDataToSend.append("videoUrls", JSON.stringify(videoUrls));
+        }
+      }
+
+      for (const pair of formDataToSend.entries()) {
+        console.log(pair[0] + ": " + pair[1]);
+      }
+
+      // Hacer la petición final para crear la publicación
+      const response = await api.post(
+        "http://localhost:4004/publications",
+        formDataToSend
+      );
+      console.log("Publicación creada:", response.data);
+      alert("¡Publicación creada con éxito!, pasa ahora a validarla.");
+      window.location.href = "/dashboard/validate";
     } catch (error) {
       console.error("Error al crear la publicación:", error);
       alert("Error al crear la publicación. Por favor, intenta de nuevo.");
