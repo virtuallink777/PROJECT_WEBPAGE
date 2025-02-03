@@ -6,23 +6,21 @@ import { BackupHash, UserHash } from "../models/hashImagesVideos";
 const router = express.Router();
 const fileHashService = new FileHashService();
 
-// Ruta para manejar la carga de archivos
+// 🔹 **Ruta para subir imágenes y videos (general)**
 const publicacionesUpload = router.post(
   "/upload/:userId",
   upload.array("files"),
-  copyToBackup, // Copia los archivos a la carpeta de respaldo
+  copyToBackup,
   async (req, res) => {
     try {
-      const userId = req.body.userId;
+      const userId = req.params.userId || req.body.userId;
 
-      if (!req.files) {
+      if (!req.files || (req.files as Express.Multer.File[]).length === 0) {
         return res.status(400).json({ message: "No se han subido archivos" });
       }
 
-      // Accede a la lista de archivos subidos
       const files = req.files as Express.Multer.File[];
 
-      // Generar hashes para los archivos
       const hashesPromises = files.map(async (file) => {
         const fileType = file.mimetype.startsWith("image/") ? "image" : "video";
         return await fileHashService.generateFileHash(
@@ -32,21 +30,39 @@ const publicacionesUpload = router.post(
         );
       });
 
-      // Guardar hashes en la colección del usuario
-      await UserHash.findOneAndUpdate(
-        { userId },
-        {
-          $push: {
-            hashes: { $each: await Promise.all(hashesPromises) },
-          },
-        },
-        { upsert: true } // Crear el documento si no existe
+      const fileHashes = await Promise.all(hashesPromises);
+      console.log(
+        "File Hashes antes de guardar:",
+        JSON.stringify(fileHashes, null, 2)
       );
 
-      // Guardar hashes en la base de datos
-      await BackupHash.insertMany(await Promise.all(hashesPromises));
+      if (fileHashes.some((f) => !f.fileName || !f.filePath)) {
+        return res
+          .status(400)
+          .json({ message: "Algunos archivos tienen datos faltantes" });
+      }
 
-      // Crear un array con las rutas de los archivos
+      // VALIDACION DE HASHES DUPLICADOS NUEVOS VS GUARDADOS EN userhashes y backupHashes
+
+      await BackupHash.insertMany(fileHashes);
+
+      // 🔹 **Guardar en UserHash dependiendo del tipo**
+      const updateQuery: any = {};
+      const imageFiles = fileHashes.filter((f) => f.fileType === "image");
+      const videoFiles = fileHashes.filter((f) => f.fileType === "video");
+
+      if (imageFiles.length > 0) {
+        updateQuery.$push = { imageHashes: { $each: imageFiles } };
+      }
+      if (videoFiles.length > 0) {
+        updateQuery.$push = { videoHashes: { $each: videoFiles } };
+      }
+
+      await UserHash.findOneAndUpdate({ userId }, updateQuery, {
+        upsert: true,
+        new: true,
+      });
+
       const filePaths = files.map((file) => ({
         url: `/uploads/${userId}/${file.filename}`,
         filename: file.filename,
@@ -57,13 +73,13 @@ const publicacionesUpload = router.post(
         files: filePaths,
       });
     } catch (error) {
+      console.error("Error al subir archivos:", error);
       res.status(500).json({ message: "Error al subir archivos", error });
     }
   }
 );
 
-//   RUTA PARA LOS VIDEOS
-
+// 🔹 **Ruta exclusiva para videos**
 const videosUpload = router.post(
   "/upload-videos/:userId",
   upload.array("videos"),
@@ -72,35 +88,40 @@ const videosUpload = router.post(
     try {
       const userId = req.params.userId;
 
-      if (!req.files) {
+      if (!req.files || (req.files as Express.Multer.File[]).length === 0) {
         return res.status(400).json({ message: "No se han subido videos" });
       }
 
       const files = req.files as Express.Multer.File[];
 
-      // Generar hashes para los archivos
       const hashesPromises = files.map(async (file) => {
-        const fileType = file.mimetype.startsWith("image/") ? "image" : "video";
         return await fileHashService.generateFileHash(
           file.path,
           file.filename,
-          fileType
+          "video"
         );
       });
 
-      // Guardar hashes en la colección del usuario
-      await UserHash.findOneAndUpdate(
-        { userId },
-        {
-          $push: {
-            hashes: { $each: await Promise.all(hashesPromises) },
-          },
-        },
-        { upsert: true } // Crear el documento si no existe
+      const fileHashes = await Promise.all(hashesPromises);
+      console.log(
+        "Video Hashes antes de guardar:",
+        JSON.stringify(fileHashes, null, 2)
       );
 
-      // Guardar hashes en la base de datos
-      await BackupHash.insertMany(await Promise.all(hashesPromises));
+      if (fileHashes.some((f) => !f.fileName || !f.filePath)) {
+        return res
+          .status(400)
+          .json({ message: "Algunos archivos tienen datos faltantes" });
+      }
+
+      await BackupHash.insertMany(fileHashes);
+
+      // 🔹 **Guardar solo videos en UserHash**
+      await UserHash.findOneAndUpdate(
+        { userId },
+        { $push: { videoHashes: { $each: fileHashes } } },
+        { upsert: true, new: true }
+      );
 
       const videoPaths = files.map((file) => ({
         url: `/uploads/${userId}/${file.filename}`,
@@ -112,6 +133,7 @@ const videosUpload = router.post(
         files: videoPaths,
       });
     } catch (error) {
+      console.error("Error al subir videos:", error);
       res.status(500).json({ message: "Error al subir videos", error });
     }
   }

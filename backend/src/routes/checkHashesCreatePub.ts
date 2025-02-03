@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { UserHash } from "../models/hashImagesVideos"; // Asegúrate de importar el modelo correcto
 import express from "express";
-import mongoose from "mongoose";
 
 const checkHashesRouter = express.Router();
 
@@ -23,16 +22,13 @@ checkHashesRouter.post("/", async (req: Request, res: Response) => {
       });
     }
 
-    // Convertir userId a ObjectId
-    const userObjectId = new mongoose.Types.ObjectId(userId);
-
     // Buscar en la base de datos si el usuario ya tiene una carpeta (UserHash)
-    let userHashDoc = await UserHash.findOne({ userId: userObjectId });
+    let userHashDoc = await UserHash.findOne({ userId });
 
     // Si no existe una carpeta para el usuario, crear una nueva
     if (!userHashDoc) {
       userHashDoc = new UserHash({
-        userId: userObjectId,
+        userId,
         imageHashes: [], // Inicialmente no tiene hashes de imágenes
         videoHashes: [], // Inicialmente no tiene hashes de videos
       });

@@ -137,52 +137,6 @@ const CreatePublications: React.FC = () => {
     const userId = formData.userId;
 
     try {
-      // Generar hashes para las imágenes
-      const imageHashes = await Promise.all(
-        formData.images.map((image) => generateFileHash(image))
-      );
-
-      // Generar hashes para los videos (si hay)
-      const videoHashes = formData.videos
-        ? await Promise.all(
-            formData.videos.map((video) => generateFileHash(video))
-          )
-        : [];
-
-      // Verificar si los hashes ya existen en el backend antes de subirlos
-      const hashCheckResponse = await fetch(
-        "http://localhost:4004/api/check-hashes",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageHashes, videoHashes, userId }),
-        }
-      );
-
-      const hashCheckData = await hashCheckResponse.json();
-
-      if (!hashCheckResponse.ok) {
-        // Si hay duplicados, mostrar mensaje específico
-
-        alert(
-          "Se encontraron Imagenes o Videos duplicados en otras de tus Publicaciones . Por favor, sube otros archivos."
-        );
-
-        // Opcional: Remover automáticamente los archivos duplicados
-        setFormData((prev) => ({
-          ...prev,
-          images: prev.images.filter(
-            (image, index) =>
-              !hashCheckData.duplicateImageHashes?.includes(imageHashes[index]) // Ojo con el "!"
-          ),
-          videos: prev.videos?.filter(
-            (video, index) =>
-              !hashCheckData.duplicateVideoHashes?.includes(videoHashes[index]) // Ojo con el "!"
-          ),
-        }));
-        return;
-      }
-
       // primero subimos las imagenes
       const imageFormData = new FormData();
       // Añadir la foto principal primero

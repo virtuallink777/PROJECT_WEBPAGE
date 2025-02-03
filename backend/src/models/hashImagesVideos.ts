@@ -24,8 +24,8 @@ export interface BackupHash {
 
 const fileHashSchema = new mongoose.Schema<FileHash>({
   hash: { type: String, required: true },
-  fileName: { type: String, required: false },
-  filePath: { type: String, required: false },
+  fileName: { type: String, required: true },
+  filePath: { type: String, required: true },
   createdAt: { type: Date, default: Date.now },
   fileType: { type: String, enum: ["image", "video"], required: true },
 });
