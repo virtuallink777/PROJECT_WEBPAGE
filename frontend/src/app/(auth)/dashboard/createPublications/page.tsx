@@ -3,7 +3,7 @@
 import { Input } from "@/components/ui/input";
 import React, { useEffect, useState } from "react";
 import { useCategoriesData } from "../../../../categoriesData/categoriesdata";
-import { generateFileHash } from "../../../../lib/hashFile";
+
 import { Button } from "@/components/ui/button";
 import VideoUploadComponent from "@/components/DownloadVideo";
 import HandleFileChange from "@/components/DownloadPhoto";
@@ -133,27 +133,23 @@ const CreatePublications: React.FC = () => {
       return;
     }
 
-    const formDataToSend = new FormData();
-    const userId = formData.userId;
-
     try {
-      // primero subimos las imagenes
+      // Subir imágenes: LAS IMAGENES DEBEN ESTAR CARGADAS EN EL FORMULARIO PARA PROCEDER
       const imageFormData = new FormData();
-      // Añadir la foto principal primero
       imageFormData.append("files", formData.fotoPrincipal);
 
-      // Añadir las demás fotos
-      formData.images.forEach((image) => {
-        if (image !== formData.fotoPrincipal) {
-          imageFormData.append("files", image);
-        }
-      });
+      if (Array.isArray(formData.images)) {
+        formData.images.forEach((image) => {
+          if (image !== formData.fotoPrincipal) {
+            imageFormData.append("files", image);
+          }
+        });
+      }
 
       imageFormData.append("userId", formData.userId);
 
-      console.log("CUARTO CONSOLE.LOG DE HANDLESUBMIT", imageFormData);
+      console.log("DATOS ENVIADOS AL BACKEDN DE LAS IMAGENES", imageFormData);
 
-      // Subir las imagenes primero
       const imageResponse = await fetch(
         `http://localhost:4004/api/publicacionesImage/upload/${formData.userId}`,
         {
@@ -162,11 +158,28 @@ const CreatePublications: React.FC = () => {
         }
       );
 
+      // Manejar la respuesta del backend
+      const imageData = await imageResponse.json();
+
       if (!imageResponse.ok) {
-        throw new Error("Error al subir las imágenes");
+        // Si hay archivos duplicados, mostrar un mensaje al usuario
+        if (imageData.duplicateFiles && imageData.duplicateFiles.length > 0) {
+          const duplicateFileNames = imageData.duplicateFiles.map(
+            (file: { filename: string }) => file.filename
+          );
+          alert(
+            `Los siguientes archivos ya existen y no se subieron: ${duplicateFileNames.join(
+              ", "
+            )}`
+          );
+          return; // Detener el proceso si hay duplicados
+        } else {
+          throw new Error("Error al subir las imágenes");
+        }
       }
 
-      const imageData = await imageResponse.json();
+      // Si no hay duplicados, continuar con el proceso
+      const formDataToSend = new FormData();
 
       // Agregar campos básicos
       Object.entries(formData).forEach(([key, value]) => {
@@ -184,38 +197,25 @@ const CreatePublications: React.FC = () => {
       const imageUrls: string[] = [];
       const isPrincipalFlags: string[] = [];
 
-      imageData.files.forEach(
+      imageData.uploadedFiles.forEach(
         (file: { url: string; filename: string }, index: number) => {
           imageUrls.push(file.url);
           isPrincipalFlags.push(index === 0 ? "true" : "false");
         }
       );
 
-      // Ahora añadimos todos los valores de una vez
       formDataToSend.append("imageUrls", JSON.stringify(imageUrls));
       formDataToSend.append("isPrincipal", JSON.stringify(isPrincipalFlags));
 
-      console.log("QUINTO CONSOLE.LOG DE HANDLESUBMIT", formDataToSend);
-
-      // Agregar videos (si hay)
+      // Subir videos (si hay)
       if (formData.videos && formData.videos.length > 0) {
-        console.log("Videos para enviar:", formData.videos);
-
-        // Definimos el tipo de respuesta que esperamos del servidor
-        interface VideoResponse {
-          message: string;
-          files: Array<{
-            url: string;
-            filename: string;
-          }>;
+        const videoFormData = new FormData();
+        if (Array.isArray(formData.videos)) {
+          formData.videos.forEach((video) => {
+            videoFormData.append("videos", video);
+          });
         }
 
-        const videoFormData = new FormData();
-        formData.videos.forEach((video) => {
-          videoFormData.append("videos", video);
-        });
-
-        // enviar videos al backend
         const videoResponse = await fetch(
           `http://localhost:4004/api/publicacionesVideo/upload-videos/${formData.userId}`,
           {
@@ -224,22 +224,33 @@ const CreatePublications: React.FC = () => {
           }
         );
 
+        // Manejar la respuesta del backend para videos
+        const videoData = await videoResponse.json();
+
         if (!videoResponse.ok) {
-          throw new Error("Error al subir los videos");
+          // Si hay archivos duplicados, mostrar un mensaje al usuario
+          if (videoData.duplicateFiles && videoData.duplicateFiles.length > 0) {
+            const duplicateFileNames = videoData.duplicateFiles.map(
+              (file: { filename: string }) => file.filename
+            );
+            alert(
+              `Los siguientes videos ya existen y no se subieron: ${duplicateFileNames.join(
+                ", "
+              )}`
+            );
+            return; // Detener el proceso si hay duplicados
+          } else {
+            throw new Error("Error al subir los videos");
+          }
         }
 
-        const videoData: VideoResponse = await videoResponse.json();
-        console.log("Videos subidos:", videoData);
-
-        // Guardar las URLs de los videos en formDataToSend
-        if (videoData.files && videoData.files.length > 0) {
-          const videoUrls = videoData.files.map((file) => file.url);
+        // Guardar las URLs de los videos
+        if (videoData.uploadedFiles && videoData.uploadedFiles.length > 0) {
+          const videoUrls = videoData.uploadedFiles.map(
+            (file: { url: string }) => file.url
+          );
           formDataToSend.append("videoUrls", JSON.stringify(videoUrls));
         }
-      }
-
-      for (const pair of formDataToSend.entries()) {
-        console.log(pair[0] + ": " + pair[1]);
       }
 
       // Hacer la petición final para crear la publicación
