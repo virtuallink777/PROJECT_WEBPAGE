@@ -148,7 +148,9 @@ const CreatePublications: React.FC = () => {
 
       imageFormData.append("userId", formData.userId);
 
-      console.log("DATOS ENVIADOS AL BACKEDN DE LAS IMAGENES", imageFormData);
+      for (const [key, value] of imageFormData.entries()) {
+        console.log(key, value);
+      }
 
       const imageResponse = await fetch(
         `http://localhost:4004/api/publicacionesImage/upload/${formData.userId}`,
@@ -214,6 +216,10 @@ const CreatePublications: React.FC = () => {
           formData.videos.forEach((video) => {
             videoFormData.append("videos", video);
           });
+        }
+
+        for (const [key, value] of videoFormData.entries()) {
+          console.log("VIDEOS ENVIADOS AL BACKEND", key, value);
         }
 
         const videoResponse = await fetch(
