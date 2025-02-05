@@ -12,10 +12,7 @@ import userRoutes from "./routes/user.route";
 import sessionRoutes from "./routes/session.route";
 import dashboardRoutes from "./routes/dashboard.route";
 import publicationsRouter from "./routes/publication.route";
-import {
-  publicacionesUpload,
-  videosUpload,
-} from "./routes/publicaciones.upload";
+import publicacionesUpload from "./routes/publicaciones.upload";
 import getPublicationsThumbnailsByUserId from "./routes/publication.thumbnails.route";
 import path from "node:path";
 import { getPublicationById } from "./routes/editPublication";
@@ -63,10 +60,6 @@ app.use("/dashboard", authenticate, dashboardRoutes);
 // ruta para subir las imagenes NUEVAS DE CREATE PUB A uploads y uploadsbackup
 app.use("/api/publicacionesImage", publicacionesUpload);
 console.log("Ruta de uploads por pirmeravez ok registrada correctamente");
-
-// ruta para subir los videos NUEVOS A uploads y uploadsbackup
-app.use("/api/publicacionesVideo", videosUpload);
-console.log("Ruta de subida de videos registrada correctamente");
 
 // ruta para subir la publicacion nuevas a mongodb
 app.use("/publications", publicationsRouter);

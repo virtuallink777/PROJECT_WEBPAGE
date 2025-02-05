@@ -214,7 +214,7 @@ const CreatePublications: React.FC = () => {
         const videoFormData = new FormData();
         if (Array.isArray(formData.videos)) {
           formData.videos.forEach((video) => {
-            videoFormData.append("videos", video);
+            videoFormData.append("files", video);
           });
         }
 
@@ -223,7 +223,7 @@ const CreatePublications: React.FC = () => {
         }
 
         const videoResponse = await fetch(
-          `http://localhost:4004/api/publicacionesVideo/upload-videos/${formData.userId}`,
+          `http://localhost:4004/api/publicacionesImage/upload/${formData.userId}`,
           {
             method: "POST",
             body: videoFormData,
