@@ -134,36 +134,50 @@ const CreatePublications: React.FC = () => {
     }
 
     try {
+      const formDataToSend = new FormData();
+
+      // Crear un único FormData para todos los archivos
+      const combinedFormData = new FormData();
       // Subir imágenes: LAS IMAGENES DEBEN ESTAR CARGADAS EN EL FORMULARIO PARA PROCEDER
-      const imageFormData = new FormData();
-      imageFormData.append("files", formData.fotoPrincipal);
+
+      // Subir imágenes
+      combinedFormData.append("files", formData.fotoPrincipal);
+      combinedFormData.append("type", "image"); // Indicar que es una imagen
 
       if (Array.isArray(formData.images)) {
         formData.images.forEach((image) => {
           if (image !== formData.fotoPrincipal) {
-            imageFormData.append("files", image);
+            combinedFormData.append("files", image);
+            combinedFormData.append("type", "image"); // Indicar que es una imagen
           }
         });
       }
 
-      imageFormData.append("userId", formData.userId);
+      combinedFormData.append("userId", formData.userId);
 
-      for (const [key, value] of imageFormData.entries()) {
-        console.log(key, value);
+      // Subir videos (si hay)
+      if (formData.videos && formData.videos.length > 0) {
+        if (Array.isArray(formData.videos)) {
+          formData.videos.forEach((video) => {
+            combinedFormData.append("files", video);
+            combinedFormData.append("type", "video"); // Indicar que es un video
+          });
+        }
       }
 
-      const imageResponse = await fetch(
+      const ResponseImageVideo = await fetch(
         `http://localhost:4004/api/publicacionesImage/upload/${formData.userId}`,
         {
           method: "POST",
-          body: imageFormData,
+          body: combinedFormData,
         }
       );
 
       // Manejar la respuesta del backend
-      const imageData = await imageResponse.json();
+      const imageData = await ResponseImageVideo.json();
+      console.log("Respuesta del backend:", imageData);
 
-      if (!imageResponse.ok) {
+      if (!ResponseImageVideo.ok) {
         // Si hay archivos duplicados, mostrar un mensaje al usuario
         if (imageData.duplicateFiles && imageData.duplicateFiles.length > 0) {
           const duplicateFileNames = imageData.duplicateFiles.map(
@@ -180,8 +194,27 @@ const CreatePublications: React.FC = () => {
         }
       }
 
+      // Verificar que imageData.uploadedFiles exista y tenga datos
+      if (!imageData.uploadedFiles || !Array.isArray(imageData.uploadedFiles)) {
+        throw new Error("No se recibieron archivos subidos desde el backend.");
+      }
+
       // Si no hay duplicados, continuar con el proceso
-      const formDataToSend = new FormData();
+      // Separar las URLs de imágenes y videos
+      const imageUrls: string[] = [];
+      const videoUrls: string[] = [];
+      const isPrincipalFlags: string[] = [];
+
+      imageData.uploadedFiles.forEach(
+        (file: { url: string; type: string }, index: number) => {
+          if (file.type === "image") {
+            imageUrls.push(file.url);
+            isPrincipalFlags.push(index === 0 ? "true" : "false"); // Marcar la primera imagen como principal
+          } else if (file.type === "video") {
+            videoUrls.push(file.url);
+          }
+        }
+      );
 
       // Agregar campos básicos
       Object.entries(formData).forEach(([key, value]) => {
@@ -195,69 +228,10 @@ const CreatePublications: React.FC = () => {
         }
       });
 
-      // Crear un array para las URLs de las imágenes
-      const imageUrls: string[] = [];
-      const isPrincipalFlags: string[] = [];
-
-      imageData.uploadedFiles.forEach(
-        (file: { url: string; filename: string }, index: number) => {
-          imageUrls.push(file.url);
-          isPrincipalFlags.push(index === 0 ? "true" : "false");
-        }
-      );
-
+      // Agregar las URLs de imágenes y videos al FormData
       formDataToSend.append("imageUrls", JSON.stringify(imageUrls));
       formDataToSend.append("isPrincipal", JSON.stringify(isPrincipalFlags));
-
-      // Subir videos (si hay)
-      if (formData.videos && formData.videos.length > 0) {
-        const videoFormData = new FormData();
-        if (Array.isArray(formData.videos)) {
-          formData.videos.forEach((video) => {
-            videoFormData.append("files", video);
-          });
-        }
-
-        for (const [key, value] of videoFormData.entries()) {
-          console.log("VIDEOS ENVIADOS AL BACKEND", key, value);
-        }
-
-        const videoResponse = await fetch(
-          `http://localhost:4004/api/publicacionesImage/upload/${formData.userId}`,
-          {
-            method: "POST",
-            body: videoFormData,
-          }
-        );
-
-        // Manejar la respuesta del backend para videos
-        const videoData = await videoResponse.json();
-
-        if (!videoResponse.ok) {
-          // Si hay archivos duplicados, mostrar un mensaje al usuario
-          if (videoData.duplicateFiles && videoData.duplicateFiles.length > 0) {
-            const duplicateFileNames = videoData.duplicateFiles.map(
-              (file: { filename: string }) => file.filename
-            );
-            alert(
-              `Los siguientes videos ya existen y no se subieron: ${duplicateFileNames.join(
-                ", "
-              )}`
-            );
-            return; // Detener el proceso si hay duplicados
-          } else {
-            throw new Error("Error al subir los videos");
-          }
-        }
-
-        // Guardar las URLs de los videos
-        if (videoData.uploadedFiles && videoData.uploadedFiles.length > 0) {
-          const videoUrls = videoData.uploadedFiles.map(
-            (file: { url: string }) => file.url
-          );
-          formDataToSend.append("videoUrls", JSON.stringify(videoUrls));
-        }
-      }
+      formDataToSend.append("videoUrls", JSON.stringify(videoUrls));
 
       // Hacer la petición final para crear la publicación
       const response = await api.post(

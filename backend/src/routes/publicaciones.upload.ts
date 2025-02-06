@@ -15,8 +15,6 @@ const publicacionesUpload = router.post(
   upload.array("files"),
   copyToBackup,
   async (req, res) => {
-    const session = await mongoose.startSession(); // 🟢 Iniciar transacción
-    session.startTransaction();
     try {
       const userId = req.params.userId || req.body.userId;
 
@@ -28,6 +26,7 @@ const publicacionesUpload = router.post(
       }
 
       const files = req.files as Express.Multer.File[];
+      console.log("ARCHIVOS RECBIDOS DEL FRONTEND:", files);
 
       // Generar hashes para todos los archivos (imágenes y videos)
       const fileHashes = await Promise.all(
@@ -90,9 +89,6 @@ const publicacionesUpload = router.post(
           }
         });
 
-        await session.abortTransaction(); // 🛑 Cancelar la transacción
-        session.endSession();
-
         return res.status(400).json({
           message:
             "Se detectaron archivos duplicados. No se subió ningún archivo.",
@@ -120,19 +116,15 @@ const publicacionesUpload = router.post(
         { upsert: true, new: true }
       );
 
-      await session.commitTransaction(); // ✅ Confirmar la transacción
-      session.endSession();
-
       res.status(200).json({
         message: "Archivos subidos exitosamente",
         uploadedFiles: fileHashes.map((f) => ({
           url: `/uploads/${userId}/${f.fileName}`,
           filename: f.fileName,
+          type: f.fileType, // Incluir el tipo de archivo (image o video)
         })),
       });
     } catch (error) {
-      await session.abortTransaction(); // 🛑 Cancelar la transacción en caso de error
-      session.endSession();
       console.error("Error al subir archivos:", error);
       res.status(500).json({ message: "Error al subir archivos", error });
     }
