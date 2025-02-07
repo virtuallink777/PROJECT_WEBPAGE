@@ -50,6 +50,26 @@ const publicacionesUpload = router.post(
           existingHashes?.videoHashes.some((vid) => vid.hash === hash.hash)
       );
 
+      //****************aca va logica para buscar en mongodb los hashes */
+      const duplicateImages = existingHashes?.imageHashes.filter((img) =>
+        duplicateFiles.some((f) => f.hash === img.hash)
+      );
+      const duplicateVideos = existingHashes?.videoHashes.filter((vid) =>
+        duplicateFiles.some((f) => f.hash === vid.hash)
+      );
+      // combinamos resultados
+      const duplicateFilesExport = [
+        ...(duplicateImages?.map((img) => ({
+          filename: img.fileName,
+          filePath: `http://localhost:4004/uploads/${userId}/${img.fileName}`,
+        })) || []),
+        ...(duplicateVideos?.map((vid) => ({
+          filename: vid.fileName,
+          filePath: `http://localhost:4004/uploads/${userId}/${vid.fileName}`,
+        })) || []),
+      ];
+      console.log("ARCHIVOS Duplicados para export:", duplicateFilesExport);
+
       // Si hay archivos duplicados, no subir nada y responder con un mensaje
       if (duplicateFiles.length > 0) {
         console.log(`Archivos duplicados detectados: ${duplicateFiles.length}`);
@@ -92,9 +112,7 @@ const publicacionesUpload = router.post(
         return res.status(400).json({
           message:
             "Se detectaron archivos duplicados. No se subió ningún archivo.",
-          duplicateFiles: duplicateFiles.map((f) => ({
-            filename: f.fileName,
-          })),
+          duplicateFiles: duplicateFilesExport,
         });
       }
 

@@ -9,6 +9,8 @@ import VideoUploadComponent from "@/components/DownloadVideo";
 import HandleFileChange from "@/components/DownloadPhoto";
 import api from "@/lib/api";
 
+import DuplicateFilesPopup from "@/components/ShowImageVideoCreatePub";
+
 interface FormData {
   userId: string;
   nombre: string;
@@ -64,6 +66,9 @@ const CreatePublications: React.FC = () => {
     esMayorDeEdad: false,
   });
   const [error, setError] = useState<string>("");
+  const [duplicateFiles, setDuplicateFiles] = useState<
+    { filename: string; filePath: string }[]
+  >([]);
 
   // Obtenemos el ID del cliente al montar el componente
   useEffect(() => {
@@ -106,11 +111,9 @@ const CreatePublications: React.FC = () => {
     }
   };
 
-  const handleVideosChange = (videos: File[]) => {
-    if (videos !== formData.videos) {
-      setFormData((prev) => ({ ...prev, videos }));
-    }
-  };
+  useEffect(() => {
+    console.log("Nuevo estado de duplicateFiles:", duplicateFiles);
+  }, [duplicateFiles]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -178,20 +181,19 @@ const CreatePublications: React.FC = () => {
       console.log("Respuesta del backend:", imageData);
 
       if (!ResponseImageVideo.ok) {
+        console.log(
+          "Ejecutando setDuplicateFiles con:",
+          imageData.duplicateFiles
+        );
         // Si hay archivos duplicados, mostrar un mensaje al usuario
         if (imageData.duplicateFiles && imageData.duplicateFiles.length > 0) {
-          const duplicateFileNames = imageData.duplicateFiles.map(
-            (file: { filename: string }) => file.filename
-          );
-          alert(
-            `Los siguientes archivos ya existen y no se subieron: ${duplicateFileNames.join(
-              ", "
-            )}`
-          );
-          return; // Detener el proceso si hay duplicados
+          console.log("Nuevos duplicados recibidos:", imageData.duplicateFiles);
+          setDuplicateFiles([]); // Limpiar el estado
+          setDuplicateFiles([...imageData.duplicateFiles]);
         } else {
           throw new Error("Error al subir las imágenes");
         }
+        return; // Detener el proceso si hay duplicados
       }
 
       // Verificar que imageData.uploadedFiles exista y tenga datos
@@ -256,356 +258,377 @@ const CreatePublications: React.FC = () => {
   const textareaStyle =
     "w-full border border-gray-300 rounded p-2 min-h-[200px] resize-y";
   const checkboxContainerStyle = "flex items-center space-x-2";
-
+  console.log("Estado actual de duplicateFiles:", duplicateFiles);
   return (
-    <div className="container mx-auto px-8 py-8">
-      <div className="max-w-4xl mx-auto">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Primer bloque */}
-          <div className="space-y-4">
-            {/* Primera fila: Checkbox y Nombre */}
-            <div className="grid grid-cols-2 gap-6">
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="esMayorDeEdad"
-                  name="esMayorDeEdad"
-                  checked={formData.esMayorDeEdad}
-                  onChange={handleInputChange}
-                  className="h-4 w-4 text-blue-600"
-                  required
-                />
-                <label
-                  htmlFor="esMayorDeEdad"
-                  className="text-gray-700 font-semibold ml-2"
-                >
-                  Soy mayor de edad
-                </label>
-              </div>
+    <>
+      {/*COMPONENTE QUE RENDERIZA LOS DUPLICADOS*/}
+      <div>
+        {duplicateFiles && duplicateFiles.length > 0 && (
+          <DuplicateFilesPopup
+            onClose={() => setDuplicateFiles([])}
+            duplicateFiles={duplicateFiles}
+          />
+        )}
+      </div>
 
-              {formData.esMayorDeEdad && (
-                <p className="text-sm text-gray-600">
-                  Al confirmar que eres mayor de 18 años, aceptas nuestros{" "}
-                  <a
-                    href="/terminos"
-                    className="text-blue-600 underline hover:text-blue-800"
+      <div className="container mx-auto px-8 py-8">
+        <div className="max-w-4xl mx-auto">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Primer bloque */}
+            <div className="space-y-4">
+              {/* Primera fila: Checkbox y Nombre */}
+              <div className="grid grid-cols-2 gap-6">
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="esMayorDeEdad"
+                    name="esMayorDeEdad"
+                    checked={formData.esMayorDeEdad}
+                    onChange={handleInputChange}
+                    className="h-4 w-4 text-blue-600"
+                    required
+                  />
+                  <label
+                    htmlFor="esMayorDeEdad"
+                    className="text-gray-700 font-semibold ml-2"
                   >
-                    términos y condiciones
-                  </a>
-                </p>
-              )}
-              <div>
-                <label
-                  htmlFor="nombre"
-                  className="text-gray-700 font-semibold block"
-                >
-                  Nombre:
-                </label>
-                <Input
-                  id="nombre"
-                  name="nombre"
-                  type="text"
-                  placeholder="Ingrese su nombre"
-                  value={formData.nombre}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full bg-white"
-                />
-              </div>
-            </div>
+                    Soy mayor de edad
+                  </label>
+                </div>
 
-            {/* Segunda fila: Edad y Teléfono */}
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <label
-                  htmlFor="edad"
-                  className="text-gray-700 font-semibold block"
-                >
-                  Edad:
-                </label>
-                <Input
-                  id="edad"
-                  name="edad"
-                  type="number"
-                  placeholder="Edad"
-                  min={18}
-                  max={70}
-                  value={formData.edad}
-                  onChange={handleInputChange}
-                  required
-                  className="w-fit bg-white"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="telefono"
-                  className="text-gray-700 font-semibold block"
-                >
-                  Teléfono:
-                </label>
-                <Input
-                  id="telefono"
-                  name="telefono"
-                  type="tel"
-                  placeholder="Ingrese su teléfono"
-                  value={formData.telefono}
-                  onChange={handleInputChange}
-                  required
-                  pattern="[0-9]{10}"
-                  title="Ingrese un número de teléfono válido de 10 dígitos"
-                  className="w-full bg-white"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="border-b border-gray-500" />
-
-          {/* Campo Categorías */}
-          <div className={fieldContainerStyle}>
-            <label htmlFor="Categorias" className={labelStyle}>
-              Categorías:
-            </label>
-            <select
-              id="Categorias"
-              name="Categorias"
-              className={selectStyle}
-              value={formData.Categorias}
-              onChange={handleInputChange}
-              required
-            >
-              <option value="">Selecciona una categoría</option>
-              {categoriesData.Categorias.map((categoria) => (
-                <option key={categoria} value={categoria}>
-                  {categoria}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Campo País */}
-          <div className={fieldContainerStyle}>
-            <label htmlFor="Pais" className={labelStyle}>
-              País:
-            </label>
-            <select
-              id="Pais"
-              name="Pais"
-              className={selectStyle}
-              value={formData.Pais}
-              onChange={handleInputChange}
-              required
-            >
-              <option value="">Selecciona un país</option>
-              {categoriesData.countries.map((country) => (
-                <option key={country} value={country}>
-                  {country}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Campo Departamento */}
-          {formData.Pais && (
-            <div className={fieldContainerStyle}>
-              <label htmlFor="Departamento" className={labelStyle}>
-                Departamento:
-              </label>
-              <select
-                id="Departamento"
-                name="Departamento"
-                className={selectStyle}
-                value={formData.Departamento}
-                onChange={handleInputChange}
-                required
-              >
-                <option value="">Selecciona un departamento</option>
-                {categoriesData.departments[formData.Pais]?.map(
-                  (departamento) => (
-                    <option key={departamento} value={departamento}>
-                      {departamento.replace(/_/g, " ")}
-                    </option>
-                  )
+                {formData.esMayorDeEdad && (
+                  <p className="text-sm text-gray-600">
+                    Al confirmar que eres mayor de 18 años, aceptas nuestros{" "}
+                    <a
+                      href="/terminos"
+                      className="text-blue-600 underline hover:text-blue-800"
+                    >
+                      términos y condiciones
+                    </a>
+                  </p>
                 )}
-              </select>
-            </div>
-          )}
+                <div>
+                  <label
+                    htmlFor="nombre"
+                    className="text-gray-700 font-semibold block"
+                  >
+                    Nombre:
+                  </label>
+                  <Input
+                    id="nombre"
+                    name="nombre"
+                    type="text"
+                    placeholder="Ingrese su nombre"
+                    value={formData.nombre}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full bg-white"
+                  />
+                </div>
+              </div>
 
-          {/* Campo Ciudad */}
-          {formData.Departamento && (
+              {/* Segunda fila: Edad y Teléfono */}
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <label
+                    htmlFor="edad"
+                    className="text-gray-700 font-semibold block"
+                  >
+                    Edad:
+                  </label>
+                  <Input
+                    id="edad"
+                    name="edad"
+                    type="number"
+                    placeholder="Edad"
+                    min={18}
+                    max={70}
+                    value={formData.edad}
+                    onChange={handleInputChange}
+                    required
+                    className="w-fit bg-white"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="telefono"
+                    className="text-gray-700 font-semibold block"
+                  >
+                    Teléfono:
+                  </label>
+                  <Input
+                    id="telefono"
+                    name="telefono"
+                    type="tel"
+                    placeholder="Ingrese su teléfono"
+                    value={formData.telefono}
+                    onChange={handleInputChange}
+                    required
+                    pattern="[0-9]{10}"
+                    title="Ingrese un número de teléfono válido de 10 dígitos"
+                    className="w-full bg-white"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="border-b border-gray-500" />
+
+            {/* Campo Categorías */}
             <div className={fieldContainerStyle}>
-              <label htmlFor="ciudad" className={labelStyle}>
-                Ciudad:
+              <label htmlFor="Categorias" className={labelStyle}>
+                Categorías:
               </label>
               <select
-                id="ciudad"
-                name="ciudad"
+                id="Categorias"
+                name="Categorias"
                 className={selectStyle}
-                value={formData.ciudad}
+                value={formData.Categorias}
                 onChange={handleInputChange}
                 required
               >
-                <option value="">Selecciona una ciudad</option>
-                {categoriesData.cities[formData.Departamento]?.map((ciudad) => (
-                  <option key={ciudad} value={ciudad}>
-                    {ciudad.replace(/_/g, " ")}
+                <option value="">Selecciona una categoría</option>
+                {categoriesData.Categorias.map((categoria) => (
+                  <option key={categoria} value={categoria}>
+                    {categoria}
                   </option>
                 ))}
               </select>
             </div>
-          )}
 
-          {/* Campo Localidad */}
-          {formData.ciudad && (
+            {/* Campo País */}
             <div className={fieldContainerStyle}>
-              <label htmlFor="Localidad" className={labelStyle}>
-                Localidad:
+              <label htmlFor="Pais" className={labelStyle}>
+                País:
               </label>
               <select
-                id="Localidad"
-                name="Localidad"
+                id="Pais"
+                name="Pais"
                 className={selectStyle}
-                value={formData.Localidad}
+                value={formData.Pais}
                 onChange={handleInputChange}
                 required
               >
-                <option value="">Selecciona una localidad</option>
-                {categoriesData.localities[formData.ciudad]?.map(
-                  (localidad) => (
-                    <option key={localidad} value={localidad}>
-                      {localidad.replace(/_/g, " ")}
-                    </option>
-                  )
-                )}
+                <option value="">Selecciona un país</option>
+                {categoriesData.countries.map((country) => (
+                  <option key={country} value={country}>
+                    {country}
+                  </option>
+                ))}
               </select>
             </div>
-          )}
 
-          {/* Campo Dirección */}
-          <div className={fieldContainerStyle}>
-            <label htmlFor="direccion" className={labelStyle}>
-              Dirección (opcional):
-            </label>
-            <Input
-              id="direccion"
-              name="direccion"
-              className={inputStyle}
-              type="text"
-              placeholder="Ingresa tu dirección, o un lugar conocido de referencia"
-              value={formData.direccion}
-              onChange={handleInputChange}
+            {/* Campo Departamento */}
+            {formData.Pais && (
+              <div className={fieldContainerStyle}>
+                <label htmlFor="Departamento" className={labelStyle}>
+                  Departamento:
+                </label>
+                <select
+                  id="Departamento"
+                  name="Departamento"
+                  className={selectStyle}
+                  value={formData.Departamento}
+                  onChange={handleInputChange}
+                  required
+                >
+                  <option value="">Selecciona un departamento</option>
+                  {categoriesData.departments[formData.Pais]?.map(
+                    (departamento) => (
+                      <option key={departamento} value={departamento}>
+                        {departamento.replace(/_/g, " ")}
+                      </option>
+                    )
+                  )}
+                </select>
+              </div>
+            )}
+
+            {/* Campo Ciudad */}
+            {formData.Departamento && (
+              <div className={fieldContainerStyle}>
+                <label htmlFor="ciudad" className={labelStyle}>
+                  Ciudad:
+                </label>
+                <select
+                  id="ciudad"
+                  name="ciudad"
+                  className={selectStyle}
+                  value={formData.ciudad}
+                  onChange={handleInputChange}
+                  required
+                >
+                  <option value="">Selecciona una ciudad</option>
+                  {categoriesData.cities[formData.Departamento]?.map(
+                    (ciudad) => (
+                      <option key={ciudad} value={ciudad}>
+                        {ciudad.replace(/_/g, " ")}
+                      </option>
+                    )
+                  )}
+                </select>
+              </div>
+            )}
+
+            {/* Campo Localidad */}
+            {formData.ciudad && (
+              <div className={fieldContainerStyle}>
+                <label htmlFor="Localidad" className={labelStyle}>
+                  Localidad:
+                </label>
+                <select
+                  id="Localidad"
+                  name="Localidad"
+                  className={selectStyle}
+                  value={formData.Localidad}
+                  onChange={handleInputChange}
+                  required
+                >
+                  <option value="">Selecciona una localidad</option>
+                  {categoriesData.localities[formData.ciudad]?.map(
+                    (localidad) => (
+                      <option key={localidad} value={localidad}>
+                        {localidad.replace(/_/g, " ")}
+                      </option>
+                    )
+                  )}
+                </select>
+              </div>
+            )}
+
+            {/* Campo Dirección */}
+            <div className={fieldContainerStyle}>
+              <label htmlFor="direccion" className={labelStyle}>
+                Dirección (opcional):
+              </label>
+              <Input
+                id="direccion"
+                name="direccion"
+                className={inputStyle}
+                type="text"
+                placeholder="Ingresa tu dirección, o un lugar conocido de referencia"
+                value={formData.direccion}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            {/* Checkbox Google Maps */}
+            <div className={checkboxContainerStyle}>
+              <input
+                type="checkbox"
+                id="mostrarEnMaps"
+                name="mostrarEnMaps"
+                checked={formData.mostrarEnMaps}
+                onChange={handleInputChange}
+                className="h-4 w-4 text-blue-600"
+              />
+              <label htmlFor="mostrarEnMaps" className={labelStyle}>
+                Mostrar dirección en Google Maps
+              </label>
+            </div>
+
+            <div className="border-b border-gray-500" />
+
+            {/* Título de la publicación */}
+            <div className="flex flex-col space-y-2 mx-auto">
+              <label htmlFor="titulo" className={labelStyle}>
+                Título de la publicación (min:50, max:120):
+              </label>
+              <Input
+                id="titulo"
+                name="titulo"
+                className={inputStyle}
+                type="text"
+                placeholder="Ingrese el título de su publicación"
+                value={formData.titulo}
+                onChange={handleInputChange}
+                required
+                minLength={50}
+                maxLength={120}
+              />
+              <span className="text-sm text-gray-500">
+                {formData.titulo.length}/120 caracteres
+              </span>
+            </div>
+
+            {/* Descripción de la publicación */}
+            <div className="flex flex-col space-y-2 mx-auto">
+              <label htmlFor="descripcion" className={labelStyle}>
+                Descripción de la publicación (min:200, max:400):
+              </label>
+              <textarea
+                id="descripcion"
+                name="descripcion"
+                className={textareaStyle}
+                value={formData.descripcion}
+                onChange={handleInputChange}
+                required
+                minLength={200}
+                maxLength={400}
+                placeholder="Describe tu publicación (mínimo 200 caracteres, máximo 400)"
+                spellCheck="true"
+              />
+              <span className="text-sm text-gray-500">
+                {formData.descripcion.length}/400 caracteres
+              </span>
+            </div>
+
+            {/* Adicionales */}
+            <div className="flex flex-col space-y-2 mx-auto">
+              <label htmlFor="adicionales" className={labelStyle}>
+                ¿Qué adicionales haces? (min:50, max:300):
+              </label>
+              <textarea
+                id="adicionales"
+                name="adicionales"
+                className="w-full border border-gray-300 rounded p-2 min-h-[100px] resize-y"
+                value={formData.adicionales}
+                onChange={handleInputChange}
+                required
+                minLength={50}
+                maxLength={300}
+                placeholder="Describe los servicios adicionales que ofreces (mínimo 50 caracteres, máximo 300)"
+                spellCheck="true"
+              />
+              <span className="text-sm text-gray-500">
+                {formData.adicionales.length}/300 caracteres
+              </span>
+            </div>
+
+            <div className="border-b border-gray-500" />
+
+            {/* Subir Fotos */}
+            <HandleFileChange
+              onImagesChange={(images, mainPhoto) =>
+                setFormData({
+                  ...formData,
+                  images: images,
+                  fotoPrincipal: mainPhoto,
+                })
+              }
             />
-          </div>
 
-          {/* Checkbox Google Maps */}
-          <div className={checkboxContainerStyle}>
-            <input
-              type="checkbox"
-              id="mostrarEnMaps"
-              name="mostrarEnMaps"
-              checked={formData.mostrarEnMaps}
-              onChange={handleInputChange}
-              className="h-4 w-4 text-blue-600"
+            {/* Subir Videos */}
+
+            <VideoUploadComponent
+              onChange={(videos) =>
+                setFormData({
+                  ...formData,
+                  videos: videos,
+                })
+              }
             />
-            <label htmlFor="mostrarEnMaps" className={labelStyle}>
-              Mostrar dirección en Google Maps
-            </label>
-          </div>
 
-          <div className="border-b border-gray-500" />
-
-          {/* Título de la publicación */}
-          <div className="flex flex-col space-y-2 mx-auto">
-            <label htmlFor="titulo" className={labelStyle}>
-              Título de la publicación (min:50, max:120):
-            </label>
-            <Input
-              id="titulo"
-              name="titulo"
-              className={inputStyle}
-              type="text"
-              placeholder="Ingrese el título de su publicación"
-              value={formData.titulo}
-              onChange={handleInputChange}
-              required
-              minLength={50}
-              maxLength={120}
-            />
-            <span className="text-sm text-gray-500">
-              {formData.titulo.length}/120 caracteres
-            </span>
-          </div>
-
-          {/* Descripción de la publicación */}
-          <div className="flex flex-col space-y-2 mx-auto">
-            <label htmlFor="descripcion" className={labelStyle}>
-              Descripción de la publicación (min:200, max:400):
-            </label>
-            <textarea
-              id="descripcion"
-              name="descripcion"
-              className={textareaStyle}
-              value={formData.descripcion}
-              onChange={handleInputChange}
-              required
-              minLength={200}
-              maxLength={400}
-              placeholder="Describe tu publicación (mínimo 200 caracteres, máximo 400)"
-              spellCheck="true"
-            />
-            <span className="text-sm text-gray-500">
-              {formData.descripcion.length}/400 caracteres
-            </span>
-          </div>
-
-          {/* Adicionales */}
-          <div className="flex flex-col space-y-2 mx-auto">
-            <label htmlFor="adicionales" className={labelStyle}>
-              ¿Qué adicionales haces? (min:50, max:300):
-            </label>
-            <textarea
-              id="adicionales"
-              name="adicionales"
-              className="w-full border border-gray-300 rounded p-2 min-h-[100px] resize-y"
-              value={formData.adicionales}
-              onChange={handleInputChange}
-              required
-              minLength={50}
-              maxLength={300}
-              placeholder="Describe los servicios adicionales que ofreces (mínimo 50 caracteres, máximo 300)"
-              spellCheck="true"
-            />
-            <span className="text-sm text-gray-500">
-              {formData.adicionales.length}/300 caracteres
-            </span>
-          </div>
-
-          <div className="border-b border-gray-500" />
-
-          {/* Subir Fotos */}
-          <HandleFileChange
-            onImagesChange={(images, mainPhoto) =>
-              setFormData({
-                ...formData,
-                images: images,
-                fotoPrincipal: mainPhoto,
-              })
-            }
-          />
-
-          {/* Subir Videos */}
-
-          <VideoUploadComponent onChange={handleVideosChange} />
-
-          {/* Botón de envío */}
-          <div className="flex justify-center">
-            <Button type="submit" className="min-w-[20rem]">
-              Enviar y seguir con la validación
-            </Button>
-          </div>
-        </form>
+            {/* Botón de envío */}
+            <div className="flex justify-center">
+              <Button type="submit" className="min-w-[20rem]">
+                Enviar y seguir con la validación
+              </Button>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

@@ -6,9 +6,9 @@ type VideoPreview = {
   file: File;
 };
 
-type VideoUploadComponentProps = {
+interface VideoUploadComponentProps {
   onChange: (videos: File[]) => void;
-};
+}
 
 const VideoUploadComponent: React.FC<VideoUploadComponentProps> = ({
   onChange,
@@ -42,7 +42,9 @@ const VideoUploadComponent: React.FC<VideoUploadComponentProps> = ({
     }));
 
     setPreviews((current) => [...current, ...newPreviews]);
-    setVideos((current) => [...current, ...files]);
+    const newVideos = [...videos, ...files];
+    setVideos(newVideos);
+    onChange(newVideos); // Llamar a onChange cuando se agregan videos
 
     if (inputRef.current) inputRef.current.value = "";
   };
@@ -54,17 +56,10 @@ const VideoUploadComponent: React.FC<VideoUploadComponentProps> = ({
       return current.filter((p) => p.id !== id);
     });
 
-    setVideos((current) =>
-      current.filter((_, index) => previews[index].id !== id)
-    );
+    const newVideos = videos.filter((_, index) => previews[index].id !== id);
+    setVideos(newVideos);
+    onChange(newVideos); // Llamar a onChange cuando se eliminan videos
   };
-
-  // Usar useEffect para llamar a onChange solo cuando se actualiza el estado de videos
-  useEffect(() => {
-    if (videos.length > 0) {
-      onChange(videos); // Pasamos los videos actualizados al componente padre
-    }
-  }, [videos, onChange]); // Dependencias correctamente configuradas
 
   useEffect(() => {
     return () => {
