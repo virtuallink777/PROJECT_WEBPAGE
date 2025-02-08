@@ -110,6 +110,14 @@ const ViewPublications = () => {
                   Pendiente de activación
                 </span>
               </p>
+              <p className="text-gray-700 mt-2 line-clamp-2 text-center">
+                {/* Enlace de editar */}
+                <Link href={`/dashboard/validate/${pub._id}`} passHref>
+                  <span className="text-blue-500 cursor-pointer hover:underline">
+                    Validar Publicidad
+                  </span>
+                </Link>
+              </p>
             </div>
           </Card>
         ))}
