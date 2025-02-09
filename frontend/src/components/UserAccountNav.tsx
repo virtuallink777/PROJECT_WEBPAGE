@@ -11,15 +11,24 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { Button } from "./ui/button";
-import Link from "next/link";
+import { useEffect, useState } from "react";
 
 const UserAccountNav = ({ user }: { user: User }) => {
   const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+
+  // Obtener isAdmin desde localStorage cuando el componente se monta
+  useEffect(() => {
+    const storedIsAdmin = JSON.parse(
+      localStorage.getItem("isAdmin") || "false"
+    );
+    setIsAdmin(storedIsAdmin);
+  }, []);
 
   const handleLogOut = async () => {
     try {
       await logout();
-
+      localStorage.removeItem("isAdmin"); // Limpiar isAdmin en logout
       router.push("/");
       router.refresh();
     } catch (error) {
@@ -45,12 +54,15 @@ const UserAccountNav = ({ user }: { user: User }) => {
 
         <DropdownMenuSeparator />
 
-        <DropdownMenuItem
-          className="cursor-pointer"
-          onClick={() => router.push("/dashboard")}
-        >
-          Ir a mi panel de control
-        </DropdownMenuItem>
+        {/* 👇 Condición para mostrar el panel correcto */}
+        {!isAdmin && (
+          <DropdownMenuItem
+            className="cursor-pointer"
+            onClick={() => router.push("/dashboard")}
+          >
+            Ir a mi panel de control
+          </DropdownMenuItem>
+        )}
 
         <DropdownMenuSeparator />
 

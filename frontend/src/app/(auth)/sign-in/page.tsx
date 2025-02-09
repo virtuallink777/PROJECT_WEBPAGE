@@ -33,7 +33,12 @@ const LoginPage = () => {
       const response = await login(formData);
 
       if (response.status === 200) {
-        router.push("/dashboard");
+        const data = response.data; // 👈 Obtiene el JSON del backend
+
+        // ✅ Guardar isAdmin en localStorage
+        localStorage.setItem("isAdmin", JSON.stringify(data.isAdmin));
+
+        router.push(data.redirectTo); // 👈 Usa la ruta enviada por el backend
         router.refresh();
       }
     } catch (error: unknown) {

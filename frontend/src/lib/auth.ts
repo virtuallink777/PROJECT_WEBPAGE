@@ -11,6 +11,8 @@ interface RegisterResponse {
   user: string;
   accessToken: string;
   refreshToken: string;
+  redirectTo: string;
+  isAdmin: string;
 }
 
 export const signUp = async (

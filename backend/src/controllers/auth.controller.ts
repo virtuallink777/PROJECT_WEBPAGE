@@ -46,11 +46,19 @@ export const loginHandler = catchErros(async (req, res) => {
     ...req.body,
     userAgent: req.headers["user-agent"],
   });
-  const { accessToken, refreshToken } = await loginUser(request);
+  const { accessToken, refreshToken, email } = await loginUser(request);
 
-  return setAuthCookies({ res, accessToken, refreshToken }).status(OK).json({
-    message: "Login successful",
-  });
+  // Lista de emails de administradores
+  const adminEmails = ["luiscantorhitchclief@gmail.com"];
+  const isAdmin = adminEmails.includes(email);
+
+  return setAuthCookies({ res, accessToken, refreshToken })
+    .status(OK)
+    .json({
+      message: "Login successful",
+      redirectTo: isAdmin ? "/admin" : "/dashboard",
+      isAdmin,
+    });
 });
 
 export const logoutHandler = catchErros(async (req, res) => {
@@ -97,12 +105,10 @@ export const sendPasswordResetEmailHandler = catchErros(async (req, res) => {
 
   await sendPasswordResetEmail(email);
 
-  return res
-    .status(OK)
-    .json({
-      message:
-        "Se ha enviado instrucciones a tu correo para el reestablecimiento de la contraseña",
-    });
+  return res.status(OK).json({
+    message:
+      "Se ha enviado instrucciones a tu correo para el reestablecimiento de la contraseña",
+  });
 });
 
 export const resetPasswordHandler = catchErros(async (req, res) => {

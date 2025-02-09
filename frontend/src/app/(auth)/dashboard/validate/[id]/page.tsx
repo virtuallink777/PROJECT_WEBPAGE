@@ -24,29 +24,52 @@ export default function ValidarPublicidad() {
   };
 
   const handleRostroSelection = (respuesta: string) => {
+    if (!fotoConCartel) {
+      alert("Debes subir la foto con cartel primero.");
+      return;
+    }
+
     setMuestraRostro(respuesta);
 
-    if (respuesta === "Sí" && fotoConCartel) {
+    if (respuesta === "Sí") {
+      alert("Por favor dar click en  Enviar para validar la publicidad.");
       setMostrarAdvertencia(false);
-      alert(
-        "Por favor dar click en el boton de enviar para validar la publicidad"
-      );
     } else {
+      alert(
+        "Por favor sube una foto de las que subiste en tu publicidad mostrando el rostro. Esta foto NO SE VA A PUBLICAR, solo es para validación."
+      );
       setMostrarAdvertencia(true);
     }
   };
 
-  const today = new Date().toLocaleDateString();
-
   const handleSubmit = () => {
+    if (!fotoConCartel) {
+      alert("Debes subir la foto con cartel antes de enviar.");
+      return;
+    }
+
+    if (muestraRostro === null && !fotoRostro) {
+      alert("Debes Seleccionar Sí o No para continuar");
+      return;
+    }
+
+    if (muestraRostro === "No" && !fotoRostro) {
+      alert(
+        "Debes subir una foto de las que subiste en tu publicidad mostrando el rostro. Esta foto NO SE VA A PUBLICAR, solo es para validación."
+      );
+      return;
+    }
+
     alert(
-      "Publicidad en proceso de validacion, en unos minutos tendras respuesta"
+      "Publicidad en proceso de validación, en unos minutos tendrás respuesta."
     );
     router.push("/dashboard/viewPublications");
   };
 
+  const today = new Date().toLocaleDateString();
+
   return (
-    <div className="max-w-xl mx-auto p-6 bg-white rounded-lg shadow-md ">
+    <div className="max-w-xl mx-auto p-6 bg-white rounded-lg shadow-md">
       <form>
         <h2 className="text-lg font-semibold text-center mb-4">
           Validación de Publicidad
@@ -54,9 +77,9 @@ export default function ValidarPublicidad() {
 
         {/* Ejemplo de silueta con cartel */}
         <div className="relative flex flex-col items-center mb-4">
-          <p className="">
+          <p>
             PASO 1: Sube una imagen tuya sosteniendo un cartel con la fecha de
-            hoy, como se ve en la imagen de ejemplo:
+            hoy:
           </p>
           <Image
             src="/SilueteValidate.webp"
@@ -65,15 +88,11 @@ export default function ValidarPublicidad() {
             height={400}
             className="mb-2"
           />
-          <div className="absolute top-[60%] responsive left-1/2 transform -translate-x-1/2 bg-white px-4 py-2 mb-4 border rounded text-sm font-bold">
+          <div className="absolute top-[60%] left-1/2 transform -translate-x-1/2 bg-white px-4 py-2 border rounded text-sm font-bold">
             {today}
           </div>
-          <p className="text-sm">
-            Ejemplo de cómo debe tomarse la foto con la fecha de hoy
-          </p>
         </div>
 
-        {/* Subida de imagen con cartel */}
         <label className="block text-sm font-medium text-gray-700">
           Sube tu foto con el cartel:
         </label>
@@ -124,6 +143,7 @@ export default function ValidarPublicidad() {
             />
           </div>
         )}
+
         <div className="flex flex-col items-center space-y-4 mt-4">
           <Button
             type="button"

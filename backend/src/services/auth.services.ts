@@ -150,6 +150,7 @@ export const loginUser = async ({
     user: user.omitPassword(),
     accessToken: accesstoken,
     refreshToken: refreshtoken,
+    email: user.email,
   };
 };
 

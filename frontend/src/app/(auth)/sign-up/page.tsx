@@ -10,7 +10,6 @@ import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { JSX, useState } from "react";
-import { set } from "zod";
 
 const SignUp = () => {
   const [errors, setErrors] = useState<Partial<RegisterInput>>({});
