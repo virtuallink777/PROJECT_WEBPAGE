@@ -19,7 +19,8 @@ const DuplicateFilesPopup: React.FC<DuplicateFilesPopupProps> = ({
       <div className="bg-white p-5 rounded-lg shadow-lg max-w-md w-full">
         <h2 className="text-lg font-semibold mb-3">
           los siguientes Archivos estan duplicados en alguna de tus
-          publicaciones, por favor eliminalos y sube otros:
+          publicaciones, o en otras Publicaciones con otro email, por favor
+          eliminalos y sube otros:
         </h2>
         <div className="grid grid-cols-3 gap-2">
           {duplicateFiles.map((file, index) => (

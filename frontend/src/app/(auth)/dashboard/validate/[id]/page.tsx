@@ -42,7 +42,9 @@ export default function ValidarPublicidad() {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
     if (!fotoConCartel) {
       alert("Debes subir la foto con cartel antes de enviar.");
       return;

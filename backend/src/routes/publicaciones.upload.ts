@@ -1,10 +1,9 @@
 import express from "express";
-import { upload, copyToBackup } from "../middleware/upload";
+import { upload } from "../middleware/upload";
 import { FileHashService } from "../services/fileHashService";
-import { BackupHash, UserHash } from "../models/hashImagesVideos";
+import { UserHash } from "../models/hashImagesVideos";
 import path from "path";
 import fs from "fs";
-import mongoose from "mongoose";
 
 const router = express.Router();
 const fileHashService = new FileHashService();
@@ -13,7 +12,7 @@ const fileHashService = new FileHashService();
 const publicacionesUpload = router.post(
   "/upload/:userId",
   upload.array("files"),
-  copyToBackup,
+
   async (req, res) => {
     try {
       const userId = req.params.userId || req.body.userId;
@@ -70,6 +69,36 @@ const publicacionesUpload = router.post(
       ];
       console.log("ARCHIVOS Duplicados para export:", duplicateFilesExport);
 
+      // ACA VA  LA LOGICA DE BUSCAR HASHES A NIVEL GENERAL EN MONGODB PARA EL ADMIN
+      // Esto busca todos los usuarios que tengan al menos uno de los hashes subidos, excluyendo al usuario actual.
+      const globalDuplicateFiles = await UserHash.find({
+        $or: [
+          { "imageHashes.hash": { $in: fileHashes.map((f) => f.hash) } },
+          { "videoHashes.hash": { $in: fileHashes.map((f) => f.hash) } },
+        ],
+        userId: { $ne: userId }, // Excluir al usuario actual
+      }).select("userId imageHashes videoHashes");
+
+      // Como globalDuplicateFiles contiene varios usuarios, hay que recorrerlos y extraer los archivos duplicados:
+      const globalDuplicates = globalDuplicateFiles.flatMap((user) => {
+        return [
+          ...user.imageHashes
+            .filter((img) => fileHashes.some((f) => f.hash === img.hash))
+            .map((img) => ({
+              filename: img.fileName,
+              filePath: `http://localhost:4004/uploads/${user.userId}/${img.fileName}`,
+              owner: user.userId, // mostrar quien tiene el archivo
+            })),
+          ...user.videoHashes
+            .filter((vid) => fileHashes.some((f) => f.hash === vid.hash))
+            .map((vid) => ({
+              filename: vid.fileName,
+              filePath: `http://localhost:4004/uploads/${user.userId}/${vid.fileName}`,
+              owner: user.userId, // mostrar quien tiene el archivo
+            })),
+        ];
+      });
+
       // Si hay archivos duplicados, no subir nada y responder con un mensaje
       if (duplicateFiles.length > 0) {
         console.log(`Archivos duplicados detectados: ${duplicateFiles.length}`);
@@ -80,14 +109,9 @@ const publicacionesUpload = router.post(
               __dirname,
               `../uploads/${userId}/${file.filename}`
             );
-            const backupPath = path.join(
-              __dirname,
-              `../uploadsBackup/${userId}/${file.filename}`
-            );
 
             console.log(`Intentando eliminar archivo: ${file.filename}`);
             console.log(`Ruta de uploads: ${uploadPath}`);
-            console.log(`Ruta de backup: ${backupPath}`);
 
             // Eliminar archivo de la carpeta de uploads
             if (fs.existsSync(uploadPath)) {
@@ -95,14 +119,6 @@ const publicacionesUpload = router.post(
               console.log(`Archivo eliminado: ${uploadPath}`);
             } else {
               console.log(`El archivo no existe en uploads: ${uploadPath}`);
-            }
-
-            // Eliminar archivo de la carpeta de backup
-            if (fs.existsSync(backupPath)) {
-              fs.unlinkSync(backupPath);
-              console.log(`Archivo eliminado: ${backupPath}`);
-            } else {
-              console.log(`El archivo no existe en backup: ${backupPath}`);
             }
           } catch (error) {
             console.error(`Error eliminando archivo: ${file.filename}`, error);
@@ -112,12 +128,43 @@ const publicacionesUpload = router.post(
         return res.status(400).json({
           message:
             "Se detectaron archivos duplicados. No se subió ningún archivo.",
-          duplicateFiles: duplicateFilesExport,
+          duplicateFiles: duplicateFilesExport, // Duplicados dentro del mismo usuario
         });
       }
 
-      // Si no hay duplicados, proceder a guardar los archivos
-      await BackupHash.insertMany(fileHashes); // Guardar en BackupHash
+      if (globalDuplicates.length > 0) {
+        console.log(
+          `Archivos duplicados detectados en otros usuarios: ${globalDuplicates.length}`
+        );
+        // Eliminar TODOS los archivos subidos (duplicados y no duplicados)
+        files.forEach((file) => {
+          try {
+            const uploadPath = path.join(
+              __dirname,
+              `../uploads/${userId}/${file.filename}`
+            );
+
+            console.log(`Intentando eliminar archivo: ${file.filename}`);
+            console.log(`Ruta de uploads: ${uploadPath}`);
+
+            // Eliminar archivo de la carpeta de uploads
+            if (fs.existsSync(uploadPath)) {
+              fs.unlinkSync(uploadPath);
+              console.log(`Archivo eliminado: ${uploadPath}`);
+            } else {
+              console.log(`El archivo no existe en uploads: ${uploadPath}`);
+            }
+          } catch (error) {
+            console.error(`Error eliminando archivo: ${file.filename}`, error);
+          }
+        });
+
+        return res.status(400).json({
+          message:
+            "Se detectaron archivos duplicados en otros usuarios. No se subió ninguno.",
+          duplicateFiles: globalDuplicates, // Duplicados en otros usuarios
+        });
+      }
 
       await UserHash.findOneAndUpdate(
         { userId },

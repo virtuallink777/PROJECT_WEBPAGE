@@ -10,8 +10,10 @@ import HandleFileChange from "@/components/DownloadPhoto";
 import api from "@/lib/api";
 
 import DuplicateFilesPopup from "@/components/ShowImageVideoCreatePub";
+import { useRouter } from "next/navigation";
 
 interface FormData {
+  email: string;
   userId: string;
   nombre: string;
   edad: string;
@@ -32,12 +34,27 @@ interface FormData {
   esMayorDeEdad: boolean;
 }
 
+// Función para obtener el ID del cliente
 async function obtenerIdCliente() {
   try {
     const response = await fetch("/api/userId");
     const data = await response.json();
-    console.log("ID del usuario obtenido:", data.userId); // Este console.log debería aparecer en la consola
+    console.log("ID del usuario obtenido:", data.userId);
+    console.log("email:", data.email); // Este console.log debería aparecer en la consola
     return data.userId; // Esto devuelve directamente el ID alfanumérico
+  } catch (error) {
+    console.error("Error al obtener el ID del usuario:", error);
+    return null;
+  }
+}
+
+//funcion para obtener el email del cliente
+async function obtenerEmailCliente() {
+  try {
+    const response = await fetch("/api/userId");
+    const data = await response.json();
+    console.log("email:", data.email); // Este console.log debería aparecer en la consola
+    return data.email; // Esto devuelve directamente el ID alfanumérico
   } catch (error) {
     console.error("Error al obtener el ID del usuario:", error);
     return null;
@@ -46,6 +63,7 @@ async function obtenerIdCliente() {
 
 const CreatePublications: React.FC = () => {
   const [formData, setFormData] = useState<FormData>({
+    email: "",
     userId: "",
     nombre: "",
     edad: "",
@@ -70,6 +88,8 @@ const CreatePublications: React.FC = () => {
     { filename: string; filePath: string }[]
   >([]);
 
+  const router = useRouter();
+
   // Obtenemos el ID del cliente al montar el componente
   useEffect(() => {
     async function fetchUserId() {
@@ -80,6 +100,18 @@ const CreatePublications: React.FC = () => {
       }
     }
     fetchUserId();
+  }, []);
+
+  // obtenemos el email del cliente al montar el componente
+  useEffect(() => {
+    async function fetchUserEmail() {
+      const email = await obtenerEmailCliente();
+      if (email) {
+        setFormData((prev) => ({ ...prev, email: email }));
+        console.log("email del usuario obtenido:", email); // Este console.log debería aparecer en la consola
+      }
+    }
+    fetchUserEmail();
   }, []);
 
   const categoriesData = useCategoriesData();
@@ -157,6 +189,7 @@ const CreatePublications: React.FC = () => {
       }
 
       combinedFormData.append("userId", formData.userId);
+      combinedFormData.append("email", formData.email);
 
       // Subir videos (si hay)
       if (formData.videos && formData.videos.length > 0) {
@@ -178,20 +211,31 @@ const CreatePublications: React.FC = () => {
 
       // Manejar la respuesta del backend
       const imageData = await ResponseImageVideo.json();
-      console.log("Respuesta del backend:", imageData);
+      console.log(
+        "Respuesta del backend y se incluye globalDuplicates :",
+        imageData
+      );
 
       if (!ResponseImageVideo.ok) {
         console.log(
           "Ejecutando setDuplicateFiles con:",
           imageData.duplicateFiles
         );
-        // Si hay archivos duplicados, mostrar un mensaje al usuario
+        // Si hay archivos duplicados del mismo usuario, mostrar un mensaje al usuario
         if (imageData.duplicateFiles && imageData.duplicateFiles.length > 0) {
           console.log("Nuevos duplicados recibidos:", imageData.duplicateFiles);
           setDuplicateFiles([]); // Limpiar el estado
           setDuplicateFiles([...imageData.duplicateFiles]);
-        } else {
-          throw new Error("Error al subir las imágenes");
+        } else if (
+          imageData.globalDuplicates &&
+          imageData.globalDuplicates.length > 0
+        ) {
+          console.log(
+            "Nuevos duplicados recibidos de otros usuarios:",
+            imageData.globalDuplicates
+          );
+          setDuplicateFiles([]); // Limpiar el estado
+          setDuplicateFiles([...imageData.globalDuplicates]);
         }
         return; // Detener el proceso si hay duplicados
       }
@@ -242,7 +286,8 @@ const CreatePublications: React.FC = () => {
       );
       console.log("Publicación creada:", response.data);
       alert("¡Publicación creada con éxito!, pasa ahora a validarla.");
-      window.location.href = "/dashboard/validate";
+
+      router.push(`/dashboard/validate/${formDataToSend.get("id")}`);
     } catch (error) {
       console.error("Error al crear la publicación:", error);
       alert("Error al crear la publicación. Por favor, intenta de nuevo.");
@@ -258,7 +303,7 @@ const CreatePublications: React.FC = () => {
   const textareaStyle =
     "w-full border border-gray-300 rounded p-2 min-h-[200px] resize-y";
   const checkboxContainerStyle = "flex items-center space-x-2";
-  console.log("Estado actual de duplicateFiles:", duplicateFiles);
+
   return (
     <>
       {/*COMPONENTE QUE RENDERIZA LOS DUPLICADOS*/}

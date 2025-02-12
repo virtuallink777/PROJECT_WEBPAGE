@@ -3,7 +3,7 @@ import { Document } from "mongoose";
 
 interface IPublication extends Document {
   userId: mongoose.Schema.Types.ObjectId; // relacion con el usuario
-
+  email: string;
   esMayorDeEdad: boolean;
   nombre: string;
   edad: number;
@@ -33,7 +33,7 @@ interface IPublication extends Document {
 
 const PublicacionSchema = new mongoose.Schema<IPublication>({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-
+  email: { type: String, required: true },
   esMayorDeEdad: { type: Boolean, required: true },
   nombre: { type: String, required: true },
   edad: { type: Number, required: true },

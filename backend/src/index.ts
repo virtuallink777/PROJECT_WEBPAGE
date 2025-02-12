@@ -19,8 +19,18 @@ import { getPublicationById } from "./routes/editPublication";
 import updatePublicationRoutes from "./routes/updatedPublication.route";
 import { updatePublicationImagesVideos } from "./controllers/updatePublicationImagesVideos";
 import checkHashesCreatePub from "./routes/checkHashesCreatePub";
+import http from "http"; // ⚡ Para usar WebSockets
+import { Server } from "socket.io"; // ⚡ Importar socket.io
 
 const app = express();
+
+const server = http.createServer(app); // ⚡ Crear servidor HTTP
+export const io = new Server(server, {
+  cors: {
+    origin: "http://localhost:3000",
+    credentials: true,
+  },
+});
 
 // Middleware para parsear JSON
 app.use(express.json()); // Esto está bien para rutas POST/PUT
@@ -46,6 +56,17 @@ app.get("/", (req, res, next) => {
   });
 });
 
+// **Inicializar WebSockets**
+io.on("connection", (socket) => {
+  console.log("⚡ Admin conectado:", socket.id);
+
+  socket.on("disconnect", () => {
+    console.log("⚡ Admin desconectado");
+  });
+});
+
+//********RUTAS****** */
+
 // prefix: /auth
 app.use("/auth", authRoutes);
 
@@ -57,9 +78,9 @@ app.use("/sessions", authenticate, sessionRoutes);
 // prefix: /dashboard
 app.use("/dashboard", authenticate, dashboardRoutes);
 
-// ruta para subir las imagenes NUEVAS DE CREATE PUB A uploads y uploadsbackup
+// ruta para subir las imagenes NUEVAS DE CREATE PUB A uploads  con creacion y verificacion de hashes
 app.use("/api/publicacionesImage", publicacionesUpload);
-console.log("Ruta de uploads por pirmeravez ok registrada correctamente");
+console.log("Ruta de uploads por primera ok registrada correctamente");
 
 // ruta para subir la publicacion nuevas a mongodb
 app.use("/publications", publicationsRouter);
@@ -82,7 +103,7 @@ app.put(
 app.use("/api/check-hashes", checkHashesCreatePub);
 
 app.use(errorHandler);
-app.listen(PORT, async () => {
+server.listen(PORT, async () => {
   console.log(`Server is running on port ${PORT} in development mode`);
   await connectToDatabase();
 });

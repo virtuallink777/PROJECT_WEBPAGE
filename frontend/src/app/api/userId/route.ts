@@ -30,7 +30,7 @@ export async function GET() {
 
     console.log("Decoded token:", decode);
 
-    return NextResponse.json({ userId: decode.userId });
+    return NextResponse.json({ userId: decode.userId, email: decode.email });
   } catch (error) {
     console.error("Error al obtener el ID del usuario:", error);
     return NextResponse.json(
