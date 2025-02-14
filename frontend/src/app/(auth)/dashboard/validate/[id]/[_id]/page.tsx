@@ -5,11 +5,20 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 
+interface ValidateImages {
+  fotoCartel: File[];
+  fotoRostro?: File[];
+}
+
 export default function ValidarPublicidad() {
   const [fotoConCartel, setFotoConCartel] = useState<File | null>(null);
   const [fotoRostro, setFotoRostro] = useState<File | null>(null);
   const [mostrarAdvertencia, setMostrarAdvertencia] = useState(false);
   const [muestraRostro, setMuestraRostro] = useState<string | null>(null);
+  const [formData, setFormData] = useState<ValidateImages>({
+    fotoCartel: [],
+    fotoRostro: [],
+  });
 
   const router = useRouter();
 
@@ -42,7 +51,18 @@ export default function ValidarPublicidad() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const storedData = JSON.parse(localStorage.getItem("dataToStorage") || "{}");
+
+  const userId = storedData.userId;
+  const email = storedData.email;
+  const _id = storedData._id;
+  const images: { url: string }[] = storedData.images || [];
+
+  console.log("User ID:", userId);
+  console.log("Email:", email);
+  console.log("_id:", _id);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!fotoConCartel) {
@@ -62,10 +82,56 @@ export default function ValidarPublicidad() {
       return;
     }
 
-    alert(
-      "Publicidad en proceso de validación, en unos minutos tendrás respuesta."
-    );
-    router.push("/dashboard/viewPublications");
+    const formData = new FormData();
+
+    // Agregar cada URL de imagen como un campo separado
+    images.forEach((image, index: number) => {
+      formData.append(`images[${index}]`, image.url);
+    });
+
+    // Verificar los datos antes de enviarlos
+    for (const pair of formData.entries()) {
+      console.log(pair[0], pair[1]);
+    }
+
+    formData.append("fotoCartel", fotoConCartel);
+
+    if (muestraRostro === "No" && fotoRostro) {
+      formData.append("fotoRostro", fotoRostro);
+    }
+
+    if (userId) formData.append("userId", userId);
+    if (_id) formData.append("id", _id);
+    if (email) formData.append("email", email);
+
+    formData.append("muestraRostro", muestraRostro || "");
+
+    console.log("Contenido de formData:", formData);
+
+    // Verificar qué datos se están enviando
+    for (const pair of formData.entries()) {
+      console.log(pair[0], pair[1]);
+    }
+    try {
+      const response = await fetch(
+        `http://localhost:4004/api/validate/${userId}`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Error al subir la publicidad");
+      }
+
+      alert(
+        "Publicidad en proceso de validación, en unos minutos tendrás respuesta."
+      );
+      router.push("/dashboard/viewPublications");
+    } catch (error) {
+      console.log("Error al subir la publicidad para la validacion:", error);
+    }
   };
 
   const today = new Date().toLocaleDateString();

@@ -287,7 +287,25 @@ const CreatePublications: React.FC = () => {
       console.log("Publicación creada:", response.data);
       alert("¡Publicación creada con éxito!, pasa ahora a validarla.");
 
-      router.push(`/dashboard/validate/${formDataToSend.get("id")}`);
+      //enviar las imagenes al localstorage// Guardar en localStorage
+
+      const dataToStorage = {
+        userId: response.data.publicacion.userId,
+        images: response.data.publicacion.images,
+        _id: response.data.publicacion._id,
+        email: response.data.publicacion.email,
+        updatedAt: response.data.publicacion.updatedAt,
+      };
+
+      localStorage.setItem("dataToStorage", JSON.stringify(dataToStorage));
+      console.log(
+        "Imágenes guardadas en localStorage:",
+        JSON.parse(localStorage.getItem("dataToStorage") || "[]")
+      );
+
+      router.push(
+        `/dashboard/validate/${formData.userId}/${response.data.publicacion._id}`
+      );
     } catch (error) {
       console.error("Error al crear la publicación:", error);
       alert("Error al crear la publicación. Por favor, intenta de nuevo.");
@@ -544,7 +562,7 @@ const CreatePublications: React.FC = () => {
             {/* Campo Dirección */}
             <div className={fieldContainerStyle}>
               <label htmlFor="direccion" className={labelStyle}>
-                Dirección (opcional):
+                Dirección (opcional, o coloca un lugar conocido cerca de ti):
               </label>
               <Input
                 id="direccion"

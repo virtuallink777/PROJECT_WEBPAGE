@@ -1,6 +1,5 @@
 import express, { Request, Response } from "express";
 import Publicacion from "../models/publications.models";
-import { io } from "..";
 
 const publicationsRouter = express.Router();
 
@@ -80,9 +79,6 @@ publicationsRouter.post("/", async (req: Request, res: Response) => {
     });
 
     const result = await nuevaPublicacion.save();
-
-    // Emitir evento WebSocket después de guardar en la base de datos
-    io.emit("nueva-publicacion", result);
 
     res.status(201).json({
       message: "Publicación creada exitosamente",

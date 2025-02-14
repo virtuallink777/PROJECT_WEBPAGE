@@ -8,6 +8,7 @@ import Link from "next/link";
 
 type Publication = {
   _id: string;
+  userId: string;
   nombre: string;
   edad: number;
   titulo: string;
@@ -37,12 +38,12 @@ const ViewPublications = () => {
   useEffect(() => {
     const fetchPublications = async () => {
       try {
-        const userId = await obtenerIdCliente();
-        if (!userId) {
+        const _id = await obtenerIdCliente();
+        if (!_id) {
           throw new Error("No se pudo obtener el ID del usuario");
         }
 
-        const response = await api.get(`/api/publicationsThumbnails/${userId}`);
+        const response = await api.get(`/api/publicationsThumbnails/${_id}`);
         setPublications(response.data);
         console.log(response.data);
       } catch (error) {
@@ -112,7 +113,11 @@ const ViewPublications = () => {
               </p>
               <p className="text-gray-700 mt-2 line-clamp-2 text-center">
                 {/* Enlace de editar */}
-                <Link href={`/dashboard/validate/${pub._id}`} passHref>
+
+                <Link
+                  href={`/dashboard/validate/${pub.userId}/${pub._id}`}
+                  passHref
+                >
                   <span className="text-blue-500 cursor-pointer hover:underline">
                     Validar Publicidad
                   </span>

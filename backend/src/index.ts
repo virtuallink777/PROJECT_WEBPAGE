@@ -21,6 +21,7 @@ import { updatePublicationImagesVideos } from "./controllers/updatePublicationIm
 import checkHashesCreatePub from "./routes/checkHashesCreatePub";
 import http from "http"; // ⚡ Para usar WebSockets
 import { Server } from "socket.io"; // ⚡ Importar socket.io
+import validateAdmin from "./routes/validatesAdmin";
 
 const app = express();
 
@@ -101,6 +102,9 @@ app.put(
 
 //RUTA PARA COMPARAR HASHES DE CREATEPUB
 app.use("/api/check-hashes", checkHashesCreatePub);
+
+// RUTA PÁRA GUARDAR LAS IMG DE VALIDATE Y ENVIAR DATOS AL ADMIN
+app.use("/api/validate", validateAdmin);
 
 app.use(errorHandler);
 server.listen(PORT, async () => {
