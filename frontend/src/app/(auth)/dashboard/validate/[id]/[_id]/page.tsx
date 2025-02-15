@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import { time } from "console";
 
 interface ValidateImages {
   fotoCartel: File[];
@@ -57,6 +58,9 @@ export default function ValidarPublicidad() {
   const email = storedData.email;
   const _id = storedData._id;
   const images: { url: string }[] = storedData.images || [];
+  const shippingDateValidate = new Date().toLocaleString("es-CO", {
+    timeZone: "America/Bogota",
+  });
 
   console.log("User ID:", userId);
   console.log("Email:", email);
@@ -105,6 +109,8 @@ export default function ValidarPublicidad() {
     if (email) formData.append("email", email);
 
     formData.append("muestraRostro", muestraRostro || "");
+
+    formData.append("shippingDateValidate", shippingDateValidate);
 
     console.log("Contenido de formData:", formData);
 

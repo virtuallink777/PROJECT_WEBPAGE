@@ -71,6 +71,8 @@ validateAdmin.post("/:userId", uploadFields, (req, res) => {
 
   // Emitir evento WebSocket después de guardar en la base de datos
   io.emit("nueva-publicacion para VALIDAR", req.body, responseUrls);
+
+  console.log("nueva-publicacion para VALIDAR:", req.body, responseUrls);
 });
 
 export default validateAdmin;
