@@ -18,6 +18,8 @@ interface IPublication extends Document {
   titulo: string;
   descripcion: string;
   adicionales: string;
+  estado?: string;
+  razon?: string;
   images: Array<{
     url: string;
     isPrincipal: boolean;
@@ -48,6 +50,12 @@ const PublicacionSchema = new mongoose.Schema<IPublication>({
   titulo: { type: String, required: true },
   descripcion: { type: String, required: true },
   adicionales: { type: String, required: true },
+  estado: {
+    type: String,
+    enum: ["PENDIENTE", "APROBADA", "RECHAZADA"],
+    default: "PENDIENTE",
+  },
+  razon: { type: String },
   images: [
     {
       url: { type: String, required: true },

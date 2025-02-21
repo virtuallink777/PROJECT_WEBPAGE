@@ -3,25 +3,23 @@
 import { useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
-import { time } from "console";
-
-interface ValidateImages {
-  fotoCartel: File[];
-  fotoRostro?: File[];
-}
+import { useParams, useRouter } from "next/navigation";
 
 export default function ValidarPublicidad() {
   const [fotoConCartel, setFotoConCartel] = useState<File | null>(null);
   const [fotoRostro, setFotoRostro] = useState<File | null>(null);
   const [mostrarAdvertencia, setMostrarAdvertencia] = useState(false);
   const [muestraRostro, setMuestraRostro] = useState<string | null>(null);
-  const [formData, setFormData] = useState<ValidateImages>({
-    fotoCartel: [],
-    fotoRostro: [],
-  });
 
   const router = useRouter();
+
+  interface DataItems {
+    userId: string;
+    email: string;
+    id: string;
+    images: { url: string }[];
+    shippingDateValidate: string;
+  }
 
   const handleUploadCartel = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] || null;
@@ -52,7 +50,9 @@ export default function ValidarPublicidad() {
     }
   };
 
-  const storedData = JSON.parse(localStorage.getItem("dataToStorage") || "{}");
+  const storedData = JSON.parse(
+    sessionStorage.getItem("dataToStorage") || "{}"
+  );
 
   const userId = storedData.userId;
   const email = storedData.email;
@@ -61,6 +61,14 @@ export default function ValidarPublicidad() {
   const shippingDateValidate = new Date().toLocaleString("es-CO", {
     timeZone: "America/Bogota",
   });
+
+  const dataItems: DataItems = {
+    userId,
+    id: _id,
+    images,
+    email,
+    shippingDateValidate,
+  };
 
   console.log("User ID:", userId);
   console.log("Email:", email);
@@ -104,15 +112,12 @@ export default function ValidarPublicidad() {
       formData.append("fotoRostro", fotoRostro);
     }
 
-    if (userId) formData.append("userId", userId);
-    if (_id) formData.append("id", _id);
-    if (email) formData.append("email", email);
+    formData.append("dataItems for sessionStorage", JSON.stringify(dataItems));
+    console.log("Contenido de dataItems para validar:", dataItems);
 
     formData.append("muestraRostro", muestraRostro || "");
 
     formData.append("shippingDateValidate", shippingDateValidate);
-
-    console.log("Contenido de formData:", formData);
 
     // Verificar qué datos se están enviando
     for (const pair of formData.entries()) {

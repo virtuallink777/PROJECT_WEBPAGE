@@ -267,7 +267,7 @@ const EditPublication: React.FC = ({}) => {
             {/* Enlace para subir nuevas fotos y videos*/}
 
             <div className="flex justify-center mt-6">
-              <Link href={`/dashboard/uploadImagesVideos/${_Id}`} passHref>
+              <Link href={`/dashboard/uploadImagesVideos/${_Id}`}>
                 <Button className="w-full text-lg">
                   Si deseas añadir nuevas fotos o videos has Click aca:
                 </Button>

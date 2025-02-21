@@ -12,6 +12,9 @@ import {
 } from "./ui/dropdown-menu";
 import { Button } from "./ui/button";
 import { useEffect, useState } from "react";
+import io from "socket.io-client";
+
+const socket = io("http://localhost:4004");
 
 const UserAccountNav = ({ user }: { user: User }) => {
   const router = useRouter();
@@ -26,9 +29,21 @@ const UserAccountNav = ({ user }: { user: User }) => {
   }, []);
 
   const handleLogOut = async () => {
+    console.log("🔴 Desconectando socket del admin...");
+    socket.emit("admin-logout", {
+      adminId: "67b6430f65f30b2dd8a65dc6",
+      email: "luiscantorhitchclief@gmail.com",
+    });
+
+    console.log("✅ 'admin-logout' emitido correctamente desde el cliente.");
+
+    socket.disconnect(); // 🔥 Fuerza la desconexión del socket
+    console.log("🔌 Socket desconectado");
+
+    localStorage.removeItem("isAdmin"); // Limpiar isAdmin en logout
     try {
       await logout();
-      localStorage.removeItem("isAdmin"); // Limpiar isAdmin en logout
+
       router.push("/");
       router.refresh();
     } catch (error) {
@@ -66,7 +81,13 @@ const UserAccountNav = ({ user }: { user: User }) => {
 
         <DropdownMenuSeparator />
 
-        <DropdownMenuItem className="cursor-pointer" onClick={handleLogOut}>
+        <DropdownMenuItem
+          className="cursor-pointer"
+          onClick={() => {
+            console.log("🟢 Botón de logout PRESIONADO");
+            handleLogOut();
+          }}
+        >
           Deslogueate
         </DropdownMenuItem>
       </DropdownMenuContent>

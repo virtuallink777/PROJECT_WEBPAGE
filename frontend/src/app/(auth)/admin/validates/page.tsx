@@ -1,11 +1,58 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { socket } from "@/lib/socket";
+
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { io } from "socket.io-client";
+import { Socket } from "socket.io-client";
 
-const socket = io("http://localhost:4004");
+// 🔹 Extender el tipo de Window para incluir 'socket'
+declare global {
+  interface Window {
+    socket: Socket;
+  }
+}
+
+interface ExtractedData {
+  userId: string;
+  id: string;
+  images: { url: string }[];
+  email: string;
+  shippingDateValidate: string;
+  responseUrls: Record<string, string>;
+}
+
+interface UpdateStatePublication {
+  id: string;
+  estado: string;
+  razon: string;
+}
+
+async function obtenerIdAdmin() {
+  try {
+    const response = await fetch("/api/userId");
+    const data: { userId: string } = await response.json();
+    return data.userId;
+  } catch (error) {
+    console.error("Error al obtener el ID del usuario:", error);
+    return null;
+  }
+}
+
+async function guardarUserId() {
+  try {
+    const userId = await obtenerIdAdmin();
+    if (userId) {
+      localStorage.setItem("userId", userId);
+      console.log("✅ userId guardado en localStorage:", userId);
+    } else {
+      console.log("⚠️ No se obtuvo un userId válido.");
+    }
+  } catch (error) {
+    console.error("Error al guardar el userId:", error);
+  }
+}
 
 const AdminPanel = () => {
   const [publicaciones, setPublicaciones] = useState<
@@ -18,9 +65,51 @@ const AdminPanel = () => {
       responseUrls: Record<string, string>;
     }[]
   >([]);
+  const [userId, setUserId] = useState<string | null>(null);
 
   // Estado para almacenar las URLs de las imágenes agrandadas
   const [activeImages, setActiveImages] = useState<string[]>([]);
+
+  useEffect(() => {
+    // ✅ Verificar si el socket ya está conectado antes de llamarlo
+    if (!socket.connected) {
+      socket.connect();
+    }
+
+    // se llama a la funcion para obtener el id del admin
+    async function fetchAndStoreUserId() {
+      await guardarUserId(); // Primero obtenemos y guardamos el userId
+
+      const storedUserId = localStorage.getItem("userId");
+      console.log("📌 userId en localStorage:", storedUserId);
+      if (storedUserId) {
+        setUserId(storedUserId);
+
+        console.log("Enviando evento identificar-admin con:", {
+          adminId: storedUserId,
+          email: "luiscantorhitchclief@gmail.com",
+        });
+
+        socket.emit("identificar-admin", {
+          adminId: storedUserId,
+          email: "luiscantorhitchclief@gmail.com",
+        });
+        console.log("📩 Enviando 'identificar-admin' con ID:", {
+          storedUserId,
+        });
+      } else {
+        console.log("❌ No se encontró userId en localStorage.");
+      }
+    }
+    fetchAndStoreUserId();
+
+    return () => {
+      // 🔹 Asegurar que el socket se desconecte cuando el componente se desmonte
+      if (socket.connected) {
+        socket.disconnect();
+      }
+    };
+  }, []); // ✅ Solo ejecuta esto al montar el componente
 
   // Función para manejar el clic en una imagen
   const handleImageClick = (url: string) => {
@@ -34,41 +123,56 @@ const AdminPanel = () => {
     }
   };
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const storedData = localStorage.getItem("publicaciones");
-      if (storedData) {
-        try {
-          const parsedData = JSON.parse(storedData);
-
-          // Asegurar que es un array y que las imágenes están bien formateadas
-          const formattedData = Array.isArray(parsedData)
-            ? parsedData.map((pub) => ({
-                ...pub,
-                images: Array.isArray(pub.images)
-                  ? pub.images.map((img) =>
-                      typeof img === "string" ? { url: img } : img
-                    )
-                  : [],
-              }))
-            : [];
-
-          setPublicaciones(formattedData);
-        } catch (error) {
-          console.error("Error al parsear datos de localStorage:", error);
+  const UpdateStatePublication = async (data: UpdateStatePublication) => {
+    const { id, estado, razon } = data;
+    try {
+      // Llamar a la API para actualizar el estado en la base de datos
+      const response = await fetch(
+        `http://localhost:4004/api/state-publication/`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ estado, razon, id }),
         }
+      );
+      if (!response.ok) {
+        throw new Error("Error al actualizar el estado de la publicación");
       }
+      const result = await response.json();
+      console.log("Estado actualizado:", result);
+      return result;
+    } catch (error) {
+      console.error("Error al actualizar el estado de la publicación:", error);
     }
-  }, []);
+  };
 
   useEffect(() => {
-    socket.on("nueva-publicacion para VALIDAR", (body, responseUrls) => {
+    socket.on("validate-publication", (body, responseUrls) => {
       if (!body || !responseUrls) {
         console.error("Datos de publicación a validar no recibidos");
         return;
       }
 
-      const { userId, id, images, email, shippingDateValidate } = body;
+      console.log("Datos de publicación a validar:", body);
+
+      let extractedData = {};
+
+      try {
+        if (body["dataItems for sessionStorage"]) {
+          console.log(
+            "JSON recibido antes de parsear:",
+            body["dataItems for sessionStorage"]
+          );
+          extractedData = JSON.parse(body["dataItems for sessionStorage"]);
+        }
+      } catch (error) {
+        console.error("Error al parsear dataItems for sessionStorage:", error);
+        return;
+      }
+
+      const { userId, id, images, email, shippingDateValidate } = extractedData;
 
       const formattedImages = Array.isArray(images)
         ? images.map((img) => (typeof img === "string" ? { url: img } : img))
@@ -83,8 +187,12 @@ const AdminPanel = () => {
         responseUrls,
       };
 
+      console.log("Nueva publicación recibida:", nuevaPublicacion);
+
       setPublicaciones((prevPublicaciones) => {
         const nuevasPublicaciones = [...prevPublicaciones, nuevaPublicacion];
+
+        console.log("Nuevas publicaciones:", nuevasPublicaciones);
 
         // Guardar en localStorage
         localStorage.setItem(
@@ -97,10 +205,73 @@ const AdminPanel = () => {
     });
 
     return () => {
-      socket.off("nueva-publicacion para VALIDAR");
+      socket.off("validate-publication");
     };
   }, []);
 
+  // 🔹 Obtener publicaciones guardadas en localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const storedData = localStorage.getItem("publicaciones");
+
+      if (storedData) {
+        setPublicaciones(JSON.parse(storedData));
+        try {
+          const parsedData = JSON.parse(storedData);
+          const formattedData = Array.isArray(parsedData)
+            ? parsedData.map((pub) => ({
+                ...pub,
+                images: Array.isArray(pub.images)
+                  ? pub.images.map((img) =>
+                      typeof img === "string" ? { url: img } : img
+                    )
+                  : [],
+              }))
+            : [];
+          setPublicaciones(formattedData);
+        } catch (error) {
+          console.error("Error al parsear datos de localStorage:", error);
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // ✅ Solo ejecuta esto al montar el componente
+
+  //ELIMINAR LA PUBLICACION ACEPTADA O RECHAZADA *** falta programarla
+
+  const deleteValidatePublication = (id: string) => {
+    console.log("ID recibido para eliminar:", id);
+
+    setPublicaciones((prevPublicaciones) => {
+      console.log("Publicaciones antes de eliminar:", prevPublicaciones);
+
+      const nuevasPublicaciones = prevPublicaciones.filter(
+        (pub) => pub.id !== id
+      );
+
+      console.log("Publicaciones después de eliminar:", nuevasPublicaciones);
+      return nuevasPublicaciones;
+    });
+
+    // Actualizar localStorage
+    const storedData = localStorage.getItem("publicaciones");
+    console.log("Datos en localStorage antes de eliminar:", storedData);
+
+    if (storedData) {
+      const parsedData = JSON.parse(storedData);
+      const updatedData = parsedData.filter(
+        (pub: { id: string }) => pub.id !== id
+      );
+
+      localStorage.setItem("publicaciones", JSON.stringify(updatedData));
+      console.log("LocalStorage actualizado:", updatedData);
+    }
+  };
+  const publicacionData = Array.isArray(publicaciones)
+    ? publicaciones[0]
+    : publicaciones;
+
+  console.log("Publicación procesada:", publicacionData);
   return (
     <>
       <div className="p-4">
@@ -109,17 +280,18 @@ const AdminPanel = () => {
           publicaciones.map((publicacion) => (
             <div key={publicacion.id} className="border p-4 rounded shadow">
               <p>
-                <strong>Usuario ID:</strong> {publicacion.userId}
+                <strong>Usuario ID:</strong>{" "}
+                {publicacionData?.userId || "Desconocido"}
               </p>
               <p>
-                <strong>Publicación ID:</strong> {publicacion.id}
+                <strong>Publicación ID:</strong> {publicacionData?.id || "N/A"}
               </p>
               <p>
-                <strong>Email:</strong> {publicacion.email}
+                <strong>Email:</strong> {publicacionData?.email || "N/A"}
               </p>
               <p>
                 <strong>Fecha de Envio para validar:</strong>{" "}
-                {publicacion.shippingDateValidate}
+                {publicacionData?.shippingDateValidate || "N/A"}
               </p>
 
               <h3 className="text-lg font-semibold mt-2">Imágenes:</h3>
@@ -184,10 +356,110 @@ const AdminPanel = () => {
                   ))}
               </div>
               <div className="flex justify-end mb-4">
-                <Button className="text-xl">APROBADA</Button>
+                <Button
+                  className="text-xl"
+                  onClick={async () => {
+                    try {
+                      // Actualizar el estado en la base de datos
+                      await UpdateStatePublication({
+                        id: publicacion.id,
+                        estado: "APROBADA",
+                        razon: "",
+                      });
+
+                      console.log(
+                        "Enviando evento actualizar-publicacion con:",
+                        {
+                          id: publicacion.id,
+                          userId: publicacion.userId,
+                          estado: "APROBADA",
+                        }
+                      );
+                      socket.emit("actualizar-publicacion", {
+                        id: publicacion.id,
+                        userId: publicacion.userId,
+                        estado: "APROBADA",
+                      });
+                      // Eliminar la publicación de la pantalla y del localStorage
+                      deleteValidatePublication(publicacion.id);
+                    } catch (error) {
+                      console.error(
+                        "Error al actualizar el estado de la publicación:",
+                        error
+                      );
+                    }
+                  }}
+                >
+                  APROBADA
+                </Button>
               </div>
               <div className="flex justify-end mb-20">
-                <Button className="text-xl">NO APROBADA</Button>
+                <Button
+                  className="text-xl"
+                  onClick={async () => {
+                    const razonesRechazo = [
+                      "la imagen del cartel está muy borrosa",
+                      "la fecha del cartel no corresponde",
+                      "la imagen está muy lejos",
+                      "debe salir medio cuerpo",
+                      "el rostro no coincide",
+                      "la cara no se distingue bien",
+                      "la imagen del rostro es borrosa",
+                    ];
+
+                    const razon = prompt(
+                      "Escribe el número de la razón de rechazo:\n" +
+                        razonesRechazo
+                          .map((r, i) => `${i + 1}. ${r}`)
+                          .join("\n")
+                    );
+
+                    if (
+                      !razon ||
+                      isNaN(parseInt(razon)) ||
+                      parseInt(razon) < 1 ||
+                      parseInt(razon) > razonesRechazo.length
+                    ) {
+                      alert("Razón inválida");
+                      return;
+                    }
+
+                    const razonSeleccionada =
+                      razonesRechazo[parseInt(razon) - 1];
+
+                    try {
+                      // Actualizar el estado en la base de datos
+                      await UpdateStatePublication({
+                        id: publicacion.id,
+                        estado: "RECHAZADA",
+                        razon: razonSeleccionada,
+                      });
+
+                      // Emitir el evento a través del socket
+                      console.log(
+                        "Enviando evento actualizar-publicacion con:",
+                        {
+                          id: publicacion.id,
+                          userId: publicacion.userId,
+                          estado: "RECHAZADA",
+                          razon: razonSeleccionada,
+                        }
+                      );
+                      socket.emit("actualizar-publicacion", {
+                        id: publicacion.id,
+                        userId: publicacion.userId,
+                        estado: "RECHAZADA",
+                        razon: razonSeleccionada,
+                      });
+                      // Eliminar la publicación de la pantalla y del localStorage
+                      deleteValidatePublication(publicacion.id);
+                    } catch (error) {
+                      console.error("Error al rechazar la publicación:", error);
+                    }
+                  }}
+                >
+                  NO APROBADA
+                </Button>
               </div>
             </div>
           ))

@@ -5,6 +5,7 @@ import {
   registerSchema,
 } from "@/typeSchema/aut.schema";
 import axios, { AxiosResponse } from "axios";
+import { io } from "socket.io-client";
 import { z } from "zod";
 
 interface RegisterResponse {
@@ -14,6 +15,8 @@ interface RegisterResponse {
   redirectTo: string;
   isAdmin: string;
 }
+
+const socket = io("http://localhost:4004");
 
 export const signUp = async (
   data: RegisterInput
@@ -107,6 +110,14 @@ export const forgotPassword = async (email: string) => {
 };
 
 export const logout = async () => {
+  console.log("🔴 Desconectando socket del admin...");
+  socket.emit("admin-logout", {
+    adminId: "67b6430f65f30b2dd8a65dc6",
+    email: "luiscantorhitchclief@gmail.com",
+  });
+  socket.disconnect(); // 🔥 Fuerza la desconexión del socket
+  console.log("✅ 'admin-logout' emitido correctamente desde el cliente.");
+  localStorage.removeItem("isAdmin"); // Limpiar isAdmin en logout
   try {
     const response = await axios.get(
       "http://localhost:4004/auth/logout",

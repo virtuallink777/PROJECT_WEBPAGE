@@ -61,27 +61,17 @@ export const updatePublicationById = async (req: Request, res: Response) => {
       }
     }
 
-    // Ruta para eliminar los hashes de las imagenes de UserHash
-    const userHashes = await UserHash.findOne({ userId });
-    if (userHashes) {
-      for (const filename of imagesToDelete) {
-        await UserHash.findOneAndUpdate(
-          { userId },
-          { $pull: { hashes: { fileName: filename } } }
-        );
-      }
-    }
-
-    // Ruta para eliminar los hashes de los videos de UserHash
-    const userHashesVideos = await UserHash.findOne({ userId });
-    if (userHashesVideos) {
-      for (const filename of videosToDelete) {
-        await UserHash.findOneAndUpdate(
-          { userId },
-          { $pull: { hashes: { fileName: filename } } }
-        );
-      }
-    }
+    // Ruta para eliminar los hashes de imágenes y videos de UserHash
+    await UserHash.findOneAndUpdate(
+      { userId },
+      {
+        $pull: {
+          imageHashes: { fileName: { $in: imagesToDelete } }, // Asegurando el campo correcto
+          videoHashes: { fileName: { $in: videosToDelete } }, // Asegurando el campo correcto
+        },
+      },
+      { new: true }
+    );
 
     // Actualizar la publicación en la base de datos
     const updatedPublication = await Publicacion.findByIdAndUpdate(

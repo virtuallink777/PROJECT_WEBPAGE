@@ -22,16 +22,19 @@ import checkHashesCreatePub from "./routes/checkHashesCreatePub";
 import http from "http"; // ⚡ Para usar WebSockets
 import { Server } from "socket.io"; // ⚡ Importar socket.io
 import validateAdmin from "./routes/validatesAdmin";
+import statePublications from "./routes/statePublications";
+import { configureSockets } from "./routes/socketHandler";
 
 const app = express();
 
 const server = http.createServer(app); // ⚡ Crear servidor HTTP
+
 export const io = new Server(server, {
-  cors: {
-    origin: "http://localhost:3000",
-    credentials: true,
-  },
+  cors: { origin: "http://localhost:3000", credentials: true }, // Permitir conexiones desde cualquier origen
 });
+
+// Configurar WebSockets con la función importada
+configureSockets(io);
 
 // Middleware para parsear JSON
 app.use(express.json()); // Esto está bien para rutas POST/PUT
@@ -54,15 +57,6 @@ app.use(cookieParser());
 app.get("/", (req, res, next) => {
   return res.status(OK).json({
     status: "healthy",
-  });
-});
-
-// **Inicializar WebSockets**
-io.on("connection", (socket) => {
-  console.log("⚡ Admin conectado:", socket.id);
-
-  socket.on("disconnect", () => {
-    console.log("⚡ Admin desconectado");
   });
 });
 
@@ -105,6 +99,9 @@ app.use("/api/check-hashes", checkHashesCreatePub);
 
 // RUTA PÁRA GUARDAR LAS IMG DE VALIDATE Y ENVIAR DATOS AL ADMIN
 app.use("/api/validate", validateAdmin);
+
+// RUTA PARA GUARDAR EL ESTADO DE LA PUBLICACION
+app.use("/api/state-publication", statePublications);
 
 app.use(errorHandler);
 server.listen(PORT, async () => {

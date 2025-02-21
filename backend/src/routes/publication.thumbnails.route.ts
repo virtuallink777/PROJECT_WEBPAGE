@@ -24,6 +24,8 @@ const getPublicationsThumbnailsByUserId = router.get(
           telefono: 1,
           titulo: 1,
           createdAt: 1,
+          estado: 1,
+          razon: 1,
           images: {
             $filter: {
               input: "$images",

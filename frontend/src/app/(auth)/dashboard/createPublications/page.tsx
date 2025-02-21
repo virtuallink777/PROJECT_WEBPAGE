@@ -173,7 +173,6 @@ const CreatePublications: React.FC = () => {
 
       // Crear un único FormData para todos los archivos
       const combinedFormData = new FormData();
-      // Subir imágenes: LAS IMAGENES DEBEN ESTAR CARGADAS EN EL FORMULARIO PARA PROCEDER
 
       // Subir imágenes
       combinedFormData.append("files", formData.fotoPrincipal);
@@ -287,7 +286,7 @@ const CreatePublications: React.FC = () => {
       console.log("Publicación creada:", response.data);
       alert("¡Publicación creada con éxito!, pasa ahora a validarla.");
 
-      //enviar las imagenes al localstorage// Guardar en localStorage
+      //enviar las imagenes al sessionStorage
 
       const dataToStorage = {
         userId: response.data.publicacion.userId,
@@ -297,11 +296,9 @@ const CreatePublications: React.FC = () => {
         updatedAt: response.data.publicacion.updatedAt,
       };
 
-      localStorage.setItem("dataToStorage", JSON.stringify(dataToStorage));
-      console.log(
-        "Imágenes guardadas en localStorage:",
-        JSON.parse(localStorage.getItem("dataToStorage") || "[]")
-      );
+      console.log("dataToStorage:", dataToStorage);
+
+      sessionStorage.setItem("dataToStorage", JSON.stringify(dataToStorage));
 
       router.push(
         `/dashboard/validate/${formData.userId}/${response.data.publicacion._id}`
