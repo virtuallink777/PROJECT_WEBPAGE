@@ -169,7 +169,7 @@ const ViewPublications = () => {
                 <p className="text-gray-700 mt-2 line-clamp-3">
                   {pub.estado === "RECHAZADA" ? (
                     <Link
-                      href={`/dashboard/validate/${pub.userId}/${pub._id}`}
+                      href={`/dashboard/validateRejected/${pub.userId}/${pub._id}`}
                       passHref
                     >
                       <span

@@ -1,25 +1,27 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
-import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
-export default function ValidarPublicidad() {
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import Image from "next/image";
+interface DataItems {
+  userId: string;
+  email: string;
+  id: string;
+  images: { url: string }[];
+  shippingDateValidate: string;
+}
+
+const ValidateRejected = () => {
   const [fotoConCartel, setFotoConCartel] = useState<File | null>(null);
   const [fotoRostro, setFotoRostro] = useState<File | null>(null);
   const [mostrarAdvertencia, setMostrarAdvertencia] = useState(false);
   const [muestraRostro, setMuestraRostro] = useState<string | null>(null);
-
   const router = useRouter();
-
-  interface DataItems {
-    userId: string;
-    email: string;
-    id: string;
-    images: { url: string }[];
-    shippingDateValidate: string;
-  }
+  // Estado para almacenar los datos de `result`
+  const [publicacionActualizada, setPublicacionActualizada] =
+    useState<DataItems | null>(null);
 
   const handleUploadCartel = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] || null;
@@ -50,29 +52,60 @@ export default function ValidarPublicidad() {
     }
   };
 
-  const storedData = JSON.parse(
-    sessionStorage.getItem("dataToStorage") || "{}"
-  );
+  const { _id } = useParams();
+  const estado = "PENDIENTE";
+  const razon = "";
 
-  const userId = storedData.userId;
-  const email = storedData.email;
-  const _id = storedData._id;
-  const images: { url: string }[] = storedData.images || [];
+  console.log("Datos recibidos en la página:", { _id, estado, razon });
+
+  useEffect(() => {
+    const updateStatePublication = async () => {
+      console.log("Datos enviados al state-pub:", { estado, razon, _id });
+      try {
+        const response = await fetch(
+          `http://localhost:4004/api/state-publication/`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ id: _id, estado, razon }),
+          }
+        );
+        if (!response.ok) {
+          throw new Error("Error al actualizar el estado de la publicación");
+        }
+        const result = await response.json();
+        console.log("Estado actualizado:", result);
+        // Actualiza el estado con los datos de `result`
+        setPublicacionActualizada(result);
+      } catch (error) {
+        console.error(
+          "Error al actualizar el estado de la publicación:",
+          error
+        );
+      }
+    };
+
+    updateStatePublication();
+  }, [_id]); // Solo se ejecuta cuando cambian `_id` o `estado`
+
+  console.log("Publicación actualizada:", publicacionActualizada);
+
+  const userId = publicacionActualizada?.userId;
+  const email = publicacionActualizada?.email;
+  const images: { url: string }[] = publicacionActualizada?.images || [];
   const shippingDateValidate = new Date().toLocaleString("es-CO", {
     timeZone: "America/Bogota",
   });
 
   const dataItems: DataItems = {
-    userId,
+    userId: userId || "",
     id: _id,
     images,
-    email,
+    email: email || "",
     shippingDateValidate,
   };
-
-  console.log("User ID:", userId);
-  console.log("Email:", email);
-  console.log("_id:", _id);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -235,4 +268,6 @@ export default function ValidarPublicidad() {
       </form>
     </div>
   );
-}
+};
+
+export default ValidateRejected;

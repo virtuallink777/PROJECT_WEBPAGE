@@ -11,7 +11,7 @@ const defaults: CookieOptions = {
 
 export const getAccessTokenCookieOptions = (): CookieOptions => ({
   ...defaults,
-  expires: fifteenMinutesFromNow(),
+  expires: new Date(Date.now() + 60 * 60 * 1000), // ✅ 1 HORA
 });
 
 export const getRefreshTokenCookieOptions = (): CookieOptions => ({

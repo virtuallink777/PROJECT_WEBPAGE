@@ -125,6 +125,7 @@ const AdminPanel = () => {
 
   const UpdateStatePublication = async (data: UpdateStatePublication) => {
     const { id, estado, razon } = data;
+    console.log("Datos enviados al state-pub:", data);
     try {
       // Llamar a la API para actualizar el estado en la base de datos
       const response = await fetch(
@@ -267,31 +268,27 @@ const AdminPanel = () => {
       console.log("LocalStorage actualizado:", updatedData);
     }
   };
-  const publicacionData = Array.isArray(publicaciones)
-    ? publicaciones[0]
-    : publicaciones;
 
-  console.log("Publicación procesada:", publicacionData);
   return (
     <>
       <div className="p-4">
         <h2 className="text-xl font-bold mb-4">Nueva Publicación</h2>
         {publicaciones.length > 0 ? (
-          publicaciones.map((publicacion) => (
-            <div key={publicacion.id} className="border p-4 rounded shadow">
+          publicaciones.map((publicacion, index) => (
+            <div key={index} className="border p-4 rounded shadow">
               <p>
                 <strong>Usuario ID:</strong>{" "}
-                {publicacionData?.userId || "Desconocido"}
+                {publicacion?.userId || "Desconocido"}
               </p>
               <p>
-                <strong>Publicación ID:</strong> {publicacionData?.id || "N/A"}
+                <strong>Publicación ID:</strong> {publicacion?.id || "N/A"}
               </p>
               <p>
-                <strong>Email:</strong> {publicacionData?.email || "N/A"}
+                <strong>Email:</strong> {publicacion?.email || "N/A"}
               </p>
               <p>
                 <strong>Fecha de Envio para validar:</strong>{" "}
-                {publicacionData?.shippingDateValidate || "N/A"}
+                {publicacion?.shippingDateValidate || "N/A"}
               </p>
 
               <h3 className="text-lg font-semibold mt-2">Imágenes:</h3>

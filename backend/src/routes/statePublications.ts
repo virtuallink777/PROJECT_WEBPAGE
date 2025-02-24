@@ -4,6 +4,7 @@ const router = express.Router();
 import Publicacion from "../models/publications.models";
 
 const statePublications = async (req: Request, res: Response) => {
+  console.log("📩 Datos recibidos en el backend:", req.body); // Agrega este log
   const { id, estado, razon } = req.body;
 
   // Validar que el estado sea uno de los permitidos
