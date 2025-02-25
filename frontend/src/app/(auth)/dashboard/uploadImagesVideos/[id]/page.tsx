@@ -134,7 +134,8 @@ const UploadImagesVideos = () => {
           });
         }
       }
-
+      console.log("combinedFormData:", combinedFormData);
+      console.log("formData.userId:", formData.userId);
       const ResponseImageVideo = await fetch(
         `http://localhost:4004/api/publicacionesImage/upload/${formData.userId}`,
         {
@@ -208,23 +209,16 @@ const UploadImagesVideos = () => {
       formDataToSend.append("imageUrls", JSON.stringify(imageUrls));
 
       formDataToSend.append("videoUrls", JSON.stringify(videoUrls));
+      console.log("formDataToSend:", formDataToSend);
 
-      // Hacer la petición final para crear la publicación
-      const response = await api.post(
-        "http://localhost:4004/publicationsUpload",
-        formDataToSend
-      );
-      console.log("Publicación creada:", response.data);
-      alert("¡Publicación creada con éxito!, pasa ahora a validarla.");
+      ///////////////////***************HAY QUE CABIAR DESDE ACA */
 
-      //enviar las imagenes al localstorage// Guardar en localStorage
+      //enviar las imagenes al sessionStorage
 
       const dataToStorage = {
-        userId: response.data.publicacion.userId,
-        images: response.data.publicacion.images,
-        _id: response.data.publicacion._id,
-        email: response.data.publicacion.email,
-        updatedAt: response.data.publicacion.updatedAt,
+        userId: formData.userId,
+        images: imageUrls,
+        videos: videoUrls,
       };
 
       localStorage.setItem("dataToStorage", JSON.stringify(dataToStorage));
@@ -233,9 +227,7 @@ const UploadImagesVideos = () => {
         JSON.parse(localStorage.getItem("dataToStorage") || "[]")
       );
 
-      router.push(
-        `/dashboard/validate/${formData.userId}/${response.data.publicacion._id}`
-      );
+      router.push(`/dashboard/validate/${formData.userId}/${id}`);
     } catch (error) {
       console.error("Error al crear la publicación:", error);
       alert("Error al crear la publicación. Por favor, intenta de nuevo.");

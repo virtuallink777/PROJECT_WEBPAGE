@@ -8,7 +8,7 @@ export interface FileHash {
   fileType: "image" | "video";
 }
 
-export interface UserHash {
+interface UserHash {
   userId: string;
   imageHashes: FileHash[];
   videoHashes: FileHash[];

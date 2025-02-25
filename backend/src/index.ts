@@ -24,6 +24,7 @@ import { Server } from "socket.io"; // ⚡ Importar socket.io
 import validateAdmin from "./routes/validatesAdmin";
 import statePublications from "./routes/statePublications";
 import { configureSockets } from "./routes/socketHandler";
+import deletePublications from "./routes/deletePublications";
 
 const app = express();
 
@@ -102,6 +103,9 @@ app.use("/api/validate", validateAdmin);
 
 // RUTA PARA GUARDAR EL ESTADO DE LA PUBLICACION
 app.use("/api/state-publication", statePublications);
+
+// RUTA PARA ELIMINAR PUBLICACIONES Y BORAR HASHES Y ARCHIVOS
+app.use("/api/delete-publication", deletePublications);
 
 app.use(errorHandler);
 server.listen(PORT, async () => {

@@ -6,6 +6,7 @@ import api from "@/lib/api";
 import Image from "next/image";
 import Link from "next/link";
 import { io } from "socket.io-client";
+import { Button } from "@/components/ui/button";
 
 const socket = io("http://localhost:4004");
 
@@ -111,6 +112,42 @@ const ViewPublications = () => {
     );
   }
 
+  // delete publication
+  const handleDeletePublication = async () => {
+    const id = publications[0]?._id; // Asegura que hay una publicación antes de intentar eliminar
+    if (!id) {
+      console.error("No hay una publicación para eliminar");
+      return;
+    }
+    const confirmDelete = window.confirm(
+      "¿Estás seguro(a) de eliminar la publicación? Si esta publicación tiene pago, se perderá."
+    );
+    if (!confirmDelete) return; // Si el usuario cancela, no hace nada
+
+    try {
+      const res = await fetch(`/api/delete-publication/`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (!res.ok) {
+        throw new Error("Error al eliminar la publicación");
+      }
+      if (res.status === 200) {
+        const data = await res.json();
+        console.log("Publicación eliminada:", data);
+        // Actualiza la lista de publicaciones después de la eliminación
+        const updatedPublications = publications.filter(
+          (pub) => pub._id !== id
+        );
+        setPublications(updatedPublications);
+        alert("Publicación eliminada exitosamente");
+      }
+    } catch (error) {
+      console.error("Error al eliminar la publicación:", error);
+    }
+  };
+
   const baseURL = "http://localhost:4004";
   console.log("Renderizando publicaciones:", publications);
   return (
@@ -202,13 +239,14 @@ const ViewPublications = () => {
                         </Link>
                       </div>
 
-                      <div className="text-gray-700 mt-2 line-clamp-2 text-center">
+                      <div>
                         {/* Enlace de editar */}
-                        <Link href={`/dashboard/editPublication/${pub._id}`}>
-                          <span className="text-blue-500 cursor-pointer hover:underline">
+                        <button onClick={() => handleDeletePublication()}>
+                          {" "}
+                          <span className="text-red-600 cursor-pointer hover:underline">
                             Elimina tu Publicacion
                           </span>
-                        </Link>
+                        </button>
                       </div>
                     </>
                   )}
