@@ -542,7 +542,9 @@ const CreatePublications: React.FC = () => {
                   className={selectStyle}
                   value={formData.Localidad}
                   onChange={handleInputChange}
-                  required
+                  disabled={
+                    categoriesData.localities[formData.ciudad]?.length === 0
+                  } // Deshabilita si no hay localidades
                 >
                   <option value="">Selecciona una localidad</option>
                   {categoriesData.localities[formData.ciudad]?.map(

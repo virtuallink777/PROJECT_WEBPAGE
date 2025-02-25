@@ -31,6 +31,11 @@ interface IPublication extends Document {
   }>;
   createdAt: Date;
   updatedAt: Date;
+  isPaid: boolean;
+  planTOP: "6H" | "10H" | "14H" | "24H";
+  price: number;
+  timeInitTOP: Date;
+  timeEndTOP: Date;
 }
 
 const PublicacionSchema = new mongoose.Schema<IPublication>({
@@ -44,7 +49,7 @@ const PublicacionSchema = new mongoose.Schema<IPublication>({
   Pais: { type: String, required: true },
   Departamento: { type: String, required: true },
   ciudad: { type: String, required: true },
-  Localidad: { type: String, required: true },
+  Localidad: { type: String },
   direccion: { type: String },
   mostrarEnMaps: { type: Boolean },
   titulo: { type: String, required: true },
@@ -72,6 +77,11 @@ const PublicacionSchema = new mongoose.Schema<IPublication>({
 
   createdAt: { type: Date, required: true, default: Date.now },
   updatedAt: { type: Date, required: true, default: Date.now },
+  isPaid: { type: Boolean, default: false },
+  planTOP: { type: String, enum: ["6H", "10H", "14H", "24H"] },
+  price: { type: Number },
+  timeInitTOP: { type: Date },
+  timeEndTOP: { type: Date },
 });
 
 export default mongoose.model<IPublication>("Publicacion", PublicacionSchema);

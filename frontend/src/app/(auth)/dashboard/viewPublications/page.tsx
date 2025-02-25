@@ -226,9 +226,11 @@ const ViewPublications = () => {
                   {pub.estado === "PENDIENTE" ||
                   pub.estado === "RECHAZADA" ? null : (
                     <>
-                      <span className="text-blue-500 cursor-pointer hover:underline">
-                        PAGAR PUBLICIDAD
-                      </span>
+                      <Link href={`/dashboard/payPublication/${pub._id}`}>
+                        <span className="text-blue-500 cursor-pointer hover:underline">
+                          PAGAR PUBLICIDAD
+                        </span>
+                      </Link>
 
                       <div className="text-gray-700 mt-2 line-clamp-2 text-center">
                         {/* Enlace de editar */}
