@@ -1,18 +1,1 @@
-[
-  {
-    "body": {
-      "images": [
-        "/uploads/67b6435a65f30b2dd8a65dd4/files-1740522739073-964472061.png",
-        "/uploads/67b6435a65f30b2dd8a65dd4/files-1740522739084-597893055.png",
-        "/uploads/67b6435a65f30b2dd8a65dd4/files-1740522739092-182343752.png",
-        "/uploads/67b6435a65f30b2dd8a65dd4/files-1740522739098-979257977.png"
-      ],
-      "dataItems for sessionStorage": "{\"userId\":\"67b6435a65f30b2dd8a65dd4\",\"id\":\"67be44f312f3d45d16f5d465\",\"images\":[{\"url\":\"/uploads/67b6435a65f30b2dd8a65dd4/files-1740522739073-964472061.png\",\"isPrincipal\":true,\"filename\":\"files-1740522739073-964472061.png\",\"_id\":\"67be44f312f3d45d16f5d466\"},{\"url\":\"/uploads/67b6435a65f30b2dd8a65dd4/files-1740522739084-597893055.png\",\"isPrincipal\":false,\"filename\":\"files-1740522739084-597893055.png\",\"_id\":\"67be44f312f3d45d16f5d467\"},{\"url\":\"/uploads/67b6435a65f30b2dd8a65dd4/files-1740522739092-182343752.png\",\"isPrincipal\":false,\"filename\":\"files-1740522739092-182343752.png\",\"_id\":\"67be44f312f3d45d16f5d468\"},{\"url\":\"/uploads/67b6435a65f30b2dd8a65dd4/files-1740522739098-979257977.png\",\"isPrincipal\":false,\"filename\":\"files-1740522739098-979257977.png\",\"_id\":\"67be44f312f3d45d16f5d469\"}],\"email\":\"negocios.caps@gmail.com\",\"shippingDateValidate\":\"25/2/2025, 5:32:28 p. m.\"}",
-      "muestraRostro": "Sí",
-      "shippingDateValidate": "25/2/2025, 5:32:28 p. m."
-    },
-    "fileUrls": {
-      "fotoCartel": "http://localhost:4004/uploads/67b6435a65f30b2dd8a65dd4/fotoCartel_1740522749242.png"
-    }
-  }
-]
+[]

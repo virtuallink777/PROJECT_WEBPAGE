@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { Document } from "mongoose";
 
-interface IPublication extends Document {
+export interface IPublication extends Document {
   userId: mongoose.Schema.Types.ObjectId; // relacion con el usuario
   email: string;
   esMayorDeEdad: boolean;
@@ -31,11 +31,17 @@ interface IPublication extends Document {
   }>;
   createdAt: Date;
   updatedAt: Date;
-  isPaid: boolean;
-  planTOP: "6H" | "10H" | "14H" | "24H";
-  price: number;
-  timeInitTOP: Date;
-  timeEndTOP: Date;
+  selectedPricing: {
+    hours: string;
+    days: string;
+    price: number;
+  };
+  selectedTime: string;
+  selectedPayment: string;
+  status: boolean;
+  transactionId: string;
+  transactionDate: string;
+  transactionTime: string;
 }
 
 const PublicacionSchema = new mongoose.Schema<IPublication>({
@@ -77,11 +83,18 @@ const PublicacionSchema = new mongoose.Schema<IPublication>({
 
   createdAt: { type: Date, required: true, default: Date.now },
   updatedAt: { type: Date, required: true, default: Date.now },
-  isPaid: { type: Boolean, default: false },
-  planTOP: { type: String, enum: ["6H", "10H", "14H", "24H"] },
-  price: { type: Number },
-  timeInitTOP: { type: Date },
-  timeEndTOP: { type: Date },
+
+  selectedPricing: {
+    hours: { type: String },
+    days: { type: String },
+    price: { type: Number },
+  },
+  selectedTime: { type: String },
+  selectedPayment: { type: String },
+  status: { type: Boolean, default: false },
+  transactionId: { type: String },
+  transactionDate: { type: String },
+  transactionTime: { type: String },
 });
 
 export default mongoose.model<IPublication>("Publicacion", PublicacionSchema);

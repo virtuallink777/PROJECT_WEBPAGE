@@ -25,6 +25,7 @@ import validateAdmin from "./routes/validatesAdmin";
 import statePublications from "./routes/statePublications";
 import { configureSockets } from "./routes/socketHandler";
 import deletePublications from "./routes/deletePublications";
+import { updatePublicationPayment } from "./routes/updatePublicationPayment";
 
 const app = express();
 
@@ -106,6 +107,9 @@ app.use("/api/state-publication", statePublications);
 
 // RUTA PARA ELIMINAR PUBLICACIONES Y BORAR HASHES Y ARCHIVOS
 app.use("/api/delete-publication", deletePublications);
+
+// RUTA PARA EL MANEJO DE ACTULIZACION DE PUBLICACIONES CON PAGO
+app.post("/api/updatePublicationPayment/:id", updatePublicationPayment);
 
 app.use(errorHandler);
 server.listen(PORT, async () => {
