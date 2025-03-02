@@ -1,12 +1,15 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import api from "@/lib/api";
 import Image from "next/image";
 import Link from "next/link";
 import { io } from "socket.io-client";
-import { Button } from "@/components/ui/button";
+
+import useSocket from "@/hooks/useSocket";
+import calculateRotationTime from "@/components/calculateRotationTime";
+import calculateEndDate from "@/components/calculateEndDate";
 
 const socket = io("http://localhost:4004");
 
@@ -59,6 +62,8 @@ const ViewPublications = () => {
   const [publications, setPublications] = useState<Publication[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [dataPay, setDataPay] = useState<any>(null);
+  const socketPay = useSocket("http://localhost:4004");
 
   // 🔹efecto  Conectar al socket cuando el componente se monta
   useEffect(() => {
@@ -80,6 +85,8 @@ const ViewPublications = () => {
       );
     });
   }, []);
+
+  /////
 
   // Efecto para cargar las publicaciones
   useEffect(() => {
@@ -103,14 +110,24 @@ const ViewPublications = () => {
     fetchPublications();
   }, []);
 
-  // Mostrar un mensaje de carga mientras se obtienen los datos
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        Cargando...
-      </div>
-    );
-  }
+  // alimentar la informacion del pago y de la rotacion
+
+  useEffect(() => {
+    if (!socketPay) return; // ✅ Mueve la condición dentro del hook
+
+    // listen event "dataPayPublication" from server
+    socketPay.on("dataPayPublication", (data) => {
+      console.log("dataPayPublication:", data);
+      setDataPay(data);
+    });
+
+    // request data from the server
+    socketPay.emit("requestDataPayPublication");
+
+    return () => {
+      socketPay.off("dataPayPublication"); // Limpia el evento al desmontar
+    };
+  }, [socketPay]);
 
   // delete publication
   const handleDeletePublication = async () => {
@@ -147,6 +164,15 @@ const ViewPublications = () => {
       console.error("Error al eliminar la publicación:", error);
     }
   };
+
+  // Mostrar un mensaje de carga mientras se obtienen los datos
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        Cargando...
+      </div>
+    );
+  }
 
   const baseURL = "http://localhost:4004";
   console.log("Renderizando publicaciones:", publications);
@@ -203,6 +229,7 @@ const ViewPublications = () => {
                     </span>
                   )}
                 </p>
+
                 <p className="text-gray-700 mt-2 line-clamp-3">
                   {pub.estado === "RECHAZADA" ? (
                     <Link
@@ -221,16 +248,40 @@ const ViewPublications = () => {
                   ) : null}
                 </p>
 
-                <div className="text-gray-700 mt-2 line-clamp-2 text-center">
+                <div className="text-gray-700 mt-2  text-center">
                   {/* Enlace de editar */}
                   {pub.estado === "PENDIENTE" ||
                   pub.estado === "RECHAZADA" ? null : (
                     <>
-                      <Link href={`/dashboard/payPublication/${pub._id}`}>
-                        <span className="text-blue-500 cursor-pointer hover:underline">
-                          PAGAR PUBLICIDAD
-                        </span>
-                      </Link>
+                      {dataPay ? (
+                        <div>
+                          <p className="text-green-500 font-semibold">
+                            TOP CONTRATADO: {dataPay.selectedPricing.days}
+                          </p>
+                          <p className="text-gray-600">
+                            DESDE: {dataPay.transactionDate}
+                          </p>
+                          <p className="text-gray-600">
+                            HASTA:{" "}
+                            {calculateEndDate(
+                              dataPay.transactionDate,
+                              dataPay.selectedPricing.days
+                            )}
+                          </p>
+                          <p className="text-gray-600">
+                            {calculateRotationTime(
+                              dataPay.selectedTime,
+                              dataPay.selectedPricing
+                            )}
+                          </p>
+                        </div>
+                      ) : (
+                        <Link href={`/dashboard/payPublication/${pub._id}`}>
+                          <span className="text-blue-500 cursor-pointer hover:underline">
+                            PAGAR PUBLICIDAD
+                          </span>
+                        </Link>
+                      )}
 
                       <div className="text-gray-700 mt-2 line-clamp-2 text-center">
                         {/* Enlace de editar */}

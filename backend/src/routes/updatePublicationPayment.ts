@@ -2,6 +2,7 @@
 
 import { Request, Response } from "express";
 import Publicacion from "../models/publications.models";
+import { io } from "..";
 
 export const updatePublicationPayment = async (req: Request, res: Response) => {
   try {
@@ -20,6 +21,19 @@ export const updatePublicationPayment = async (req: Request, res: Response) => {
     if (!publication) {
       return res.status(404).json({ message: "Publicación no encontrada" });
     }
+
+    // Emitir el evento de actualización de la publicación al frontend
+    io.on("connection", (socket) => {
+      // listener personal events fron client
+      socket.on("requestDataPayPublication", () => {
+        const data = req.body;
+        socket.emit("dataPayPublication", data);
+      });
+      console.log(
+        "📩 Datos recibidos en el backend y enviados al frontend:",
+        req.body
+      );
+    });
 
     // Procesar los datos de req.body
     return res.status(200).json({ message: "Datos recibidos correctamente" });

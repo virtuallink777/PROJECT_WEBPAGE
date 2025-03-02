@@ -26,6 +26,8 @@ import statePublications from "./routes/statePublications";
 import { configureSockets } from "./routes/socketHandler";
 import deletePublications from "./routes/deletePublications";
 import { updatePublicationPayment } from "./routes/updatePublicationPayment";
+import getPublicationsTOP from "./routes/getPublicationTOP";
+import getPublicationsNOTOP from "./routes/getPublicationsNOTOP";
 
 const app = express();
 
@@ -110,6 +112,12 @@ app.use("/api/delete-publication", deletePublications);
 
 // RUTA PARA EL MANEJO DE ACTULIZACION DE PUBLICACIONES CON PAGO
 app.post("/api/updatePublicationPayment/:id", updatePublicationPayment);
+
+//ruta para obtener todas las publicaciones TOP
+app.get("/api/publicationsTOP", getPublicationsTOP);
+
+// ruta para obtener publicaciones no top
+app.get("/api/publicationsNOTOP", getPublicationsNOTOP);
 
 app.use(errorHandler);
 server.listen(PORT, async () => {

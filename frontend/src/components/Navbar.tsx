@@ -1,4 +1,3 @@
-import React from "react";
 import MaxWidthWrapper from "./MaxWidthWrapper";
 import Link from "next/link";
 import { Icons } from "./Icons";
@@ -7,26 +6,38 @@ import Cities from "./NavItem";
 import UserAccountNav from "./UserAccountNav";
 import { cookies } from "next/headers";
 import { getServerSideUser } from "@/lib/serverSideUser";
+import { MobileNav } from "./Movilnav";
 
 export const Navbar = async () => {
   const nextCookies = cookies();
   const { user } = await getServerSideUser(nextCookies);
   console.log("Usuario desde Navbar:", user);
+
   return (
     <div className="bg-white sticky top-0 z-50 inset-x-0 h-16">
       <header className="relative bg-rose-300">
         <MaxWidthWrapper>
           <div className="border-b border-gray-500">
             <div className="flex h-16 items-center">
-              {/* TODO: Mobile nav */}
+              {/* Menú de móviles (solo visible en móviles) */}
+              <div className="ml-4 lg:hidden">
+                <MobileNav user={user} />
+              </div>
+
+              {/* Logo (visible en todas las pantallas) */}
               <div className="ml-4 flex lg:ml-0">
                 <Link href="/">
                   <Icons.logo className="h-10 w-10" />
                 </Link>
               </div>
-              <div className="ml-50">{user ? null : <Cities />}</div>
+
+              {/* Cities y elementos del lado derecho (solo visibles en pantallas grandes) */}
+              <div className="hidden lg:flex lg:items-center lg:space-x-6 lg:ml-50">
+                {user ? null : <Cities />}
+              </div>
 
               <div className="ml-auto flex items-center">
+                {/* Elementos para pantallas grandes (ocultos en móviles) */}
                 <div className="hidden lg:flex lg:flex-1 lg:items-center lg:justify-end lg:space-x-6">
                   {user ? null : (
                     <Link href="/sign-in" className={buttonVariants()}>

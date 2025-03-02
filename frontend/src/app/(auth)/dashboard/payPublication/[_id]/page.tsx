@@ -5,7 +5,7 @@ import PricingTable from "@/components/TableValuesPublication";
 import TimePicker from "@/components/TimePicker";
 import { Button } from "@/components/ui/button";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 const PayPublication = () => {
   // state for select cell

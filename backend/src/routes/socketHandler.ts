@@ -1,9 +1,5 @@
 import { Server, Socket } from "socket.io";
-import {
-  clearPendingValidations,
-  pendingValidations,
-  savePendingValidations,
-} from "./validatesAdmin";
+import { clearPendingValidations, pendingValidations } from "./validatesAdmin";
 
 interface CustomSocket extends Socket {
   userId?: string;
