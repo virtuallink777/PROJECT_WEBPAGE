@@ -73,7 +73,7 @@ const UserAccountNav = ({ user }: { user: User }) => {
         {!isAdmin && (
           <DropdownMenuItem
             className="cursor-pointer"
-            onClick={() => router.push("/dashboard")}
+            onClick={() => router.push("/dashboard/viewPublications")}
           >
             Ir a mi panel de control
           </DropdownMenuItem>

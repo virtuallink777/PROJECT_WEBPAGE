@@ -33,6 +33,14 @@ const getPublicationsThumbnailsByUserId = router.get(
               cond: { $eq: ["$$image.isPrincipal", true] },
             },
           },
+          selectedPricing: {
+            hours: 1,
+            days: 1,
+            price: 1,
+          },
+          selectedTime: 1,
+          transactionDate: 1,
+          transactionTime: 1,
         }); // Seleccionamos solo los campos necesarios para la vista miniatura
 
       if (!publications) {

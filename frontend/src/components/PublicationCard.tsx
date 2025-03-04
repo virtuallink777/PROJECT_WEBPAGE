@@ -14,8 +14,12 @@ interface IPublication {
   _id: string;
   nombre: string;
   titulo: string;
-  images: Image[];
+  Pais: string;
+  Departamento: string;
   ciudad: string;
+  Localidad: string;
+  images: Image[];
+
   telefono: string;
   status: boolean;
 }
@@ -54,11 +58,11 @@ const PublicationCard: React.FC<PublicationCardProps> = ({ publication }) => {
     <div
       onClick={() => handleClick()}
       className="flex flex-col items-center border border-gray-500 rounded-lg overflow-hidden shadow-sm w-full cursor-pointer transition-transform duration-300 ease-in-out hover:scale-105"
-      style={{ width: cardWidth, height: cardHeight }} // ✅ Tamaño fijo
+      style={{ width: cardWidth, height: cardHeight }} // ✅ Tamaño variable en vm y vw
     >
       {/* Imagen */}
       <div
-        className="w-full flex-shrink-0"
+        className="w-full"
         style={{ height: "80%" }} // ✅ 80% del contenedor para la imagen
       >
         <Image
@@ -71,10 +75,14 @@ const PublicationCard: React.FC<PublicationCardProps> = ({ publication }) => {
       </div>
 
       {/* Contenido */}
-      <div className="p-2 w-full text-center flex-grow flex flex-col justify-center">
+      <div className="p-2 w-full text-center flex-grow flex flex-col justify-center items-center">
         <h3 className="text-sm font-semibold">{publication.nombre}</h3>
         <p className="text-xs text-gray-600">{publication.titulo}</p>
-        <p className="text-xs text-gray-600">{publication.ciudad}</p>
+        <p className="text-xs text-gray-600">{publication.Pais}</p>
+        <p className="text-xs text-gray-600">{publication.Departamento}</p>
+        <p className="text-xs text-gray-600">
+          {publication.ciudad} - {publication.Localidad}
+        </p>
       </div>
     </div>
   );

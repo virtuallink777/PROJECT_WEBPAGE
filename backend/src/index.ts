@@ -114,10 +114,10 @@ app.use("/api/delete-publication", deletePublications);
 app.post("/api/updatePublicationPayment/:id", updatePublicationPayment);
 
 //ruta para obtener todas las publicaciones TOP
-app.get("/api/publicationsTOP", getPublicationsTOP);
+app.post("/api/publicationsTOP", getPublicationsTOP);
 
 // ruta para obtener publicaciones no top
-app.get("/api/publicationsNOTOP", getPublicationsNOTOP);
+app.post("/api/publicationsNOTOP", getPublicationsNOTOP);
 
 app.use(errorHandler);
 server.listen(PORT, async () => {

@@ -11,6 +11,8 @@ import useSocket from "@/hooks/useSocket";
 import calculateRotationTime from "@/components/calculateRotationTime";
 import calculateEndDate from "@/components/calculateEndDate";
 
+import { Button } from "@/components/ui/button";
+
 const socket = io("http://localhost:4004");
 
 type Publication = {
@@ -27,6 +29,14 @@ type Publication = {
   }[];
   estado: "PENDIENTE" | "APROBADA" | "RECHAZADA"; // 👈 Agregado
   razon?: string; // 👈 Agregado (opcional)
+  selectedPricing: {
+    days: string;
+    hours: string;
+    price: string;
+  };
+  selectedTime: string;
+  transactionDate: string;
+  transactionTime: string;
 };
 
 // Función para obtener el ID del cliente
@@ -62,7 +72,7 @@ const ViewPublications = () => {
   const [publications, setPublications] = useState<Publication[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
-  const [dataPay, setDataPay] = useState<any>(null);
+  const [dataPay, setDataPay] = useState<{ [key: string]: any }>({});
   const socketPay = useSocket("http://localhost:4004");
 
   // 🔹efecto  Conectar al socket cuando el componente se monta
@@ -118,7 +128,10 @@ const ViewPublications = () => {
     // listen event "dataPayPublication" from server
     socketPay.on("dataPayPublication", (data) => {
       console.log("dataPayPublication:", data);
-      setDataPay(data);
+      setDataPay((prevDataPay) => ({
+        ...prevDataPay,
+        [data.id]: data, // Asocia el pago a la publicación correcta
+      }));
     });
 
     // request data from the server
@@ -174,6 +187,19 @@ const ViewPublications = () => {
     );
   }
 
+  // LOGICA PARA VERIFICAR CUANTAS PUBLICACIONES TIENE GRATIS Y APROBADAS
+  const canCreateMorePublications = () => {
+    const hasFreePublication = publications.some(
+      (pub) => pub.estado === "APROBADA" && !dataPay[pub._id]
+    );
+    const hasUnpaidApprovedPublications = publications.filter(
+      (pub) => pub.estado === "APROBADA" && !dataPay[pub._id]
+    ).length;
+
+    // Si ya tiene una publicación gratis y otra aprobada sin pagar, no puede crear más
+    return !(hasFreePublication && hasUnpaidApprovedPublications >= 2);
+  };
+  console.log("dataPay", dataPay);
   const baseURL = "http://localhost:4004";
   console.log("Renderizando publicaciones:", publications);
   return (
@@ -188,6 +214,8 @@ const ViewPublications = () => {
               key={pub._id}
               className="overflow-hidden hover:shadow-lg transition-shadow"
             >
+              {" "}
+              {/* Ajusta el tamaño aquí */}
               <Image
                 src={
                   pub.images[0]?.url
@@ -202,8 +230,7 @@ const ViewPublications = () => {
               <div className="p-4">
                 <p className="text-gray-600">{pub._id}</p>
                 <h2 className="font-semibold text-lg mb-2">{pub.nombre}</h2>
-                <p className="text-gray-600">Edad: {pub.edad}</p>
-                <p className="text-gray-700 mt-2 line-clamp-2">{pub.titulo}</p>
+
                 <p className="text-gray-700 mt-2 line-clamp-2">
                   Telefono: {pub.telefono}
                 </p>
@@ -249,29 +276,28 @@ const ViewPublications = () => {
                 </p>
 
                 <div className="text-gray-700 mt-2  text-center">
-                  {/* Enlace de editar */}
                   {pub.estado === "PENDIENTE" ||
                   pub.estado === "RECHAZADA" ? null : (
                     <>
-                      {dataPay ? (
+                      {pub.selectedTime ? ( // ✅ Verifica si existe información de pago para esta publicación
                         <div>
                           <p className="text-green-500 font-semibold">
-                            TOP CONTRATADO: {dataPay.selectedPricing.days}
+                            TOP CONTRATADO: {pub.selectedPricing.days}
                           </p>
                           <p className="text-gray-600">
-                            DESDE: {dataPay.transactionDate}
+                            DESDE: {pub.transactionDate}
                           </p>
                           <p className="text-gray-600">
                             HASTA:{" "}
                             {calculateEndDate(
-                              dataPay.transactionDate,
-                              dataPay.selectedPricing.days
+                              pub.transactionDate,
+                              pub.selectedPricing.days
                             )}
                           </p>
                           <p className="text-gray-600">
                             {calculateRotationTime(
-                              dataPay.selectedTime,
-                              dataPay.selectedPricing
+                              pub.selectedTime,
+                              pub.selectedPricing
                             )}
                           </p>
                         </div>
@@ -307,6 +333,23 @@ const ViewPublications = () => {
               </div>
             </Card>
           ))}
+        </div>
+        <div className="container relative flex pt-10 flex-col items-center justify-center lg:px-0">
+          <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
+            <div className="text-center "></div>
+
+            <div className="text-center"></div>
+            <div className="flex flex-col items-center space-y-4 mt-4">
+              <Link
+                href="/dashboard/createPublications"
+                className="w-full text-lg"
+              >
+                <Button className="w-full text-lg">Crear Publicaciones</Button>
+              </Link>
+
+              <Button className="w-full text-lg">Estadísticas</Button>
+            </div>
+          </div>
         </div>
       </div>
     </>

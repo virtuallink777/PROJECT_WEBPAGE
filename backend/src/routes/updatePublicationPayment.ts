@@ -13,10 +13,12 @@ export const updatePublicationPayment = async (req: Request, res: Response) => {
     }
 
     const { id } = req.params; // Obtener el ID de los parámetros de la ruta
+    console.log("ID de la publicación:", id);
 
     const publication = await Publicacion.findByIdAndUpdate(id, req.body, {
       new: true,
     });
+    console.log("Publicación actualizada:", publication);
 
     if (!publication) {
       return res.status(404).json({ message: "Publicación no encontrada" });
@@ -26,12 +28,14 @@ export const updatePublicationPayment = async (req: Request, res: Response) => {
     io.on("connection", (socket) => {
       // listener personal events fron client
       socket.on("requestDataPayPublication", () => {
-        const data = req.body;
+        const data = { ...req.body, id };
         socket.emit("dataPayPublication", data);
       });
       console.log(
         "📩 Datos recibidos en el backend y enviados al frontend:",
-        req.body
+        req.body,
+        "ID de la publicación:",
+        id
       );
     });
 

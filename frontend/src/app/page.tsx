@@ -41,19 +41,43 @@ export default function Home() {
   const { selections } = useFilterStore(); // Estado global de filtros
 
   useEffect(() => {
-    // obtener las publicaciones top
-    fetch("/api/publicationsTOP")
-      .then((res) => res.json())
-      .then((data) => setTopPublications(data))
-      .catch((err) => console.log(err));
+    const fetchPublications = async () => {
+      try {
+        // Obtener las publicaciones TOP filtradas
+        const topRes = await fetch(
+          "http://localhost:4004/api/publicationsTOP",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(selections),
+          }
+        );
+        const topData = await topRes.json();
+        setTopPublications(topData);
 
-    // obtener las publicaciones sin top
-    fetch("/api/publicationsNOTOP")
-      .then((res) => res.json())
-      .then((data) => setNonTopPublications(data))
-      .catch((err) => console.log(err))
-      .finally(() => setLoading(false));
-  }, []);
+        // Obtener las publicaciones sin TOP filtradas
+        const nonTopRes = await fetch(
+          "http://localhost:4004/api/publicationsNOTOP",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(selections),
+          }
+        );
+        const nonTopData = await nonTopRes.json();
+        setNonTopPublications(nonTopData);
+      } catch (error) {
+        console.error("Error al obtener las publicaciones:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPublications();
+  }, [selections]);
 
   console.log("publicaciones TOP:", topPublications);
   console.log("publicaciones sin TOP:", nonTopPublications);

@@ -56,7 +56,7 @@ export const loginHandler = catchErros(async (req, res) => {
     .status(OK)
     .json({
       message: "Login successful",
-      redirectTo: isAdmin ? "/admin" : "/dashboard",
+      redirectTo: isAdmin ? "/admin" : "/dashboard/viewPublications",
       isAdmin,
     });
 });
