@@ -27,16 +27,27 @@ export const updatePublicationPayment = async (req: Request, res: Response) => {
     // Emitir el evento de actualización de la publicación al frontend
     io.on("connection", (socket) => {
       // listener personal events fron client
-      socket.on("requestDataPayPublication", () => {
-        const data = { ...req.body, id };
+      socket.on("requestDataPayPublication", async () => {
+        const publication = await Publicacion.findById(id); // Verifica si la publicación existe
+        if (!publication) {
+          console.log("La publicación no existe");
+          socket.emit("publicationNotFound", {
+            message: "La publicación no existe",
+          });
+          return;
+        }
+        const data = { publication, id };
+
+        // Verifica si la publicación ya fue enviada
+
         socket.emit("dataPayPublication", data);
+        console.log(
+          "📩 Datos recibidos en el backend y enviados al frontend:",
+          data,
+          "ID de la publicación:",
+          id
+        );
       });
-      console.log(
-        "📩 Datos recibidos en el backend y enviados al frontend:",
-        req.body,
-        "ID de la publicación:",
-        id
-      );
     });
 
     // Procesar los datos de req.body

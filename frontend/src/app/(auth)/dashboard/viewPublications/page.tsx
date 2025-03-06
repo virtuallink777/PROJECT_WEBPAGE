@@ -6,11 +6,9 @@ import api from "@/lib/api";
 import Image from "next/image";
 import Link from "next/link";
 import { io } from "socket.io-client";
-
 import useSocket from "@/hooks/useSocket";
 import calculateRotationTime from "@/components/calculateRotationTime";
 import calculateEndDate from "@/components/calculateEndDate";
-
 import { Button } from "@/components/ui/button";
 
 const socket = io("http://localhost:4004");
@@ -65,20 +63,24 @@ async function guardarUserId() {
   }
 }
 
-// Llamar a la función para obtener y guardar el userId
-guardarUserId();
-
 const ViewPublications = () => {
   const [publications, setPublications] = useState<Publication[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [dataPay, setDataPay] = useState<{ [key: string]: any }>({});
+  const [canCreateMorePublications, setCanCreateMorePublications] =
+    useState(true);
   const socketPay = useSocket("http://localhost:4004");
+
+  useEffect(() => {
+    guardarUserId();
+  }, []);
 
   // 🔹efecto  Conectar al socket cuando el componente se monta
   useEffect(() => {
     // 🔹 Obtener userId del localStorage
-    const storedUserId = localStorage.getItem("userId");
+    const storedUserId =
+      typeof window !== "undefined" ? localStorage.getItem("userId") : null;
     socket.emit("identificar-usuario", storedUserId);
 
     console.log("📌 userId en localStorage:", storedUserId);
@@ -123,28 +125,53 @@ const ViewPublications = () => {
   // alimentar la informacion del pago y de la rotacion
 
   useEffect(() => {
-    if (!socketPay) return; // ✅ Mueve la condición dentro del hook
+    if (!socketPay) return;
 
-    // listen event "dataPayPublication" from server
-    socketPay.on("dataPayPublication", (data) => {
-      console.log("dataPayPublication:", data);
-      setDataPay((prevDataPay) => ({
-        ...prevDataPay,
-        [data.id]: data, // Asocia el pago a la publicación correcta
-      }));
-    });
+    const handleDataPayPublication = (data) => {
+      if (data.id) {
+        console.log("dataPayPublication:", data);
+        setDataPay((prevDataPay) => ({
+          ...prevDataPay,
+          [data.id]: data,
+        }));
+      }
+    };
 
-    // request data from the server
+    // 🔹 Verifica si ya hay un listener antes de agregar uno nuevo
+    if (!socketPay.hasListeners("dataPayPublication")) {
+      socketPay.on("dataPayPublication", handleDataPayPublication);
+    }
+
     socketPay.emit("requestDataPayPublication");
 
     return () => {
-      socketPay.off("dataPayPublication"); // Limpia el evento al desmontar
+      socketPay.off("dataPayPublication", handleDataPayPublication);
     };
   }, [socketPay]);
 
+  // CONTAR PUBLICACIONES NOTOP AL BACKEND PARA QUE SEAN EVALUADAS Y RENDERIZADAS
+  useEffect(() => {
+    const countUnpaidApprovedPublications = (publications: Publication[]) => {
+      return publications.filter(
+        (pub) => pub.estado === "APROBADA" && !pub.transactionDate
+      ).length;
+    };
+    const unpaidApprovedCount = countUnpaidApprovedPublications(publications);
+    if (unpaidApprovedCount >= 2) {
+      setCanCreateMorePublications(false);
+      alert(
+        "Has alcanzado el límite de publicaciones sin pagar. Por favor, paga alguna de las 2 publicaciones pendientes por pago antes de crear nuevas."
+      );
+    } else {
+      setCanCreateMorePublications(true);
+    }
+  }, [publications, dataPay]);
+
+  // enviamos la primera notop al backend para que sea renderizada
+
   // delete publication
-  const handleDeletePublication = async () => {
-    const id = publications[0]?._id; // Asegura que hay una publicación antes de intentar eliminar
+  const handleDeletePublication = async (id: string) => {
+    console.log("Eliminar publicación con ID:", id);
     if (!id) {
       console.error("No hay una publicación para eliminar");
       return;
@@ -187,32 +214,20 @@ const ViewPublications = () => {
     );
   }
 
-  // LOGICA PARA VERIFICAR CUANTAS PUBLICACIONES TIENE GRATIS Y APROBADAS
-  const canCreateMorePublications = () => {
-    const hasFreePublication = publications.some(
-      (pub) => pub.estado === "APROBADA" && !dataPay[pub._id]
-    );
-    const hasUnpaidApprovedPublications = publications.filter(
-      (pub) => pub.estado === "APROBADA" && !dataPay[pub._id]
-    ).length;
-
-    // Si ya tiene una publicación gratis y otra aprobada sin pagar, no puede crear más
-    return !(hasFreePublication && hasUnpaidApprovedPublications >= 2);
-  };
   console.log("dataPay", dataPay);
   const baseURL = "http://localhost:4004";
   console.log("Renderizando publicaciones:", publications);
   return (
     <>
-      <div className="container mx-auto p-4">
+      <div className="container relative flex pt-10 flex-col items-center justify-center lg:px-0 p-4">
         <h1 className="text-2xl font-bold mb-6 text-center">
           Mis Publicaciones
         </h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6  ">
           {publications.map((pub) => (
             <Card
               key={pub._id}
-              className="overflow-hidden hover:shadow-lg transition-shadow"
+              className="overflow-hidden hover:shadow-lg transition-shadow lg:w-[20vw] lg:h-[80vh] sm:w-[30vw] sm:h-[90vh] md:w-[20vw] md:h-[115vh]"
             >
               {" "}
               {/* Ajusta el tamaño aquí */}
@@ -225,7 +240,7 @@ const ViewPublications = () => {
                 width={300}
                 height={300}
                 alt="ppalImages"
-                className="w-full h-48 object-cover"
+                className="w-30 h-48 object-cover"
               />
               <div className="p-4">
                 <p className="text-gray-600">{pub._id}</p>
@@ -246,7 +261,7 @@ const ViewPublications = () => {
                       APROBADA ✅
                     </span>
                   ) : pub.estado === "RECHAZADA" ? (
-                    <span className="text-red-500 font-semibold">
+                    <span className="text-red-500 font-semibold line-clamp-4">
                       RECHAZADA ❌ - Motivo: {pub.razon}, Por favor intenta de
                       nuevo
                     </span>
@@ -257,7 +272,7 @@ const ViewPublications = () => {
                   )}
                 </p>
 
-                <p className="text-gray-700 mt-2 line-clamp-3">
+                <p className="text-gray-700 mt-2 line-clamp-2">
                   {pub.estado === "RECHAZADA" ? (
                     <Link
                       href={`/dashboard/validateRejected/${pub.userId}/${pub._id}`}
@@ -320,8 +335,9 @@ const ViewPublications = () => {
 
                       <div>
                         {/* Enlace de editar */}
-                        <button onClick={() => handleDeletePublication()}>
-                          {" "}
+                        <button
+                          onClick={() => handleDeletePublication(pub._id)}
+                        >
                           <span className="text-red-600 cursor-pointer hover:underline">
                             Elimina tu Publicacion
                           </span>
@@ -343,8 +359,18 @@ const ViewPublications = () => {
               <Link
                 href="/dashboard/createPublications"
                 className="w-full text-lg"
+                onClick={(e) => {
+                  if (!canCreateMorePublications) {
+                    e.preventDefault(); // Evita la navegación si el botón está deshabilitado
+                  }
+                }}
               >
-                <Button className="w-full text-lg">Crear Publicaciones</Button>
+                <Button
+                  className="w-full text-lg"
+                  disabled={!canCreateMorePublications}
+                >
+                  Crear Publicaciones
+                </Button>
               </Link>
 
               <Button className="w-full text-lg">Estadísticas</Button>

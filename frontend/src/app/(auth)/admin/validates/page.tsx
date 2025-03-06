@@ -238,8 +238,6 @@ const AdminPanel = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // ✅ Solo ejecuta esto al montar el componente
 
-  //ELIMINAR LA PUBLICACION ACEPTADA O RECHAZADA *** falta programarla
-
   const deleteValidatePublication = (id: string) => {
     console.log("ID recibido para eliminar:", id);
 

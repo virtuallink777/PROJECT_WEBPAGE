@@ -4,7 +4,7 @@ import PaymentMethodSelector from "@/components/PaymentMethodSelector";
 import PricingTable from "@/components/TableValuesPublication";
 import TimePicker from "@/components/TimePicker";
 import { Button } from "@/components/ui/button";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 
 const PayPublication = () => {
@@ -28,6 +28,8 @@ const PayPublication = () => {
   console.log("id", _id);
 
   const id = _id._id;
+
+  const router = useRouter();
 
   const handlePayment = async () => {
     if (!selectedPricing || !selectedTime || !selectedPayment) {
@@ -83,6 +85,7 @@ const PayPublication = () => {
       });
 
       alert(`Pago exitoso. ID de transacción: ${newTransactionId}`);
+      router.push("/dashboard/viewPublications");
     } catch (error) {
       console.error("Error al realizar el pago:", error);
       alert("Ha ocurrido un error al procesar el pago.");
