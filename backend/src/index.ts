@@ -28,7 +28,7 @@ import deletePublications from "./routes/deletePublications";
 import { updatePublicationPayment } from "./routes/updatePublicationPayment";
 import getPublicationsTOP from "./routes/getPublicationTOP";
 import getPublicationsNOTOP from "./routes/getPublicationsNOTOP";
-import Publicacion from "./models/publications.models";
+import updatePublicationsEndTop from "./routes/updatePublicationsEndTop";
 
 const app = express();
 
@@ -115,10 +115,13 @@ app.use("/api/delete-publication", deletePublications);
 app.post("/api/updatePublicationPayment/:id", updatePublicationPayment);
 
 //ruta para obtener todas las publicaciones TOP
-app.post("/api/publicationsTOP", getPublicationsTOP);
+app.get("/api/publicationsTOP", getPublicationsTOP);
 
 // ruta para obtener publicaciones no top
 app.get("/api/publicationsNOTOP", getPublicationsNOTOP);
+
+// ruta para actualizar las publicaciones que finalizaron top
+app.use("/api/updatePublicationsEndTop", updatePublicationsEndTop);
 
 app.use(errorHandler);
 server.listen(PORT, async () => {

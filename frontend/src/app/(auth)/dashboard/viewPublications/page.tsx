@@ -10,6 +10,7 @@ import useSocket from "@/hooks/useSocket";
 import calculateRotationTime from "@/components/calculateRotationTime";
 import calculateEndDate from "@/components/calculateEndDate";
 import { Button } from "@/components/ui/button";
+import calculateRotationTimeLogic from "@/lib/calculateRotationTimeLogic";
 
 const socket = io("http://localhost:4004");
 
@@ -167,7 +168,99 @@ const ViewPublications = () => {
     }
   }, [publications, dataPay]);
 
-  // enviamos la primera notop al backend para que sea renderizada
+  const endTopPublication = async () => {
+    try {
+      // Filtrar solo publicaciones aprobadas con datos de transacción
+      const paidPublications = publications.filter(
+        (pub) =>
+          pub.estado === "APROBADA" &&
+          pub.transactionDate &&
+          pub.selectedPricing?.days &&
+          pub.selectedPricing?.hours
+      );
+
+      console.log("Publicaciones pagadas a evaluar:", paidPublications.length);
+
+      paidPublications.forEach((pub) => {
+        try {
+          console.log(`Evaluando publicación ID: ${pub._id}`);
+          console.log("Datos:", {
+            transactionDate: pub.transactionDate,
+            days: pub.selectedPricing.days,
+            selectedTime: pub.selectedTime || "12:00 AM",
+            hours: pub.selectedPricing.hours,
+          });
+
+          const endDateString = calculateEndDate(
+            pub.transactionDate,
+            pub.selectedPricing.days,
+            pub.selectedTime || "12:00 AM",
+            pub.selectedPricing.hours
+          );
+
+          console.log("Fecha de finalización calculada:", endDateString);
+
+          // Extraer correctamente la fecha y hora del formato "dd/mm/yyyy hh:mm a.m./p.m."
+          const [datePart, timePart] = endDateString.split(" ");
+          const [day, month, year] = datePart.split("/").map(Number);
+
+          // Crear objeto Date correctamente
+          const endDate = new Date(year, month - 1, day);
+          // Ajustar la hora si es necesario (código adicional necesario)
+
+          const currentDate = new Date();
+          console.log(
+            `Comparando: End date ${endDate} vs Current date ${currentDate}`
+          );
+
+          if (endDate < currentDate) {
+            console.log(
+              `Publicación ${pub._id} ha expirado, actualizando estado...`
+            );
+            updatePublicationStatus(pub._id);
+          }
+        } catch (error) {
+          console.error(`Error procesando publicación ${pub._id}:`, error);
+        }
+      });
+    } catch (error) {
+      console.error("Error general en endTopPublication:", error);
+    }
+  };
+
+  const updatePublicationStatus = async (_id: string) => {
+    console.log("Actualizando estado de la publicación:", _id);
+    try {
+      const response = await fetch(
+        `http://localhost:4004/api/updatePublicationsEndTop`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+
+          body: JSON.stringify({ _id }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Error al actualizar la publicación");
+      }
+
+      const result = await response.json();
+      console.log("Estado actualizado:", result);
+    } catch (error) {
+      console.error("Error al actualizar la publicación:", error);
+    }
+  };
+
+  // Efecto para verificar publicaciones finalizadas
+  useEffect(() => {
+    if (publications.length > 0) {
+      // Solo ejecutar si hay publicaciones
+      endTopPublication();
+    }
+  }, [publications]); // Se ejecuta cuando `publications` cambia
 
   // delete publication
   const handleDeletePublication = async (id: string) => {
@@ -215,6 +308,11 @@ const ViewPublications = () => {
   }
 
   console.log("dataPay", dataPay);
+  console.log(
+    "publications: selectedTime ",
+    publications.map((pub) => pub.selectedTime)
+  );
+
   const baseURL = "http://localhost:4004";
   console.log("Renderizando publicaciones:", publications);
   return (
@@ -306,7 +404,9 @@ const ViewPublications = () => {
                             HASTA:{" "}
                             {calculateEndDate(
                               pub.transactionDate,
-                              pub.selectedPricing.days
+                              pub.selectedPricing.days,
+                              pub.selectedTime,
+                              pub.selectedPricing.hours
                             )}
                           </p>
                           <p className="text-gray-600">

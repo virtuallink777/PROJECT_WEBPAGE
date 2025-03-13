@@ -1,152 +1,300 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import MaxWidthWrapper from "../components/MaxWidthWrapper";
-import PublicationCard from "@/components/PublicationCard";
+import PublicationCard, { IPublication } from "@/components/PublicationCard";
 import { useFilterStore } from "../lib/storeZsutandCities"; // Importamos Zustand
-import { io } from "socket.io-client";
-
-const socket = io("http://localhost:4004");
-
-interface Publication {
-  _id: string;
-  nombre: string;
-  categorias: string;
-  pais: string;
-  departamento: string;
-  ciudad: string;
-  localidad: string;
-  direccion: string;
-  mostrarEnMaps: boolean;
-  edad: number;
-  telefono: string;
-  titulo: string;
-  descripcion: string;
-  adicionales: string;
-  status: boolean;
-  images: {
-    url: string;
-    isPrincipal: boolean;
-    filename: string;
-    _id: string;
-  }[];
-  videos: {
-    url: string;
-  }[];
-}
-
-interface PublicationData {
-  publication: Publication; // Aquí usas la interfaz Publication que ya tienes
-  id: string;
-}
 
 export default function Home() {
-  const [topPublications, setTopPublications] = useState<PublicationData[]>([]);
-  const [nonTopPublications, setNonTopPublications] = useState<Publication[]>(
+  const [topPublications, setTopPublications] = useState<IPublication[]>([]);
+  const [nonTopPublications, setNonTopPublications] = useState<IPublication[]>(
     []
   );
-  const [publicationIds, setPublicationIds] = useState<string[]>([]);
-  const [renderPublicationsIds, setRenderPublicationsIds] = useState<string[]>(
-    []
-  );
+  const [forceUpdate, setForceUpdate] = useState(false);
   const [loading, setLoading] = useState(true);
   const { selections } = useFilterStore(); // Estado global de filtros
 
-  //  Restaurar el orden al cargar la página
-  useEffect(() => {
-    const savedOrder = localStorage.getItem("topPublicationsOrder");
-    if (savedOrder) {
-      try {
-        const orderArray = JSON.parse(savedOrder);
-        setRenderPublicationsIds(orderArray);
-      } catch (error) {
-        console.error("Error al restaurar el orden:", error);
+  // Función para filtrar publicaciones según las selecciones
+  const filterPublications = (publications: IPublication[]) => {
+    return publications.filter((pub) => {
+      // Filtro por categoría
+      if (selections.Categorias && pub.Categorias !== selections.Categorias) {
+        return false;
       }
-    }
-  }, []);
-
-  // 🔹 Escuchar cambios en publicaciones top
-  // Escuchar cambios en publicaciones top
-  useEffect(() => {
-    socket.on("dataPayPublication", (data) => {
-      console.log("📩 Datos recibidos en el frontend:", data);
-
-      // Añadir timestamp pero mantener el objeto simple
-      const dataWithTimestamp = {
-        ...data,
-        receivedAt: Date.now(),
-      };
-
-      setTopPublications((prev) => {
-        // Filtrar duplicados existentes
-        const filteredPublications = prev.filter((pub) => pub.id !== data.id);
-        // Agregar nuevo dato al inicio
-        return [dataWithTimestamp, ...filteredPublications];
-      });
-
-      // Solo actualizar publicationIds y llamar a processNewId si el ID no está
-      // ya en renderPublicationsIds (evita procesamiento duplicado)
-      if (!renderPublicationsIds.includes(data.id)) {
-        setPublicationIds((prevIds) => {
-          if (!prevIds.includes(data.id)) {
-            return [data.id, ...prevIds];
-          }
-          return prevIds;
-        });
-
-        // Procesar el ID solo si es necesario
-        processNewId(data.id);
+      // Filtro por país
+      if (selections.Pais && pub.Pais !== selections.Pais) {
+        return false;
       }
+      // Filtro por departamento
+      if (
+        selections.Departamento &&
+        pub.Departamento !== selections.Departamento
+      ) {
+        return false;
+      }
+      // Filtro por ciudad
+      if (selections.ciudad && pub.ciudad !== selections.ciudad) {
+        return false;
+      }
+      // Filtro por localidad
+      if (selections.Localidad && pub.Localidad !== selections.Localidad) {
+        return false;
+      }
+      // Si pasa todos los filtros, incluir la publicación
+      return true;
     });
-
-    socket.emit("requestDataPayPublication");
-
-    return () => {
-      socket.off("dataPayPublication");
-    };
-  }, [renderPublicationsIds]); // Agregar renderPublicationsIds como dependencia
-
-  // Función para procesar cada nuevo ID según la lógica requerida
-  const processNewId = (newId: string) => {
-    // Verificar si el ID ya está en renderPublicationsIds
-    if (renderPublicationsIds.includes(newId)) {
-      // Si está en renderPublicationsIds, eliminarlo de publicationIds
-      setPublicationIds((prevIds) => prevIds.filter((id) => id !== newId));
-    } else {
-      // Si NO está en renderPublicationsIds:
-      // 1. Pasarlo a renderPublicationsIds
-      setRenderPublicationsIds((prevIds) => [newId, ...prevIds]);
-      // 2. Eliminarlo de publicationIds
-      setPublicationIds((prevIds) => prevIds.filter((id) => id !== newId));
-    }
   };
 
-  // 3. Persist el orden usando localStorage para mantenerlo entre recargas
+  // OBTENER PUBLICACIONES TOP
   useEffect(() => {
-    // Guardar el orden en localStorage cada vez que cambie
-    if (renderPublicationsIds.length > 0) {
-      localStorage.setItem(
-        "topPublicationsOrder",
-        JSON.stringify(renderPublicationsIds)
+    const fetchPublications = async () => {
+      try {
+        // Obtener las publicaciones TOP filtradas
+        const topRes = await fetch(
+          "http://localhost:4004/api/publicationsTOP",
+          {
+            method: "GET",
+          }
+        );
+        console.log(topRes);
+        if (topRes.ok) {
+          const topData = await topRes.json();
+          if (!topData.error) {
+            // En lugar de establecer directamente, aplicamos el filtro
+            const filteredTopData = filterValidTopPublications(topData);
+            setTopPublications(filteredTopData);
+
+            // Mover publicaciones que no deben estar en TOP a nonTopPublications
+            const invalidTopData = topData.filter(
+              (pub) => !filteredTopData.some((valid) => valid._id === pub._id)
+            );
+
+            if (invalidTopData.length > 0) {
+              console.log(
+                "Publicaciones movidas de TOP a no-TOP:",
+                invalidTopData
+              );
+              setNonTopPublications((prev) => [...invalidTopData, ...prev]);
+            }
+          }
+        } else {
+          console.error(
+            "Error al obtener las publicaciones TOP:",
+            topRes.statusText
+          );
+        }
+      } catch (error) {
+        console.error("Error al cargar publicaciones:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPublications();
+  }, [
+    selections.Categorias, // Dependencia primitiva
+    selections.Pais, // Dependencia primitiva
+    selections.Departamento, // Dependencia primitiva
+    selections.ciudad, // Dependencia primitiva
+    selections.Localidad, // Dependencia primitiva
+  ]);
+
+  // Rotación de publicaciones TOP cada 3 minutos
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTopPublications((prevIds) => {
+        if (prevIds.length > 1) {
+          setForceUpdate((prev) => !prev); // Forzar re-render
+          return [...prevIds.slice(1), prevIds[0]];
+        }
+        return prevIds;
+      });
+    }, 3 * 1000 * 60);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  console.log("Publicaciones TOP:", topPublications);
+
+  // Función para filtrar las publicaciones TOP válidas
+  const filterValidTopPublications: (
+    publications: IPublication[]
+  ) => IPublication[] = (publications) => {
+    const now = new Date();
+    console.log("🕒 Hora actual:", now.toLocaleString());
+
+    return publications.filter((pub) => {
+      if (
+        !pub.transactionDate ||
+        !pub.selectedTime ||
+        !pub.selectedPricing?.hours ||
+        !pub.selectedPricing?.days
+      ) {
+        console.log("⛔ Publicación con datos faltantes:", pub);
+        return false;
+      }
+
+      // Convertir transactionDate a objeto Date
+      const [day, month, year] = pub.transactionDate.split("/").map(Number);
+
+      // Función para convertir formato de hora
+      const startHour = (timeStr) => {
+        const [hourStr, period] = timeStr.split(" ");
+        const hour = parseInt(hourStr);
+
+        if (period === "PM" && hour !== 12) return hour + 12;
+        if (period === "AM" && hour === 12) return 0;
+
+        return hour;
+      };
+
+      const startHourValue = startHour(pub.selectedTime);
+      let startDate = new Date(year, month - 1, day, startHourValue, 0, 0);
+
+      // Crear correctamente el objeto Date para la transacción
+      // Asumiendo que pub.transactionTime tiene horas y minutos
+      let transactionHour = 0;
+      let transactionMinutes = 0;
+
+      // Parseamos la hora de transacción (ajusta según tu formato)
+      if (pub.transactionTime) {
+        // Si transactionTime ya es un objeto Date
+        if (pub.transactionTime instanceof Date) {
+          transactionHour = pub.transactionTime.getHours();
+          transactionMinutes = pub.transactionTime.getMinutes();
+        }
+        // Si es un string, parseamos según su formato
+        else if (typeof pub.transactionTime === "string") {
+          // Ajusta este parsing según el formato real de pub.transactionTime
+          const timeMatch = pub.transactionTime.match(/(\d+):(\d+)/);
+          if (timeMatch) {
+            transactionHour = parseInt(timeMatch[1]);
+            transactionMinutes = parseInt(timeMatch[2]);
+          }
+        }
+      }
+
+      const transactionDateTimeObj = new Date(
+        year,
+        month - 1,
+        day,
+        transactionHour,
+        transactionMinutes
       );
-    }
-  }, [renderPublicationsIds]);
 
-  console.log("🚀 publicationIds:", publicationIds);
-  console.log("🚀 renderPublicationsIds:", renderPublicationsIds);
+      console.log(
+        "📅 Fecha de transacción:",
+        transactionDateTimeObj.toLocaleString()
+      );
 
-  // Obtener publicaciones completas sin duplicados
-  const publicationsToRender = renderPublicationsIds
-    .map((id) => topPublications.find((pub) => pub.id === id))
-    .filter(Boolean) // Eliminar nulls/undefined
-    .filter(
-      (pub, index, self) =>
-        // Eliminar duplicados basados en el ID
-        index === self.findIndex((p) => p.id === pub.id)
-    ) as PublicationData[];
+      // Comparar sólo si es el mismo día pero hora posterior
+      const sameDay =
+        transactionDateTimeObj.getDate() === startDate.getDate() &&
+        transactionDateTimeObj.getMonth() === startDate.getMonth() &&
+        transactionDateTimeObj.getFullYear() === startDate.getFullYear();
 
-  console.log("🚀 publicationsToRender:", publicationsToRender);
+      if (
+        sameDay &&
+        (transactionDateTimeObj.getHours() > startHourValue ||
+          (transactionDateTimeObj.getHours() === startHourValue &&
+            transactionDateTimeObj.getMinutes() > 0))
+      ) {
+        // Si la transacción es el mismo día pero después de la hora de inicio,
+        // mover la fecha de inicio al día siguiente
+        startDate.setDate(startDate.getDate() + 1);
+        console.log(
+          "⚠️ Transacción después de hora de inicio - movido a mañana"
+        );
+      }
 
+      console.log("📅 Fecha de inicio con hora:", startDate.toLocaleString());
+
+      // El resto de tu código continúa igual...
+      const daysDuration =
+        parseInt(pub.selectedPricing.days.replace(/\D/g, ""), 10) || 0;
+      const dailyHours =
+        parseInt(pub.selectedPricing.hours.replace(/\D/g, ""), 10) || 0;
+
+      // Calcular fecha de fin
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + daysDuration);
+
+      // Validar si la publicación está dentro del rango de días permitidos
+      const isWithinDateRange = now >= startDate && now <= endDate;
+
+      // Validar si la hora actual está dentro del horario permitido
+      const nowHour = now.getHours();
+      const endHour = (startHourValue + dailyHours) % 24;
+
+      // Verificar si las horas cruzan a otro día
+      const isWithinDailyHours =
+        startHourValue < endHour
+          ? nowHour >= startHourValue && nowHour < endHour
+          : nowHour >= startHourValue || nowHour < endHour;
+
+      console.log(`🕒 Ahora: ${now.toLocaleString()}`);
+      console.log(`📅 Publicación ID: ${pub._id}`);
+      console.log(`⏳ Fecha de inicio: ${startDate.toLocaleString()}`);
+      console.log(`⏳ Fecha de fin: ${endDate.toLocaleString()}`);
+      console.log(`🕐 Hora inicio: ${startHourValue}, Hora fin: ${endHour}`);
+      console.log(
+        `💡 ¿Debe estar en TOP?`,
+        isWithinDateRange && isWithinDailyHours
+      );
+
+      // La publicación solo está en TOP si cumple ambas condiciones
+      if (!isWithinDateRange || !isWithinDailyHours) {
+        console.log(
+          `⛔ Publicación fuera de horario: ${pub._id} | Hora actual: ${nowHour} | Horario permitido: ${startHourValue} - ${endHour}`
+        );
+        return false;
+      }
+
+      console.log(`✅ Publicación en TOP: ${pub._id}`);
+      return true;
+    });
+  };
+
+  // Verificación periódica para actualizar el estado de las publicaciones TOP
+  useEffect(() => {
+    const checkPublicationsStatus = () => {
+      const validPublications = filterValidTopPublications(topPublications);
+
+      // Identificar publicaciones que ya no son válidas
+      const invalidPublications = topPublications.filter(
+        (pub) => !validPublications.some((valid) => valid._id === pub._id)
+      );
+
+      // Actualizar las publicaciones TOP solo con las válidas
+      if (invalidPublications.length > 0) {
+        console.log("Publicaciones que se quitan de TOP:", invalidPublications);
+        setTopPublications(validPublications);
+
+        // Mover las publicaciones no válidas a nonTopPublications
+        setNonTopPublications((prev) => {
+          // Evitar duplicados
+          const newNonTop = [...prev];
+
+          invalidPublications.forEach((invalid) => {
+            if (!newNonTop.some((p) => p._id === invalid._id)) {
+              newNonTop.unshift(invalid);
+            }
+          });
+
+          return newNonTop;
+        });
+      }
+    };
+
+    // Verificar inmediatamente
+    checkPublicationsStatus();
+
+    // Y luego periódicamente
+    const interval = setInterval(checkPublicationsStatus, 60000);
+    return () => clearInterval(interval);
+  }, [topPublications]);
+
+  // Obtener publicaciones sin TOP
   useEffect(() => {
     const fetchPublications = async () => {
       try {
@@ -157,12 +305,21 @@ export default function Home() {
             method: "GET",
           }
         );
-        console.log(nonTopRes);
+
         if (nonTopRes.ok) {
           const nonTopData = await nonTopRes.json();
           if (!nonTopData.error) {
-            // Solo actualizamos si no hay error
-            setNonTopPublications(nonTopData);
+            // Aplicar filtros a las publicaciones no TOP
+
+            setNonTopPublications((prevPublications) => {
+              // Evitar duplicados: Filtramos las que ya están en la lista
+              const newPublications = nonTopData.filter(
+                (pub) => !prevPublications.some((p) => p._id === pub._id)
+              );
+
+              // Insertamos las nuevas publicaciones al inicio y desplazamos las demás
+              return [...newPublications, ...prevPublications];
+            });
           }
         } else {
           console.error(
@@ -180,21 +337,16 @@ export default function Home() {
     fetchPublications();
   }, [selections]);
 
-  // 🔹 Rotar publicaciones cada 5 minutos
-  // 1. Modificar la lógica de rotación para que solo use renderPublicationsIds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setRenderPublicationsIds((prevIds) => {
-        if (prevIds.length > 1) {
-          // Mueve el primer ID al final para simular la rotación
-          return [...prevIds.slice(1), prevIds[0]];
-        }
-        return prevIds;
-      });
-    }, 5 * 60 * 1000); // 5 minutos en milisegundos
+  console.log("Publicaciones sin TOP:", nonTopPublications);
 
-    return () => clearInterval(interval);
-  }, []); // Elimina la rotación de topPublications
+  // Verifica y elimina duplicados antes de renderizar
+  const uniqueTopPublications = Array.from(
+    new Set(topPublications.map((pub) => pub._id))
+  ).map((id) => topPublications.find((pub) => pub._id === id));
+
+  const uniqueNonTopPublications = Array.from(
+    new Set(nonTopPublications.map((pub) => pub._id))
+  ).map((id) => nonTopPublications.find((pub) => pub._id === id));
 
   return (
     <MaxWidthWrapper>
@@ -207,10 +359,19 @@ export default function Home() {
         <div className="mt-8 flex flex-col">
           <h2 className="text-2xl font-semibold mb-4">Publicaciones TOP</h2>
           <div className="grid grid-cols-4 gap-4">
-            {publicationsToRender.length > 0 &&
-              publicationsToRender.map((data) => (
-                <PublicationCard key={data.id} publication={data.publication} />
-              ))}
+            {uniqueTopPublications.length > 0 ? (
+              uniqueTopPublications.map((data) => (
+                <PublicationCard
+                  key={data._id}
+                  publication={data}
+                  isTopSection={true}
+                />
+              ))
+            ) : (
+              <p className="col-span-4 text-gray-500">
+                No hay publicaciones TOP en este momento
+              </p>
+            )}
           </div>
         </div>
 
@@ -218,10 +379,19 @@ export default function Home() {
         <div className="mt-8 flex flex-col">
           <h2 className="text-2xl font-semibold mb-4">Otras Publicaciones</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {nonTopPublications.length > 0 &&
-              nonTopPublications.map((pub) => (
-                <PublicationCard key={pub._id} publication={pub} />
-              ))}
+            {uniqueNonTopPublications.length > 0 ? (
+              uniqueNonTopPublications.map((pub) => (
+                <PublicationCard
+                  key={pub._id}
+                  publication={pub}
+                  isTopSection={false}
+                />
+              ))
+            ) : (
+              <p className="col-span-4 text-gray-500">
+                No hay publicaciones disponibles
+              </p>
+            )}
           </div>
         </div>
       </div>

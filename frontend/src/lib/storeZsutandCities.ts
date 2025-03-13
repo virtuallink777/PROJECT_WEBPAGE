@@ -1,62 +1,58 @@
 import { create } from "zustand";
 
-type SelectionKeys =
-  | "Pais"
-  | "Departamento"
-  | "ciudad"
-  | "Localidad"
-  | "Categorias";
-
-interface Selections {
-  Pais: string;
-  Departamento: string;
-  ciudad: string;
-  Localidad: string;
-  Categorias: string;
-}
-
-interface FilterStore {
-  selections: Selections;
-  setSelection: (key: SelectionKeys, value: string) => void;
-  resetSelections: () => void;
-}
-
-export const useFilterStore = create<FilterStore>((set) => ({
+// Definimos el tipo para el estado de los filtros
+interface FilterState {
   selections: {
-    Pais: "",
-    Departamento: "",
-    ciudad: "",
-    Localidad: "",
-    Categorias: "",
+    Categorias: string | null;
+    Pais: string | null;
+    Departamento: string | null;
+    ciudad: string | null;
+    Localidad: string | null;
+  };
+  setSelection: (
+    filterType: keyof FilterState["selections"],
+    value: string | null
+  ) => void;
+  clearSelections: () => void; // Opcional: Para limpiar las selecciones
+}
+
+// Creamos el store de Zustand
+export const useFilterStore = create<FilterState>((set) => ({
+  selections: {
+    Categorias: null,
+    Pais: null,
+    Departamento: null,
+    ciudad: null,
+    Localidad: null,
   },
-
-  setSelection: (key, value) =>
-    set((state) => {
-      const newSelections = { ...state.selections, [key]: value };
-
-      // Limpiar selecciones dependientes
-      if (key === "Pais") {
-        newSelections.Departamento = "";
-        newSelections.ciudad = "";
-        newSelections.Localidad = "";
-      } else if (key === "Departamento") {
-        newSelections.ciudad = "";
-        newSelections.Localidad = "";
-      } else if (key === "ciudad") {
-        newSelections.Localidad = "";
-      }
-
-      return { selections: newSelections };
-    }),
-
-  resetSelections: () =>
+  setSelection: (filterType, value) =>
+    set((state) => ({
+      selections: {
+        ...state.selections,
+        [filterType]: value,
+        // Resetear los filtros dependientes si es necesario
+        ...(filterType === "Pais" && {
+          Departamento: null,
+          ciudad: null,
+          Localidad: null,
+        }),
+        ...(filterType === "Departamento" && {
+          ciudad: null,
+          Localidad: null,
+        }),
+        ...(filterType === "ciudad" && {
+          Localidad: null,
+        }),
+      },
+    })),
+  clearSelections: () =>
     set({
       selections: {
-        Pais: "",
-        Departamento: "",
-        ciudad: "",
-        Localidad: "",
-        Categorias: "",
+        Categorias: null,
+        Pais: null,
+        Departamento: null,
+        ciudad: null,
+        Localidad: null,
       },
     }),
 }));

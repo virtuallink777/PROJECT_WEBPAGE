@@ -10,26 +10,37 @@ interface Image {
   _id: string;
 }
 
-interface IPublication {
+export interface IPublication {
+  Categorias: string;
   _id: string;
   nombre: string;
-  titulo: string;
   Pais: string;
   Departamento: string;
   ciudad: string;
   Localidad: string;
   images: Image[];
-
   telefono: string;
   status: boolean;
+  transactionDate: string;
+  selectedTime: string;
+  selectedPricing: {
+    days: string;
+    hours: string;
+    price: string;
+  };
+  transactionTime: string;
 }
 
 interface PublicationCardProps {
   publication: IPublication;
   status?: boolean; // ✅ Nueva prop para diferenciar TOP y NO TOP
+  isTopSection?: boolean;
 }
 
-const PublicationCard: React.FC<PublicationCardProps> = ({ publication }) => {
+const PublicationCard: React.FC<PublicationCardProps> = ({
+  publication,
+  isTopSection,
+}) => {
   // Encontrar la imagen principal
   const principalImage =
     publication.images?.find((img) => img.isPrincipal) ||
@@ -45,10 +56,9 @@ const PublicationCard: React.FC<PublicationCardProps> = ({ publication }) => {
     ? `${backendUrl}${principalImage.url}`
     : "/default-image.png";
 
-  console.log(publication);
-
-  const cardWidth = publication.status ? "20vw" : "18vw";
-  const cardHeight = publication.status ? "35vw" : "25vw";
+  const isActuallyTop = publication.status && isTopSection; // Solo es "realmente TOP" si tiene status=true Y está en sección TOP
+  const cardWidth = isActuallyTop ? "20vw" : "18vw";
+  const cardHeight = isActuallyTop ? "35vw" : "25vw";
 
   const handleClick = () => {
     router.push(`/publicationUser/`);
@@ -77,9 +87,11 @@ const PublicationCard: React.FC<PublicationCardProps> = ({ publication }) => {
       {/* Contenido */}
       <div className="p-2 w-full text-center flex-grow flex flex-col justify-center items-center">
         <h3 className="text-sm font-semibold">{publication.nombre}</h3>
-        <p className="text-xs text-gray-600">{publication.titulo}</p>
-        <p className="text-xs text-gray-600">{publication.Pais}</p>
-        <p className="text-xs text-gray-600">{publication.Departamento}</p>
+
+        <p className="text-xs text-gray-600">
+          {publication.Pais}, {publication.Departamento}
+        </p>
+
         <p className="text-xs text-gray-600">
           {publication.ciudad} - {publication.Localidad}
         </p>

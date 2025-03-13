@@ -1,36 +1,25 @@
 import { Request, Response } from "express";
 import Publicacion from "../models/publications.models";
 
-interface Filters {
-  pais?: string;
-  departamento?: string;
-  ciudad?: string;
-  localidad?: string;
-  categorias?: string;
-}
-
-const getPublicationsTOP = async (req: Request, res: Response) => {
-  const { Pais, Departamento, ciudad, Localidad, Categorias } = req.body;
-
-  const filters: Filters = {};
-  if (Pais) filters.pais = Pais;
-  if (Departamento) filters.departamento = Departamento;
-  if (ciudad) filters.ciudad = ciudad;
-  if (Localidad) filters.localidad = Localidad;
-  if (Categorias) filters.categorias = Categorias;
-
+const getPublicationsNOTOP = async (req: Request, res: Response) => {
   try {
-    // Si no hay filtros, se devuelven todas las publicaciones TOP
-    const publications = await Publicacion.find({
-      ...filters,
+    // Buscar la publicación en MongoDB
+    const publicationTOP = await Publicacion.find({
       status: true,
-      transactionId: { $exists: true, $ne: null }, // Asegura que transactionId exista y no sea null
-    });
-    res.status(200).json(publications);
+      estado: "APROBADA",
+    })
+      .sort({ createdAt: -1 }) // Ordenar por fecha de creación descendente (más nuevo primero)
+      .exec(); // Usa await y .exec()
+
+    if (!publicationTOP) {
+      return res.status(404).json({ message: "Publicación no encontrada" });
+    }
+
+    return res.status(200).json(publicationTOP);
   } catch (error) {
-    console.error("Error al obtener las publicaciones TOP:", error);
-    res.status(500).json({ error: "Error al obtener las publicaciones TOP" });
+    console.error("Error al obtener la publicación:", error);
+    return res.status(500).json({ message: "Error al obtener la publicación" });
   }
 };
 
-export default getPublicationsTOP;
+export default getPublicationsNOTOP;

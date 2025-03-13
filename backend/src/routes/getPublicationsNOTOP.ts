@@ -7,7 +7,9 @@ const getPublicationsNOTOP = async (req: Request, res: Response) => {
     const publicationTOPNO = await Publicacion.find({
       status: false,
       estado: "APROBADA",
-    }).exec(); // Usa await y .exec()
+    })
+      .sort({ createdAt: -1 }) // Ordenar por fecha de creación descendente (más nuevo primero)
+      .exec(); // Usa await y .exec()
 
     if (!publicationTOPNO) {
       return res.status(404).json({ message: "Publicación no encontrada" });

@@ -44,6 +44,7 @@ const Cities: React.FC = () => {
         return [];
     }
   };
+  console.log(selections);
 
   return (
     <div className="flex flex-wrap gap-5 p-10">
