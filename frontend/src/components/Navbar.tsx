@@ -11,14 +11,13 @@ import { MobileNav } from "./Movilnav";
 export const Navbar = async () => {
   const nextCookies = cookies();
   const { user } = await getServerSideUser(nextCookies);
-  console.log("Usuario desde Navbar:", user);
 
   return (
-    <div className="bg-white sticky top-0 z-50 inset-x-0 h-16">
+    <div className="bg-white sticky top-0 z-50 inset-x-0 h-fit ">
       <header className="relative bg-rose-300">
         <MaxWidthWrapper>
           <div className="border-b border-gray-500">
-            <div className="flex h-16 items-center">
+            <div className="flex h-24 items-center">
               {/* Menú de móviles (solo visible en móviles) */}
               <div className="ml-4 lg:hidden">
                 <MobileNav user={user} />

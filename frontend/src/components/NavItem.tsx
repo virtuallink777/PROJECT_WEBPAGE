@@ -3,13 +3,18 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronDown } from "lucide-react";
-import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { useCategoriesData } from "../categoriesData/categoriesdata";
 import { useFilterStore } from "../lib/storeZsutandCities"; // Importamos Zustand
 
 const Cities: React.FC = () => {
-  const { selections, setSelection } = useFilterStore(); // Estado global de filtros
+  const {
+    selections,
+    setSelection,
+    searchText,
+    setSearchText,
+    clearSelections,
+  } = useFilterStore(); // Estado global de filtros
   const [openMenu, setOpenMenu] = useState<string | "">("");
 
   const categoriesData = useCategoriesData();
@@ -47,7 +52,7 @@ const Cities: React.FC = () => {
   console.log(selections);
 
   return (
-    <div className="flex flex-wrap gap-5 p-10">
+    <div className="flex flex-wrap gap-4 items-center">
       {menuConfig.map(({ id, label }) => {
         const options = getAvailableOptions(id);
         const isDisabled =
@@ -105,10 +110,26 @@ const Cities: React.FC = () => {
           </div>
         );
       })}
+
+      <div className="flex items-center">
+        <input
+          type="text"
+          placeholder="Buscar por teléfono, nombre, etc."
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)} // Actualizar el estado de búsqueda
+          className="px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      {/* Botón "Limpiar filtros" */}
       <div className="ml-auto flex items-center">
-        <Link href="/ciudades" className={buttonVariants()}>
-          Buscar
-        </Link>
+        <Button
+          onClick={clearSelections} // Limpia los filtros al hacer clic
+          variant="outline" // Puedes personalizar el estilo
+          className={buttonVariants()}
+        >
+          Limpiar filtros
+        </Button>
       </div>
     </div>
   );

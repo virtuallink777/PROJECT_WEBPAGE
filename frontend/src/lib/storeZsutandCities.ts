@@ -9,10 +9,12 @@ interface FilterState {
     ciudad: string | null;
     Localidad: string | null;
   };
+  searchText: string; // Nuevo estado para el campo de búsqueda
   setSelection: (
     filterType: keyof FilterState["selections"],
     value: string | null
   ) => void;
+  setSearchText: (text: string) => void; // Función para actualizar el texto de búsqueda
   clearSelections: () => void; // Opcional: Para limpiar las selecciones
 }
 
@@ -25,6 +27,7 @@ export const useFilterStore = create<FilterState>((set) => ({
     ciudad: null,
     Localidad: null,
   },
+  searchText: "", // Valor inicial del campo de búsqueda
   setSelection: (filterType, value) =>
     set((state) => ({
       selections: {
@@ -45,6 +48,7 @@ export const useFilterStore = create<FilterState>((set) => ({
         }),
       },
     })),
+  setSearchText: (text) => set({ searchText: text }), // Actualizar el texto de búsqueda
   clearSelections: () =>
     set({
       selections: {
@@ -54,5 +58,6 @@ export const useFilterStore = create<FilterState>((set) => ({
         ciudad: null,
         Localidad: null,
       },
+      searchText: "", // Limpiar también el campo de búsqueda
     }),
 }));

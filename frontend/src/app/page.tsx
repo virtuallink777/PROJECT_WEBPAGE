@@ -12,7 +12,7 @@ export default function Home() {
   );
   const [forceUpdate, setForceUpdate] = useState(false);
   const [loading, setLoading] = useState(true);
-  const { selections } = useFilterStore(); // Estado global de filtros
+  const { selections, searchText } = useFilterStore(); // Estado global de filtros
 
   // Función para filtrar publicaciones según las selecciones
   const filterPublications = (publications: IPublication[]) => {
@@ -40,6 +40,19 @@ export default function Home() {
       if (selections.Localidad && pub.Localidad !== selections.Localidad) {
         return false;
       }
+
+      // Filtro por texto de búsqueda (por ejemplo, número de teléfono)
+      if (searchText) {
+        const searchLower = searchText.toLowerCase();
+        return (
+          pub.telefono?.toLowerCase().includes(searchLower) || // Buscar en teléfono
+          pub.nombre?.toLowerCase().includes(searchLower) || // Buscar en nombre
+          pub.descripcion?.toLowerCase().includes(searchLower) || // Buscar en descripción
+          pub.direccion?.toLowerCase().includes(searchLower) || // Buscar en dirección
+          pub.adicionales?.toLowerCase().includes(searchLower) // Buscar en adicionales
+        );
+      }
+
       // Si pasa todos los filtros, incluir la publicación
       return true;
     });
@@ -74,7 +87,29 @@ export default function Home() {
                 "Publicaciones movidas de TOP a no-TOP:",
                 invalidTopData
               );
-              setNonTopPublications((prev) => [...invalidTopData, ...prev]);
+
+              setNonTopPublications((prev) => {
+                // Crear un Map para evitar duplicados basados en el _id
+                const uniquePublicationsMap = new Map();
+
+                // Agregar las publicaciones previas al Map
+                prev.forEach((pub) => {
+                  uniquePublicationsMap.set(pub._id, pub);
+                });
+
+                // Agregar las nuevas publicaciones al Map (sobrescriben las existentes si tienen el mismo _id)
+                invalidTopData.forEach((pub) => {
+                  uniquePublicationsMap.set(pub._id, pub);
+                });
+
+                // Convertir el Map de nuevo a un array
+                const uniquePublications = Array.from(
+                  uniquePublicationsMap.values()
+                );
+
+                // Devolver el array sin duplicados
+                return uniquePublications;
+              });
             }
           }
         } else {
@@ -91,13 +126,17 @@ export default function Home() {
     };
 
     fetchPublications();
-  }, [
-    selections.Categorias, // Dependencia primitiva
-    selections.Pais, // Dependencia primitiva
-    selections.Departamento, // Dependencia primitiva
-    selections.ciudad, // Dependencia primitiva
-    selections.Localidad, // Dependencia primitiva
-  ]);
+
+    const intervalId = setInterval(() => {
+      console.log("Ejecutando setInterval...");
+      fetchPublications();
+    }, 60000); // Se ejecuta cada 60 segundos
+
+    return () => {
+      console.log("Limpiando intervalo...");
+      clearInterval(intervalId);
+    }; // Limpiar el intervalo cuando el componente se desmonte
+  }, []);
 
   // Rotación de publicaciones TOP cada 3 minutos
   useEffect(() => {
@@ -109,7 +148,7 @@ export default function Home() {
         }
         return prevIds;
       });
-    }, 3 * 1000 * 60);
+    }, 1 * 1000 * 60);
 
     return () => clearInterval(interval);
   }, []);
@@ -296,6 +335,8 @@ export default function Home() {
 
   // Obtener publicaciones sin TOP
   useEffect(() => {
+    console.log("useEffect montado o selections cambió para NOTOP.");
+
     const fetchPublications = async () => {
       try {
         // Obtener las publicaciones sin TOP filtradas
@@ -310,15 +351,27 @@ export default function Home() {
           const nonTopData = await nonTopRes.json();
           if (!nonTopData.error) {
             // Aplicar filtros a las publicaciones no TOP
-
             setNonTopPublications((prevPublications) => {
-              // Evitar duplicados: Filtramos las que ya están en la lista
-              const newPublications = nonTopData.filter(
-                (pub) => !prevPublications.some((p) => p._id === pub._id)
+              // Crear un Map para evitar duplicados basados en el _id
+              const uniquePublicationsMap = new Map();
+
+              // Agregar las publicaciones previas al Map
+              prevPublications.forEach((pub) => {
+                uniquePublicationsMap.set(pub._id, pub);
+              });
+
+              // Agregar las nuevas publicaciones al Map (sobrescriben las existentes si tienen el mismo _id)
+              nonTopData.forEach((pub) => {
+                uniquePublicationsMap.set(pub._id, pub);
+              });
+
+              // Convertir el Map de nuevo a un array
+              const uniquePublications = Array.from(
+                uniquePublicationsMap.values()
               );
 
-              // Insertamos las nuevas publicaciones al inicio y desplazamos las demás
-              return [...newPublications, ...prevPublications];
+              // Devolver el array sin duplicados
+              return uniquePublications;
             });
           }
         } else {
@@ -335,7 +388,16 @@ export default function Home() {
     };
 
     fetchPublications();
-  }, [selections]);
+    const intervalId = setInterval(() => {
+      console.log("Ejecutando setInterval...");
+      fetchPublications();
+    }, 60000); // Se ejecuta cada 60 segundos
+
+    return () => {
+      console.log("Limpiando intervalo...");
+      clearInterval(intervalId);
+    }; // Limpiar el intervalo cuando el componente se desmonte
+  }, []);
 
   console.log("Publicaciones sin TOP:", nonTopPublications);
 
@@ -348,6 +410,26 @@ export default function Home() {
     new Set(nonTopPublications.map((pub) => pub._id))
   ).map((id) => nonTopPublications.find((pub) => pub._id === id));
 
+  console.log(
+    "Publicaciones sin TOP despues de eliminar duplicados:",
+    uniqueNonTopPublications
+  );
+  // Eliminar elementos undefined de uniqueTopPublications
+  const validTopPublications = uniqueTopPublications.filter(
+    (pub): pub is IPublication => pub !== undefined
+  );
+
+  const filteredTopPublications = filterPublications(validTopPublications);
+
+  // Eliminar elementos undefined de uniqueNonTopPublications
+  const validNonTopPublications = uniqueNonTopPublications.filter(
+    (pub): pub is IPublication => pub !== undefined
+  );
+
+  const filteredNonTopPublications = filterPublications(
+    validNonTopPublications
+  );
+
   return (
     <MaxWidthWrapper>
       <div className="py-20 mx-auto text-center flex flex-col items-center w-full">
@@ -359,8 +441,8 @@ export default function Home() {
         <div className="mt-8 flex flex-col">
           <h2 className="text-2xl font-semibold mb-4">Publicaciones TOP</h2>
           <div className="grid grid-cols-4 gap-4">
-            {uniqueTopPublications.length > 0 ? (
-              uniqueTopPublications.map((data) => (
+            {filteredTopPublications.length > 0 ? (
+              filteredTopPublications.map((data) => (
                 <PublicationCard
                   key={data._id}
                   publication={data}
@@ -379,8 +461,8 @@ export default function Home() {
         <div className="mt-8 flex flex-col">
           <h2 className="text-2xl font-semibold mb-4">Otras Publicaciones</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {uniqueNonTopPublications.length > 0 ? (
-              uniqueNonTopPublications.map((pub) => (
+            {filteredNonTopPublications.length > 0 ? (
+              filteredNonTopPublications.map((pub) => (
                 <PublicationCard
                   key={pub._id}
                   publication={pub}

@@ -19,6 +19,9 @@ export interface IPublication {
   ciudad: string;
   Localidad: string;
   images: Image[];
+  descripcion: string;
+  direccion: string;
+  adicionales: string;
   telefono: string;
   status: boolean;
   transactionDate: string;

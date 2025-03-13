@@ -73,7 +73,7 @@ const calculateEndDate = (
 
   // Calcular la fecha y hora de finalización
   const endDate = new Date(start);
-  endDate.setDate(start.getDate() + numberOfDays); // Sumar días
+  endDate.setDate(start.getDate() + numberOfDays + 1); // Sumar días
   endDate.setHours(start.getHours() + numberOfHours); // Sumar horas
 
   // Formatear la fecha y hora de finalización como "dd/mm/yyyy hh:mm a. m./p. m."

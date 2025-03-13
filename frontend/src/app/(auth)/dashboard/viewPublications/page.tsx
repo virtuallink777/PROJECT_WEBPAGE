@@ -202,10 +202,10 @@ const ViewPublications = () => {
 
           // Extraer correctamente la fecha y hora del formato "dd/mm/yyyy hh:mm a.m./p.m."
           const [datePart, timePart] = endDateString.split(" ");
-          const [day, month, year] = datePart.split("/").map(Number);
+          const [day, month, year, hour] = datePart.split("/").map(Number);
 
           // Crear objeto Date correctamente
-          const endDate = new Date(year, month - 1, day);
+          const endDate = new Date(year, month - 1, day, hour);
           // Ajustar la hora si es necesario (código adicional necesario)
 
           const currentDate = new Date();
