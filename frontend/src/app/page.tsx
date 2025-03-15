@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import MaxWidthWrapper from "../components/MaxWidthWrapper";
 import PublicationCard, { IPublication } from "@/components/PublicationCard";
 import { useFilterStore } from "../lib/storeZsutandCities"; // Importamos Zustand
+import Link from "next/link";
 
 export default function Home() {
   const [topPublications, setTopPublications] = useState<IPublication[]>([]);
@@ -58,66 +59,94 @@ export default function Home() {
     });
   };
 
-  // OBTENER PUBLICACIONES TOP
+  // OBTENER PUBLICACIONES TOP Y NOTOP
   useEffect(() => {
-    const fetchPublications = async () => {
+    const loadAllPublications = async () => {
       try {
-        // Obtener las publicaciones TOP filtradas
+        setLoading(true);
+        console.log("Iniciando carga coordinada de publicaciones...");
+
+        // 1. Primero cargar todas las publicaciones TOP
         const topRes = await fetch(
           "http://localhost:4004/api/publicationsTOP",
           {
             method: "GET",
           }
         );
-        console.log(topRes);
-        if (topRes.ok) {
-          const topData = await topRes.json();
-          if (!topData.error) {
-            // En lugar de establecer directamente, aplicamos el filtro
-            const filteredTopData = filterValidTopPublications(topData);
-            setTopPublications(filteredTopData);
 
-            // Mover publicaciones que no deben estar en TOP a nonTopPublications
-            const invalidTopData = topData.filter(
-              (pub) => !filteredTopData.some((valid) => valid._id === pub._id)
-            );
-
-            if (invalidTopData.length > 0) {
-              console.log(
-                "Publicaciones movidas de TOP a no-TOP:",
-                invalidTopData
-              );
-
-              setNonTopPublications((prev) => {
-                // Crear un Map para evitar duplicados basados en el _id
-                const uniquePublicationsMap = new Map();
-
-                // Agregar las publicaciones previas al Map
-                prev.forEach((pub) => {
-                  uniquePublicationsMap.set(pub._id, pub);
-                });
-
-                // Agregar las nuevas publicaciones al Map (sobrescriben las existentes si tienen el mismo _id)
-                invalidTopData.forEach((pub) => {
-                  uniquePublicationsMap.set(pub._id, pub);
-                });
-
-                // Convertir el Map de nuevo a un array
-                const uniquePublications = Array.from(
-                  uniquePublicationsMap.values()
-                );
-
-                // Devolver el array sin duplicados
-                return uniquePublications;
-              });
-            }
-          }
-        } else {
-          console.error(
-            "Error al obtener las publicaciones TOP:",
-            topRes.statusText
-          );
+        if (!topRes.ok) {
+          console.error("Error al cargar publicaciones TOP", topRes.statusText);
+          return;
         }
+
+        const topData = await topRes.json();
+        const allTopPublications = topData.error ? [] : topData;
+        console.log("Publicaciones TOP cargadas:", allTopPublications.length);
+
+        // 2. Luego cargar todas las publicaciones NOTOP
+
+        const nonTopRes = await fetch(
+          "http://localhost:4004/api/publicationsNOTOP",
+          {
+            method: "GET",
+          }
+        );
+
+        if (!nonTopRes.ok) {
+          console.error(
+            "Error al obtener publicaciones NOTOP:",
+            nonTopRes.statusText
+          );
+          return;
+        }
+
+        const nonTopData = await nonTopRes.json();
+        const allNonTopPublications = nonTopData.error ? [] : nonTopData;
+        console.log(
+          "Publicaciones NOTOP cargadas:",
+          allNonTopPublications.length
+        );
+
+        // 3. Aplicar filtro para determinar qué publicaciones TOP son válidas actualmente
+
+        const validTopPublications =
+          filterValidTopPublications(allTopPublications);
+        console.log("Publicaciones TOP válidas:", validTopPublications.length);
+
+        // 4. Identificar publicaciones TOP que deben moverse a NOTOP
+
+        const invalidTopPublications = allTopPublications.filter(
+          (pub) => !validTopPublications.some((valid) => valid._id === pub._id)
+        );
+        console.log(
+          "Publicaciones TOP inválidas (mover a NOTOP):",
+          invalidTopPublications.length
+        );
+
+        // 5. Actualizar estado de publicaciones TOP
+
+        setTopPublications(validTopPublications);
+
+        // 6. Actualizar estado de publicaciones NOTOP combinando las originales + las TOP inválidas
+        // Crear Map para evitar duplicados
+
+        const nonTopMap = new Map();
+
+        // Agregar primero las publicaciones NOTOP originales
+
+        allNonTopPublications.forEach((pub) => nonTopMap.set(pub._id, pub));
+
+        // Agregar las TOP inválidas (sobrescribiendo si existe duplicado)
+        invalidTopPublications.forEach((pub) => nonTopMap.set(pub._id, pub));
+
+        // Convertir el Map a Array para actualizar el estado
+        const combinedNonTopPublications = Array.from(nonTopMap.values());
+        setNonTopPublications(combinedNonTopPublications);
+
+        console.log(
+          "Total publicaciones NOTOP después de combinación:",
+          combinedNonTopPublications.length
+        );
       } catch (error) {
         console.error("Error al cargar publicaciones:", error);
       } finally {
@@ -125,17 +154,19 @@ export default function Home() {
       }
     };
 
-    fetchPublications();
+    // Ejecutar carga inicial
+    loadAllPublications();
 
+    // Configurar intervalo para actualización periódica
     const intervalId = setInterval(() => {
-      console.log("Ejecutando setInterval...");
-      fetchPublications();
-    }, 60000); // Se ejecuta cada 60 segundos
+      console.log("Ejecutando actualización periódica de publicaciones...");
+      loadAllPublications();
+    }, 60000); // Actualizar cada 60 segundos
 
     return () => {
       console.log("Limpiando intervalo...");
       clearInterval(intervalId);
-    }; // Limpiar el intervalo cuando el componente se desmonte
+    };
   }, []);
 
   // Rotación de publicaciones TOP cada 3 minutos
@@ -294,141 +325,8 @@ export default function Home() {
     });
   };
 
-  // Verificación periódica para actualizar el estado de las publicaciones TOP
-  useEffect(() => {
-    const checkPublicationsStatus = () => {
-      const validPublications = filterValidTopPublications(topPublications);
-
-      // Identificar publicaciones que ya no son válidas
-      const invalidPublications = topPublications.filter(
-        (pub) => !validPublications.some((valid) => valid._id === pub._id)
-      );
-
-      // Actualizar las publicaciones TOP solo con las válidas
-      if (invalidPublications.length > 0) {
-        console.log("Publicaciones que se quitan de TOP:", invalidPublications);
-        setTopPublications(validPublications);
-
-        // Mover las publicaciones no válidas a nonTopPublications
-        setNonTopPublications((prev) => {
-          // Evitar duplicados
-          const newNonTop = [...prev];
-
-          invalidPublications.forEach((invalid) => {
-            if (!newNonTop.some((p) => p._id === invalid._id)) {
-              newNonTop.unshift(invalid);
-            }
-          });
-
-          return newNonTop;
-        });
-      }
-    };
-
-    // Verificar inmediatamente
-    checkPublicationsStatus();
-
-    // Y luego periódicamente
-    const interval = setInterval(checkPublicationsStatus, 60000);
-    return () => clearInterval(interval);
-  }, [topPublications]);
-
-  // Obtener publicaciones sin TOP
-  useEffect(() => {
-    console.log("useEffect montado o selections cambió para NOTOP.");
-
-    const fetchPublications = async () => {
-      try {
-        // Obtener las publicaciones sin TOP filtradas
-        const nonTopRes = await fetch(
-          "http://localhost:4004/api/publicationsNOTOP",
-          {
-            method: "GET",
-          }
-        );
-
-        if (nonTopRes.ok) {
-          const nonTopData = await nonTopRes.json();
-          if (!nonTopData.error) {
-            // Aplicar filtros a las publicaciones no TOP
-            setNonTopPublications((prevPublications) => {
-              // Crear un Map para evitar duplicados basados en el _id
-              const uniquePublicationsMap = new Map();
-
-              // Agregar las publicaciones previas al Map
-              prevPublications.forEach((pub) => {
-                uniquePublicationsMap.set(pub._id, pub);
-              });
-
-              // Agregar las nuevas publicaciones al Map (sobrescriben las existentes si tienen el mismo _id)
-              nonTopData.forEach((pub) => {
-                uniquePublicationsMap.set(pub._id, pub);
-              });
-
-              // Convertir el Map de nuevo a un array
-              const uniquePublications = Array.from(
-                uniquePublicationsMap.values()
-              );
-
-              // Devolver el array sin duplicados
-              return uniquePublications;
-            });
-          }
-        } else {
-          console.error(
-            "Error al obtener las publicaciones sin TOP:",
-            nonTopRes.statusText
-          );
-        }
-      } catch (error) {
-        console.error("Error al cargar publicaciones:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPublications();
-    const intervalId = setInterval(() => {
-      console.log("Ejecutando setInterval...");
-      fetchPublications();
-    }, 60000); // Se ejecuta cada 60 segundos
-
-    return () => {
-      console.log("Limpiando intervalo...");
-      clearInterval(intervalId);
-    }; // Limpiar el intervalo cuando el componente se desmonte
-  }, []);
-
-  console.log("Publicaciones sin TOP:", nonTopPublications);
-
-  // Verifica y elimina duplicados antes de renderizar
-  const uniqueTopPublications = Array.from(
-    new Set(topPublications.map((pub) => pub._id))
-  ).map((id) => topPublications.find((pub) => pub._id === id));
-
-  const uniqueNonTopPublications = Array.from(
-    new Set(nonTopPublications.map((pub) => pub._id))
-  ).map((id) => nonTopPublications.find((pub) => pub._id === id));
-
-  console.log(
-    "Publicaciones sin TOP despues de eliminar duplicados:",
-    uniqueNonTopPublications
-  );
-  // Eliminar elementos undefined de uniqueTopPublications
-  const validTopPublications = uniqueTopPublications.filter(
-    (pub): pub is IPublication => pub !== undefined
-  );
-
-  const filteredTopPublications = filterPublications(validTopPublications);
-
-  // Eliminar elementos undefined de uniqueNonTopPublications
-  const validNonTopPublications = uniqueNonTopPublications.filter(
-    (pub): pub is IPublication => pub !== undefined
-  );
-
-  const filteredNonTopPublications = filterPublications(
-    validNonTopPublications
-  );
+  const filteredTopPublications = filterPublications(topPublications);
+  const filteredNonTopPublications = filterPublications(nonTopPublications);
 
   return (
     <MaxWidthWrapper>
@@ -443,11 +341,13 @@ export default function Home() {
           <div className="grid grid-cols-4 gap-4">
             {filteredTopPublications.length > 0 ? (
               filteredTopPublications.map((data) => (
-                <PublicationCard
-                  key={data._id}
-                  publication={data}
-                  isTopSection={true}
-                />
+                <Link href={`/publicationUser/${data._id}`} key={data._id}>
+                  <PublicationCard
+                    key={data._id}
+                    publication={data}
+                    isTopSection={true}
+                  />
+                </Link>
               ))
             ) : (
               <p className="col-span-4 text-gray-500">
@@ -463,11 +363,13 @@ export default function Home() {
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {filteredNonTopPublications.length > 0 ? (
               filteredNonTopPublications.map((pub) => (
-                <PublicationCard
-                  key={pub._id}
-                  publication={pub}
-                  isTopSection={false}
-                />
+                <Link href={`/publicationUser/${pub._id}`} key={pub._id}>
+                  <PublicationCard
+                    key={pub._id}
+                    publication={pub}
+                    isTopSection={false}
+                  />
+                </Link>
               ))
             ) : (
               <p className="col-span-4 text-gray-500">

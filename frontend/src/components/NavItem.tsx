@@ -52,86 +52,95 @@ const Cities: React.FC = () => {
   console.log(selections);
 
   return (
-    <div className="flex flex-wrap gap-4 items-center">
-      {menuConfig.map(({ id, label }) => {
-        const options = getAvailableOptions(id);
-        const isDisabled =
-          id !== "Categorias" &&
-          id !== "Pais" &&
-          !selections[
-            menuConfig[menuConfig.findIndex((m) => m.id === id) - 1].id
-          ];
+    <>
+      <div className="flex flex-col w-full">
+        {/* Fila de botones agrupados */}
+        <div className="flex flex-row items-center space-x-2 ml-40">
+          {menuConfig.map(({ id, label }) => {
+            const options = getAvailableOptions(id);
+            const isDisabled =
+              id !== "Categorias" &&
+              id !== "Pais" &&
+              !selections[
+                menuConfig[menuConfig.findIndex((m) => m.id === id) - 1].id
+              ];
 
-        return (
-          <div key={id} className="relative">
-            <div className="flex flex-col gap-1">
-              <Button
-                onClick={() => setOpenMenu(openMenu === id ? "" : id)}
-                variant={openMenu === id ? "secondary" : "default"}
-                disabled={isDisabled}
-                className="h-8 px-2 text-sm min-w-[100px] justify-between"
-                size="sm"
-              >
-                <span>{label}</span>
-                <ChevronDown
-                  className={`h-3 w-3 transition-all ${
-                    openMenu === id ? "rotate-180" : ""
-                  }`}
-                />
-              </Button>
+            return (
+              <div key={id} className="relative">
+                <div className="flex flex-col gap-1">
+                  <Button
+                    onClick={() => setOpenMenu(openMenu === id ? "" : id)}
+                    variant={openMenu === id ? "secondary" : "default"}
+                    disabled={isDisabled}
+                    className="h-8 px-2 text-sm min-w-[100px] justify-between"
+                    size="sm"
+                  >
+                    <span>{label}</span>
+                    <ChevronDown
+                      className={`h-3 w-3 transition-all ${
+                        openMenu === id ? "rotate-180" : ""
+                      }`}
+                    />
+                  </Button>
 
-              {selections[id] && (
-                <div className="px-1.5 py-0.5 bg-gray-100 rounded text-xs text-center truncate max-w-[150px]">
-                  {selections[id]}
+                  {selections[id] && (
+                    <div className="px-1.5 py-0.5 bg-gray-100 rounded text-xs text-center truncate max-w-[150px]">
+                      {selections[id]}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            {openMenu === id && options.length > 0 && (
-              <div className="absolute z-50 w-[160px] bg-white rounded-md shadow-lg mt-1 border">
-                <div className="max-h-[250px] overflow-y-auto">
-                  <div className="p-1 space-y-0.5">
-                    {options.map((option) => (
-                      <div
-                        key={option}
-                        className="px-2 py-1.5 text-xs hover:bg-gray-100 cursor-pointer rounded-sm transition-colors"
-                        onClick={() => {
-                          setSelection(id as keyof typeof selections, option);
-                          setOpenMenu("");
-                        }}
-                      >
-                        {option}
+                {openMenu === id && options.length > 0 && (
+                  <div className="absolute z-50 w-[160px] bg-white rounded-md shadow-lg mt-1 border">
+                    <div className="max-h-[250px] overflow-y-auto">
+                      <div className="p-1 space-y-0.5">
+                        {options.map((option) => (
+                          <div
+                            key={option}
+                            className="px-2 py-1.5 text-xs hover:bg-gray-100 cursor-pointer rounded-sm transition-colors"
+                            onClick={() => {
+                              setSelection(
+                                id as keyof typeof selections,
+                                option
+                              );
+                              setOpenMenu("");
+                            }}
+                          >
+                            {option}
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
-            )}
+            );
+          })}
+
+          {/* Campo de búsqueda */}
+          <div className="flex items-center">
+            <input
+              type="text"
+              placeholder="Buscar por teléfono, nombre, etc."
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              className="px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
           </div>
-        );
-      })}
 
-      <div className="flex items-center">
-        <input
-          type="text"
-          placeholder="Buscar por teléfono, nombre, etc."
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)} // Actualizar el estado de búsqueda
-          className="px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
+          {/* Botón "Limpiar filtros" centrado y debajo */}
+          <div className="flex justify-center w-full  ">
+            <Button
+              onClick={clearSelections}
+              variant="outline"
+              className={buttonVariants()}
+            >
+              Limpiar filtros
+            </Button>
+          </div>
+        </div>
       </div>
-
-      {/* Botón "Limpiar filtros" */}
-      <div className="ml-auto flex items-center">
-        <Button
-          onClick={clearSelections} // Limpia los filtros al hacer clic
-          variant="outline" // Puedes personalizar el estilo
-          className={buttonVariants()}
-        >
-          Limpiar filtros
-        </Button>
-      </div>
-    </div>
+    </>
   );
 };
 
