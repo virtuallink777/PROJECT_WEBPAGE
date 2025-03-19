@@ -29,6 +29,7 @@ import { updatePublicationPayment } from "./routes/updatePublicationPayment";
 import getPublicationsTOP from "./routes/getPublicationTOP";
 import getPublicationsNOTOP from "./routes/getPublicationsNOTOP";
 import updatePublicationsEndTop from "./routes/updatePublicationsEndTop";
+import configureSocketChat from "./sockets/index";
 
 const app = express();
 
@@ -40,6 +41,9 @@ export const io = new Server(server, {
 
 // Configurar WebSockets con la función importada
 configureSockets(io);
+
+// Configurar WebSockets con la función importada
+configureSocketChat(io);
 
 // Middleware para parsear JSON
 app.use(express.json()); // Esto está bien para rutas POST/PUT
@@ -122,6 +126,8 @@ app.get("/api/publicationsNOTOP", getPublicationsNOTOP);
 
 // ruta para actualizar las publicaciones que finalizaron top
 app.use("/api/updatePublicationsEndTop", updatePublicationsEndTop);
+
+//*********RUTAS PARA EL CHAT***************** */
 
 app.use(errorHandler);
 server.listen(PORT, async () => {

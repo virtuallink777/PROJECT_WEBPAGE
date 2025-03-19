@@ -10,7 +10,8 @@ import useSocket from "@/hooks/useSocket";
 import calculateRotationTime from "@/components/calculateRotationTime";
 import calculateEndDate from "@/components/calculateEndDate";
 import { Button } from "@/components/ui/button";
-import calculateRotationTimeLogic from "@/lib/calculateRotationTimeLogic";
+
+import ChatReceptor from "@/components/ChatReceptor";
 
 const socket = io("http://localhost:4004");
 
@@ -64,6 +65,10 @@ async function guardarUserId() {
   }
 }
 
+const ownerId = localStorage.getItem("userId");
+const clientId = sessionStorage.getItem("senderId") || "";
+console.log("clientId", clientId);
+
 const ViewPublications = () => {
   const [publications, setPublications] = useState<Publication[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,13 +89,10 @@ const ViewPublications = () => {
       typeof window !== "undefined" ? localStorage.getItem("userId") : null;
     socket.emit("identificar-usuario", storedUserId);
 
-    console.log("📌 userId en localStorage:", storedUserId);
     setUserId(storedUserId);
 
     // 🔹 Escuchar cambios en publicaciones
     socket.on("actualizar-publicacion", ({ id, estado, razon }) => {
-      console.log("actualizar-publicacion con:", { id, estado, razon });
-
       setPublications((prevPublications) =>
         prevPublications.map((pub) =>
           pub._id === id ? { ...pub, estado, razon } : pub
@@ -98,8 +100,6 @@ const ViewPublications = () => {
       );
     });
   }, []);
-
-  /////
 
   // Efecto para cargar las publicaciones
   useEffect(() => {
@@ -112,7 +112,6 @@ const ViewPublications = () => {
 
         const response = await api.get(`/api/publicationsThumbnails/${_id}`);
         setPublications(response.data);
-        console.log(response.data);
       } catch (error) {
         console.error("Error al cargar publicaciones:", error);
       } finally {
@@ -179,26 +178,14 @@ const ViewPublications = () => {
           pub.selectedPricing?.hours
       );
 
-      console.log("Publicaciones pagadas a evaluar:", paidPublications.length);
-
       paidPublications.forEach((pub) => {
         try {
-          console.log(`Evaluando publicación ID: ${pub._id}`);
-          console.log("Datos:", {
-            transactionDate: pub.transactionDate,
-            days: pub.selectedPricing.days,
-            selectedTime: pub.selectedTime || "12:00 AM",
-            hours: pub.selectedPricing.hours,
-          });
-
           const endDateString = calculateEndDate(
             pub.transactionDate,
             pub.selectedPricing.days,
             pub.selectedTime || "12:00 AM",
             pub.selectedPricing.hours
           );
-
-          console.log("Fecha de finalización calculada:", endDateString);
 
           // Extraer correctamente la fecha y hora del formato "dd/mm/yyyy hh:mm a.m./p.m."
           const [datePart, timePart] = endDateString.split(" ");
@@ -315,12 +302,14 @@ const ViewPublications = () => {
 
   const baseURL = "http://localhost:4004";
   console.log("Renderizando publicaciones:", publications);
+
   return (
     <>
       <div className="container relative flex pt-10 flex-col items-center justify-center lg:px-0 p-4">
         <h1 className="text-2xl font-bold mb-6 text-center">
           Mis Publicaciones
         </h1>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6  ">
           {publications.map((pub) => (
             <Card
@@ -452,7 +441,9 @@ const ViewPublications = () => {
         </div>
         <div className="container relative flex pt-10 flex-col items-center justify-center lg:px-0">
           <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
-            <div className="text-center "></div>
+            <div className="text-center ">
+              <ChatReceptor userId={ownerId} clientId={clientId} />
+            </div>
 
             <div className="text-center"></div>
             <div className="flex flex-col items-center space-y-4 mt-4">
