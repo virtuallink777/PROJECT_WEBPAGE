@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { use, useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import api from "@/lib/api";
 import Image from "next/image";
@@ -14,6 +14,9 @@ import { Button } from "@/components/ui/button";
 import ChatReceptor from "@/components/ChatReceptor";
 
 const socket = io("http://localhost:4004");
+
+const ownerId = localStorage.getItem("userId");
+console.log("ownerId:", ownerId);
 
 type Publication = {
   _id: string;
@@ -65,10 +68,6 @@ async function guardarUserId() {
   }
 }
 
-const ownerId = localStorage.getItem("userId");
-const clientId = sessionStorage.getItem("senderId") || "";
-console.log("clientId", clientId);
-
 const ViewPublications = () => {
   const [publications, setPublications] = useState<Publication[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,10 +76,20 @@ const ViewPublications = () => {
   const [canCreateMorePublications, setCanCreateMorePublications] =
     useState(true);
   const socketPay = useSocket("http://localhost:4004");
+  const [clientId, setClientId] = useState<string | null>(null);
 
   useEffect(() => {
     guardarUserId();
   }, []);
+
+  // efecto para obtener el clientId
+  useEffect(() => {
+    const storeClientId =
+      typeof window !== "undefined" ? localStorage.getItem("clientId") : null;
+    setClientId(storeClientId);
+  }, []);
+
+  console.log("clientId:", clientId);
 
   // 🔹efecto  Conectar al socket cuando el componente se monta
   useEffect(() => {

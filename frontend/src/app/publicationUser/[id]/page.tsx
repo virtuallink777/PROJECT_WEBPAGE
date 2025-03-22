@@ -18,6 +18,9 @@ const getOrCreateClientId = () => {
       clientId = uuidv4();
       localStorage.setItem("clientId", clientId);
     }
+
+    // También guardar en sessionStorage para mayor seguridad
+    sessionStorage.setItem("clientId", clientId);
     return clientId;
   }
   return null; // O manejarlo de otra forma

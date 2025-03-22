@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
 import io from "socket.io-client";
 
+// Inicializar el socket una sola vez
 const socket = io("http://localhost:4004");
 
 interface ChatProps {
-  conversationId: string;
-  userId: string;
-  ownerId: string;
-  onClose: () => void;
+  conversationId: string; // ID de la conversación
+  userId: string; // ID del usuario actual (anónimo o dueño)
+  ownerId: string; // ID del dueño de la publicidad
+  onClose: () => void; // Función para cerrar el chat
 }
 
 const Chat: React.FC<ChatProps> = ({
@@ -23,20 +24,22 @@ const Chat: React.FC<ChatProps> = ({
   const [activeConversationId, setActiveConversationId] =
     useState(conversationId);
 
+  // Efecto para manejar la conexión y los mensajes
   useEffect(() => {
-    // Obtener la conversación guardada
+    // Obtener la conversación guardada del sessionStorage
     const storedConversationId =
       sessionStorage.getItem("current_conversation") || conversationId;
     setActiveConversationId(storedConversationId);
 
-    // Unir al usuario a su sala (room)
+    // Unir al usuario a su sala (room) usando su ID
     socket.emit("joinRoom", userId);
     console.log(`🔗 Usuario ${userId} unido a su sala privada.`);
 
     // Escuchar mensajes entrantes
-    socket.on("newMessage", (message) => {
+    const handleNewMessage = (message: any) => {
       console.log("📩 Mensaje recibido del backend:", message);
 
+      // Actualizar el estado de los mensajes
       setMessages((prevMessages) => {
         const updatedMessages = [...prevMessages, message];
         sessionStorage.setItem(
@@ -45,27 +48,43 @@ const Chat: React.FC<ChatProps> = ({
         );
         return updatedMessages;
       });
-    });
-
-    return () => {
-      socket.off("newMessage");
     };
-  }, [conversationId]);
 
+    socket.on("newMessage", handleNewMessage);
+
+    // Limpiar el listener al desmontar el componente
+    return () => {
+      socket.off("newMessage", handleNewMessage);
+    };
+  }, [conversationId, userId]);
+
+  // Función para enviar un mensaje
   const sendMessage = (message: string) => {
-    if (!message.trim()) return;
+    if (!message.trim()) return; // No enviar mensajes vacíos
 
+    // Determinar el receptor del mensaje
+    let receiverId = ownerId; // Por defecto, el receptor es el dueño
+
+    // Si el usuario actual es el dueño, responder al cliente
+    if (userId === ownerId) {
+      const otherMessage = messages.find((msg) => msg.senderId !== userId);
+      if (otherMessage) {
+        receiverId = otherMessage.senderId; // Responder al cliente que inició la conversación
+      }
+    }
+
+    // Crear el objeto del mensaje
     const messageData = {
       conversationId: activeConversationId,
-      senderId: userId, // Usuario actual
-      receiverId: ownerId, // Dueño de la publicación
+      senderId: userId,
+      receiverId: receiverId,
       content: message,
       timestamp: new Date().toISOString(),
     };
 
     console.log("📤 Enviando mensaje:", messageData);
 
-    // Agregar mensaje al estado local
+    // Actualizar el estado local de los mensajes
     setMessages((prevMessages) => {
       const updatedMessages = [...prevMessages, messageData];
       sessionStorage.setItem(
@@ -75,12 +94,14 @@ const Chat: React.FC<ChatProps> = ({
       return updatedMessages;
     });
 
-    // Emitir el mensaje al backend
+    // Enviar el mensaje al servidor
     socket.emit("sendMessage", messageData);
 
-    setNewMessage(""); // Limpiar input después de enviar
+    // Limpiar el input después de enviar
+    setNewMessage("");
   };
 
+  // Función para limpiar el chat
   const clearChat = () => {
     setMessages([]); // Limpiar el estado local
     sessionStorage.removeItem(`chat_${activeConversationId}`); // Eliminar del sessionStorage

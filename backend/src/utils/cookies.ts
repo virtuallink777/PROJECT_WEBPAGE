@@ -11,12 +11,10 @@ const defaults: CookieOptions = {
 
 export const getAccessTokenCookieOptions = (): CookieOptions => ({
   ...defaults,
-  expires: new Date(Date.now() + 60 * 60 * 1000), // ✅ 1 HORA
 });
 
 export const getRefreshTokenCookieOptions = (): CookieOptions => ({
   ...defaults,
-  expires: thirtyDaysFromNow(),
   path: "/auth/refresh",
 });
 
@@ -33,7 +31,16 @@ export const setAuthCookies = ({ res, accessToken, refreshToken }: Params) => {
 };
 
 export const clearAuthCookies = (res: Response) => {
-  return res.clearCookie("accessToken").clearCookie("refreshToken", {
-    path: "/auth/refresh",
-  });
+  return res
+    .clearCookie("accessToken", {
+      httpOnly: true,
+      secure,
+      sameSite: "strict",
+    })
+    .clearCookie("refreshToken", {
+      path: "/auth/refresh",
+      httpOnly: true,
+      secure,
+      sameSite: "strict",
+    });
 };

@@ -155,6 +155,11 @@ export const loginUser = async ({
 };
 
 export const refreshUserAccessToken = async (refreshToken: string) => {
+  // 🔴 Si no hay refreshToken, significa que la cookie expiró (el usuario cerró el navegador)
+  if (!refreshToken) {
+    throw new Error("Session Expired");
+  }
+
   const { payload } = verifyToken<RefreshTokenPayload>(refreshToken, {
     secret: refreshTokenSignOptions.secret,
   });
@@ -162,14 +167,16 @@ export const refreshUserAccessToken = async (refreshToken: string) => {
 
   const session = await SessionModel.findById(payload.sessionId);
   const now = Date.now();
-  appAssert(
-    session && session.expiresAt.getTime() > now,
-    UNAUTHORIZED,
-    "Session Expired"
-  );
 
-  // refresh session if it expires in 24 hours
+  // 🔴 Si la sesión no existe o ya expiró, eliminarla de la base de datos
+  if (!session || session.expiresAt.getTime() <= now) {
+    if (session) {
+      await SessionModel.findByIdAndDelete(session._id); // 🚀 Elimina la sesión de la DB
+    }
+    throw new Error("Session Expired");
+  }
 
+  // ✅ Si la sesión es válida, pero está por expirar en menos de 24h, refrescarla
   const sessionNeedsRefresh = session.expiresAt.getTime() - now <= ONE_DAY_MS;
   if (sessionNeedsRefresh) {
     session.expiresAt = thirtyDaysFromNow();
