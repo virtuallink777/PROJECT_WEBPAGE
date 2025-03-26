@@ -1,6 +1,6 @@
 "use client";
 
-import React, { use, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import api from "@/lib/api";
 import Image from "next/image";
@@ -10,11 +10,11 @@ import useSocket from "@/hooks/useSocket";
 import calculateRotationTime from "@/components/calculateRotationTime";
 import calculateEndDate from "@/components/calculateEndDate";
 import { Button } from "@/components/ui/button";
-
 import ChatReceptor from "@/components/ChatReceptor";
+import parseBackendDate from "@/lib/parseBackendDate";
+import { useRouter } from "next/navigation";
 
 const socket = io("http://localhost:4004");
-
 const ownerId = localStorage.getItem("userId");
 console.log("ownerId:", ownerId);
 
@@ -54,6 +54,7 @@ async function obtenerIdCliente() {
   }
 }
 
+// Función para guardar el ID del cliente en localStorage
 async function guardarUserId() {
   try {
     const userId = await obtenerIdCliente();
@@ -100,7 +101,7 @@ const ViewPublications = () => {
 
     setUserId(storedUserId);
 
-    // 🔹 Escuchar cambios en publicaciones
+    // 🔹 Escuchar cambios en publicaciones DE LA APROBACION DEL ADMIN
     socket.on("actualizar-publicacion", ({ id, estado, razon }) => {
       setPublications((prevPublications) =>
         prevPublications.map((pub) =>
@@ -110,32 +111,39 @@ const ViewPublications = () => {
     });
   }, []);
 
+  const router = useRouter();
+
   // Efecto para cargar las publicaciones
   useEffect(() => {
     const fetchPublications = async () => {
       try {
         const _id = await obtenerIdCliente();
         if (!_id) {
-          throw new Error("No se pudo obtener el ID del usuario");
+          // Redirige a login si no hay ID
+          router.push("/sign-in"); // o la ruta que corresponda
+          return;
         }
 
         const response = await api.get(`/api/publicationsThumbnails/${_id}`);
         setPublications(response.data);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error al cargar publicaciones:", error);
+
+        // Si el error es por autenticación, redirigir
+        if (error.response?.status === 401) {
+          router.push("/sign-in"); // o la ruta que corresponda
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchPublications();
-  }, []);
+  }, [router]);
 
-  // alimentar la informacion del pago y de la rotacion
-
+  // alimentar la informacion del pago y de la rotacion de las publicaciones
   useEffect(() => {
     if (!socketPay) return;
-
     const handleDataPayPublication = (data) => {
       if (data.id) {
         console.log("dataPayPublication:", data);
@@ -176,6 +184,7 @@ const ViewPublications = () => {
     }
   }, [publications, dataPay]);
 
+  // Efecto para finalizar las publicaciones TOP CUANDO HALLAN TERMINADO EL TIEMPO DE CONTRATACION
   const endTopPublication = async () => {
     try {
       // Filtrar solo publicaciones aprobadas con datos de transacción
@@ -196,20 +205,19 @@ const ViewPublications = () => {
             pub.selectedPricing.hours
           );
 
-          // Extraer correctamente la fecha y hora del formato "dd/mm/yyyy hh:mm a.m./p.m."
-          const [datePart, timePart] = endDateString.split(" ");
-          const [day, month, year, hour] = datePart.split("/").map(Number);
+          console.log("Fecha de finalización (string):", endDateString);
 
-          // Crear objeto Date correctamente
-          const endDate = new Date(year, month - 1, day, hour);
-          // Ajustar la hora si es necesario (código adicional necesario)
-
+          // Parsear la fecha del backend
+          const parsedBackendDate = parseBackendDate(endDateString);
           const currentDate = new Date();
+
+          console.log("Fecha de finalización:", parsedBackendDate);
+          console.log("Fecha actual:", currentDate);
           console.log(
-            `Comparando: End date ${endDate} vs Current date ${currentDate}`
+            `Comparando: End date ${parsedBackendDate} vs Current date ${currentDate}`
           );
 
-          if (endDate < currentDate) {
+          if (parsedBackendDate < currentDate) {
             console.log(
               `Publicación ${pub._id} ha expirado, actualizando estado...`
             );
@@ -256,7 +264,7 @@ const ViewPublications = () => {
       // Solo ejecutar si hay publicaciones
       endTopPublication();
     }
-  }, [publications]); // Se ejecuta cuando `publications` cambia
+  }, []);
 
   // delete publication
   const handleDeletePublication = async (id: string) => {

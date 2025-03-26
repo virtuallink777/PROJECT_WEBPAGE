@@ -15,6 +15,8 @@ export interface ServerSideUserResponse {
 export interface JWTPayload {
   userId: string;
   email: string;
+  exp?: number; // timestamp de expiración (opcional)
+  iat?: number; // timestamp de creación (issued at) (opcional)
 }
 
 // Definimos los nombres de las cookies exactamente como están en el backend
@@ -24,41 +26,47 @@ export async function getServerSideUser(
   cookieStore: ReturnType<typeof cookies>
 ): Promise<ServerSideUserResponse> {
   try {
-    // Esperamos a que se resuelva la Promise de las cookies
     const cookiesList = await cookieStore;
-    console.log("Lista de cookies disponibles:", cookiesList);
-
-    // Intentamos obtener el accessToken
     const accessTokenCookie = cookiesList.get(ACCESS_TOKEN_COOKIE);
 
     if (!accessTokenCookie) {
-      console.log("No se encontró el access token en las cookies");
-      return { user: null };
+      return { user: null }; // No hay token - usuario no logueado
     }
 
     const accessToken = accessTokenCookie.value;
-    console.log("Access token obtenido:", accessToken);
-
-    // decodificamos el accessToken
     const jwtSecret = process.env.JWT_SECRET;
+
     if (!jwtSecret) {
       throw new Error("JWT_SECRET no está configurado");
     }
 
-    const decoded = jwt.verify(accessToken, jwtSecret) as JWTPayload;
+    try {
+      const decoded = jwt.verify(accessToken, jwtSecret) as JWTPayload;
 
-    // Construir el objeto usuario
-    const user: User = {
-      id: decoded.userId,
-      email: decoded.email,
-    };
+      const user: User = {
+        id: decoded.userId,
+        email: decoded.email,
+      };
 
-    console.log(user.email);
-    console.log("Usuario obtenido:", user);
+      return { user };
+    } catch (verifyError) {
+      // Manejo específico de errores de JWT
+      if (verifyError instanceof jwt.TokenExpiredError) {
+        console.log("Token expirado - redirigir a login");
+        return { user: null }; // Token expirado - usuario no válido
+      }
 
-    return { user };
+      if (verifyError instanceof jwt.JsonWebTokenError) {
+        console.log("Token inválido");
+        return { user: null }; // Token corrupto - usuario no válido
+      }
+
+      // Otros errores inesperados
+      console.error("Error inesperado al verificar token:", verifyError);
+      return { user: null };
+    }
   } catch (error) {
-    console.error("Error al obtener el usuario:", error);
+    console.error("Error general:", error);
     return { user: null };
   }
 }

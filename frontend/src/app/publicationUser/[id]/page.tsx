@@ -53,6 +53,7 @@ interface IPublication {
   adicionales: string;
   images: ImageItem[];
   videos: VideoItem[];
+  transactionId: string;
 }
 
 const PublicacionDetalle = () => {
@@ -97,6 +98,21 @@ const PublicacionDetalle = () => {
     }
   }, [publicationId]);
 
+  console.log("publicacion en render:", publicacion);
+
+  const userId = publicacion?.userId;
+
+  console.log("userId:", userId);
+
+  const handleImageClick = (index: number) => {
+    setSelectedImageIndex(index);
+    setIsCarouselOpen(true);
+  };
+
+  const closeCarousel = () => {
+    setIsCarouselOpen(false);
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -107,17 +123,6 @@ const PublicacionDetalle = () => {
   if (!publicacion) {
     return <div>Publicación no encontrada</div>;
   }
-
-  console.log("publicacion en render:", publicacion); // Este log mostrará el valor actualizado en cada renderizado
-
-  const handleImageClick = (index: number) => {
-    setSelectedImageIndex(index);
-    setIsCarouselOpen(true);
-  };
-
-  const closeCarousel = () => {
-    setIsCarouselOpen(false);
-  };
 
   const ownerId = publicacion.userId;
   console.log("ownerId:", ownerId);
@@ -179,38 +184,46 @@ const PublicacionDetalle = () => {
               </div>
               <div>
                 {/* Botón "Chatea en vivo" */}
-                <div>
-                  {/* Botón "Chatea en vivo" */}
-                  <div className="flex justify-between">
-                    <button
-                      className="text-blue-500 hover:text-blue-700"
-                      onClick={() => {
-                        console.log(
-                          "Botón presionado, generando conversación..."
-                        );
-                        setConversationId(`chat-${ownerId}-${clientId}`);
-                        setIsChatOpen(true);
-                      }}
-                    >
-                      Chatea en vivo
-                    </button>
-                  </div>
+                {publicacion.transactionId ? (
+                  <div>
+                    {/* Botón "Chatea en vivo" */}
+                    <div className="flex justify-between">
+                      <button
+                        className="text-blue-500 hover:text-blue-700 text-lg font-medium"
+                        onClick={() => {
+                          console.log(
+                            "Botón presionado, generando conversación..."
+                          );
+                          setConversationId(`chat-${ownerId}-${clientId}`);
+                          setIsChatOpen(true);
+                        }}
+                      >
+                        Chatea en vivo
+                      </button>
+                    </div>
 
-                  {/* Mostrar el chat si está abierto */}
-                  {isChatOpen && conversationId ? (
-                    <Chat
-                      conversationId={conversationId}
-                      userId={clientId}
-                      ownerId={ownerId}
-                      onClose={() => {
-                        console.log("Cerrando chat...");
-                        setIsChatOpen(false);
-                      }}
-                    />
-                  ) : (
-                    ""
-                  )}
-                </div>
+                    {/* Mostrar el chat si está abierto */}
+                    {isChatOpen && conversationId ? (
+                      <Chat
+                        conversationId={conversationId}
+                        userId={clientId}
+                        ownerId={ownerId}
+                        onClose={() => {
+                          console.log("Cerrando chat...");
+                          setIsChatOpen(false);
+                        }}
+                      />
+                    ) : (
+                      ""
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <h3 className="text-gray-500">
+                      **Esta publicacion no tiene chat en vivo**
+                    </h3>
+                  </div>
+                )}
               </div>
             </div>
           </div>

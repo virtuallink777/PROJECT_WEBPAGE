@@ -32,6 +32,7 @@ export const signUp = async (
     );
 
     console.log(response.data);
+
     return response;
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -69,6 +70,7 @@ export const login = async (
         }
       );
       console.log(response.data);
+
       return response;
     }
   } catch (error) {

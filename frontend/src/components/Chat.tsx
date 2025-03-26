@@ -24,6 +24,12 @@ const Chat: React.FC<ChatProps> = ({
   const [activeConversationId, setActiveConversationId] =
     useState(conversationId);
 
+  // Nuevo estado para manejar notificaciones de usuario desconectado
+  const [offlineNotification, setOfflineNotification] = useState<{
+    receiverId: string;
+    message: string;
+  } | null>(null);
+
   // Efecto para manejar la conexión y los mensajes
   useEffect(() => {
     // Obtener la conversación guardada del sessionStorage
@@ -39,7 +45,6 @@ const Chat: React.FC<ChatProps> = ({
     const handleNewMessage = (message: any) => {
       console.log("📩 Mensaje recibido del backend:", message);
 
-      // Actualizar el estado de los mensajes
       setMessages((prevMessages) => {
         const updatedMessages = [...prevMessages, message];
         sessionStorage.setItem(
@@ -50,30 +55,49 @@ const Chat: React.FC<ChatProps> = ({
       });
     };
 
-    socket.on("newMessage", handleNewMessage);
+    // Nuevo manejador para usuarios desconectados
+    const handleUserOffline = (offlineInfo: {
+      receiverId: string;
+      conversationId: string;
+      message: string;
+    }) => {
+      console.log("Usuario receptor no conectado:", offlineInfo);
 
-    // Limpiar el listener al desmontar el componente
+      // Mostrar notificación de usuario desconectado
+      setOfflineNotification({
+        receiverId: offlineInfo.receiverId,
+        message: offlineInfo.message,
+      });
+
+      // Opcional: Guardar el mensaje para entrega posterior
+      // Puedes implementar una lógica para guardar mensajes no entregados
+    };
+
+    // Escuchar eventos de socket
+    socket.on("newMessage", handleNewMessage);
+    socket.on("userOffline", handleUserOffline);
+
+    // Limpiar listeners al desmontar
     return () => {
       socket.off("newMessage", handleNewMessage);
+      socket.off("userOffline", handleUserOffline);
     };
   }, [conversationId, userId]);
 
   // Función para enviar un mensaje
+  // Modificar la función de envío de mensajes para manejar notificaciones
   const sendMessage = (message: string) => {
-    if (!message.trim()) return; // No enviar mensajes vacíos
+    if (!message.trim()) return;
 
-    // Determinar el receptor del mensaje
-    let receiverId = ownerId; // Por defecto, el receptor es el dueño
+    let receiverId = ownerId;
 
-    // Si el usuario actual es el dueño, responder al cliente
     if (userId === ownerId) {
       const otherMessage = messages.find((msg) => msg.senderId !== userId);
       if (otherMessage) {
-        receiverId = otherMessage.senderId; // Responder al cliente que inició la conversación
+        receiverId = otherMessage.senderId;
       }
     }
 
-    // Crear el objeto del mensaje
     const messageData = {
       conversationId: activeConversationId,
       senderId: userId,
@@ -84,7 +108,7 @@ const Chat: React.FC<ChatProps> = ({
 
     console.log("📤 Enviando mensaje:", messageData);
 
-    // Actualizar el estado local de los mensajes
+    // Actualizar mensajes locales
     setMessages((prevMessages) => {
       const updatedMessages = [...prevMessages, messageData];
       sessionStorage.setItem(
@@ -94,17 +118,20 @@ const Chat: React.FC<ChatProps> = ({
       return updatedMessages;
     });
 
-    // Enviar el mensaje al servidor
+    // Enviar mensaje
     socket.emit("sendMessage", messageData);
-
-    // Limpiar el input después de enviar
     setNewMessage("");
   };
 
-  // Función para limpiar el chat
+  // Función para limpiar la conversación
   const clearChat = () => {
-    setMessages([]); // Limpiar el estado local
-    sessionStorage.removeItem(`chat_${activeConversationId}`); // Eliminar del sessionStorage
+    setMessages([]); // Limpiar mensajes locales
+    sessionStorage.removeItem(`chat_${activeConversationId}`); // Limpiar mensajes guardados en sessionStorage
+  };
+
+  // Función para limpiar la notificación de usuario desconectado
+  const clearOfflineNotification = () => {
+    setOfflineNotification(null);
   };
 
   return (
@@ -147,6 +174,15 @@ const Chat: React.FC<ChatProps> = ({
           Borrar conversación
         </button>
       </div>
+      {/* Mostrar notificación de usuario desconectado */}
+      {offlineNotification && (
+        <div className="offline-notification">
+          <p className="text-red-800 text-center">
+            El usuario dueño de la publicidad no está conectado... intenta mas
+            tarde o por whatsapp
+          </p>
+        </div>
+      )}
     </div>
   );
 };
