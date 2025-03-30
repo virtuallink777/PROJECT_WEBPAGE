@@ -15,8 +15,6 @@ import parseBackendDate from "@/lib/parseBackendDate";
 import { useRouter } from "next/navigation";
 
 const socket = io("http://localhost:4004");
-const ownerId = localStorage.getItem("userId");
-console.log("ownerId:", ownerId);
 
 type Publication = {
   _id: string;
@@ -78,19 +76,25 @@ const ViewPublications = () => {
     useState(true);
   const socketPay = useSocket("http://localhost:4004");
   const [clientId, setClientId] = useState<string | null>(null);
+  const [ownerId, setOwnerId] = useState<string | null>(null);
 
   useEffect(() => {
     guardarUserId();
   }, []);
 
-  // efecto para obtener el clientId
+  // efecto para obtener el clientId y ownerId del localStorage
   useEffect(() => {
     const storeClientId =
       typeof window !== "undefined" ? localStorage.getItem("clientId") : null;
     setClientId(storeClientId);
+
+    const storedOwnerId =
+      typeof window !== "undefined" ? localStorage.getItem("userId") : null;
+    setOwnerId(storedOwnerId);
   }, []);
 
   console.log("clientId:", clientId);
+  console.log("ownerId:", ownerId);
 
   // 🔹efecto  Conectar al socket cuando el componente se monta
   useEffect(() => {
