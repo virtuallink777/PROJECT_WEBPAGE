@@ -179,7 +179,6 @@ export const SecondBlockPublication: React.FC<SecondBlockPublicationProps> = ({
             className={selectStyle}
             value={formData.Localidad}
             onChange={handleInputChange} // Agregado
-            required
           >
             <option value="">Selecciona una localidad</option>
             {categoriesData.localities[formData.ciudad]?.map((localidad) => (

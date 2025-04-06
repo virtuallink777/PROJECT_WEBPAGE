@@ -37,6 +37,7 @@ interface VideoItem {
 }
 
 interface IPublication {
+  _id: string;
   userId: string;
   nombre: string;
   edad: number;
@@ -54,6 +55,8 @@ interface IPublication {
   images: ImageItem[];
   videos: VideoItem[];
   transactionId: string;
+  whatsappClicks: string;
+  liveChatClicks: number;
 }
 
 const PublicacionDetalle = () => {
@@ -127,6 +130,26 @@ const PublicacionDetalle = () => {
   const ownerId = publicacion.userId;
   console.log("ownerId:", ownerId);
 
+  const handleClick = async (
+    postId: string,
+    eventType: "click" | "whatsappClicks" | "liveChatClicks"
+  ) => {
+    console.log("📌 handleClick ejecutado con:", { postId, eventType });
+    try {
+      await fetch("http://localhost:4004/api/metrics", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId, eventType }),
+      });
+    } catch (error) {
+      console.error("Error enviando métrica", error);
+    }
+
+    console.log(
+      `Evento ${eventType} registrado para publicación con ID: ${postId}`
+    );
+  };
+
   return (
     <div className="max-w-5xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
       {/* Encabezado de la publicación */}
@@ -180,7 +203,11 @@ const PublicacionDetalle = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Whatsapp:</span>
-                <WhatsAppLink telefono={publicacion?.telefono} />
+                <WhatsAppLink
+                  telefono={publicacion?.telefono}
+                  postId={publicacion?._id}
+                  onWhatsAppClick={handleClick}
+                />
               </div>
               <div>
                 {/* Botón "Chatea en vivo" */}
@@ -191,9 +218,7 @@ const PublicacionDetalle = () => {
                       <button
                         className="text-blue-500 hover:text-blue-700 text-lg font-medium"
                         onClick={() => {
-                          console.log(
-                            "Botón presionado, generando conversación..."
-                          );
+                          handleClick(publicacion._id, "liveChatClicks");
                           setConversationId(`chat-${ownerId}-${clientId}`);
                           setIsChatOpen(true);
                         }}
@@ -212,6 +237,8 @@ const PublicacionDetalle = () => {
                           console.log("Cerrando chat...");
                           setIsChatOpen(false);
                         }}
+                        postId={publicacion?._id}
+                        onliveChatClicks={handleClick}
                       />
                     ) : (
                       ""

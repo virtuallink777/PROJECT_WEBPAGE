@@ -328,6 +328,22 @@ export default function Home() {
   const filteredTopPublications = filterPublications(topPublications);
   const filteredNonTopPublications = filterPublications(nonTopPublications);
 
+  const handleClick = async (postId: string, eventType: "click") => {
+    try {
+      await fetch("http://localhost:4004/api/metrics", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId, eventType }),
+      });
+    } catch (error) {
+      console.error("Error enviando métrica", error);
+    }
+
+    console.log(
+      `Evento ${eventType} registrado para publicación con ID: ${postId}`
+    );
+  };
+
   return (
     <MaxWidthWrapper>
       <div className="py-20 mx-auto text-center flex flex-col items-center w-full">
@@ -341,13 +357,15 @@ export default function Home() {
           <div className="grid grid-cols-4 gap-4">
             {filteredTopPublications.length > 0 ? (
               filteredTopPublications.map((data) => (
-                <Link href={`/publicationUser/${data._id}`} key={data._id}>
-                  <PublicationCard
-                    key={data._id}
-                    publication={data}
-                    isTopSection={true}
-                  />
-                </Link>
+                <div
+                  key={data._id}
+                  onClick={() => handleClick(data._id, "click")}
+                  className="cursor-pointer"
+                >
+                  <Link href={`/publicationUser/${data._id}`} key={data._id}>
+                    <PublicationCard publication={data} isTopSection={true} />
+                  </Link>
+                </div>
               ))
             ) : (
               <p className="col-span-4 text-gray-500">
@@ -362,14 +380,16 @@ export default function Home() {
           <h2 className="text-2xl font-semibold mb-4">Otras Publicaciones</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {filteredNonTopPublications.length > 0 ? (
-              filteredNonTopPublications.map((pub) => (
-                <Link href={`/publicationUser/${pub._id}`} key={pub._id}>
-                  <PublicationCard
-                    key={pub._id}
-                    publication={pub}
-                    isTopSection={false}
-                  />
-                </Link>
+              filteredNonTopPublications.map((data) => (
+                <div
+                  key={data._id}
+                  onClick={() => handleClick(data._id, "click")}
+                  className="cursor-pointer"
+                >
+                  <Link href={`/publicationUser/${data._id}`} key={data._id}>
+                    <PublicationCard publication={data} isTopSection={false} />
+                  </Link>
+                </div>
               ))
             ) : (
               <p className="col-span-4 text-gray-500">

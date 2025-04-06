@@ -30,6 +30,7 @@ import getPublicationsTOP from "./routes/getPublicationTOP";
 import getPublicationsNOTOP from "./routes/getPublicationsNOTOP";
 import updatePublicationsEndTop from "./routes/updatePublicationsEndTop";
 import configureSocketChat from "./sockets/index";
+import metricsRoutes from "./routes/metrics"; // Importamos el router correctamente
 
 const app = express();
 
@@ -127,7 +128,8 @@ app.get("/api/publicationsNOTOP", getPublicationsNOTOP);
 // ruta para actualizar las publicaciones que finalizaron top
 app.use("/api/updatePublicationsEndTop", updatePublicationsEndTop);
 
-//*********RUTAS PARA EL CHAT***************** */
+// RUTA PARA LAS METRICAS
+app.use("/api/metrics", metricsRoutes); // Usa el router en la ruta "/api/metrics"
 
 app.use(errorHandler);
 server.listen(PORT, async () => {

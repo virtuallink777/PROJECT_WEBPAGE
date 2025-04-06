@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 
-export function middleware(request) {
+export function middleware(request: NextRequest) {
   const jwt = request.cookies.get("accessToken");
   if (
     request.nextUrl.pathname.includes("/dashboard") ||

@@ -18,6 +18,7 @@ export interface IPublication {
   Departamento: string;
   ciudad: string;
   Localidad: string;
+  titulo: string;
   images: Image[];
   descripcion: string;
   direccion: string;
@@ -38,6 +39,7 @@ interface PublicationCardProps {
   publication: IPublication;
   status?: boolean; // ✅ Nueva prop para diferenciar TOP y NO TOP
   isTopSection?: boolean;
+  onClick?: () => void; // ✅ Nueva prop para manejar el click
 }
 
 const PublicationCard: React.FC<PublicationCardProps> = ({

@@ -12,7 +12,6 @@ const getPublicationById = async (req: Request, res: Response) => {
     if (!publication) {
       return res.status(404).json({ message: "Publicación no encontrada" });
     }
-    console.log("publicacion encontrada: ", publication);
 
     // Retornar la publicación encontrada
     res.status(200).json(publication);

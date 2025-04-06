@@ -189,6 +189,7 @@ const ViewPublications = () => {
   }, [publications, dataPay]);
 
   // Efecto para finalizar las publicaciones TOP CUANDO HALLAN TERMINADO EL TIEMPO DE CONTRATACION
+
   const endTopPublication = async () => {
     try {
       // Filtrar solo publicaciones aprobadas con datos de transacción
@@ -235,6 +236,10 @@ const ViewPublications = () => {
       console.error("Error general en endTopPublication:", error);
     }
   };
+
+  useEffect(() => {
+    endTopPublication();
+  });
 
   const updatePublicationStatus = async (_id: string) => {
     console.log("Actualizando estado de la publicación:", _id);
@@ -326,7 +331,34 @@ const ViewPublications = () => {
 
   return (
     <>
-      <div className="container relative flex pt-10 flex-col items-center justify-center lg:px-0 p-4">
+      <div className="container relative flex pt-0 flex-col items-center justify-center lg:px-0 p-4">
+        {/* Encabezado con botones a la derecha */}
+        <div className="w-full flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold"></h1>
+
+          {/* Botones a la derecha */}
+          <div className="flex gap-4">
+            <Link
+              href="/dashboard/createPublications"
+              className="w-full text-lg"
+              onClick={(e) => {
+                if (!canCreateMorePublications) {
+                  e.preventDefault(); // Evita la navegación si el botón está deshabilitado
+                }
+              }}
+            >
+              <Button
+                className="w-full text-lg"
+                disabled={!canCreateMorePublications}
+              >
+                Crear Publicaciones
+              </Button>
+            </Link>
+            <Link href="/dashboard/statistics" className="w-full text-lg">
+              <Button className="w-full text-lg">Estadísticas</Button>
+            </Link>
+          </div>
+        </div>
         <h1 className="text-2xl font-bold mb-6 text-center">
           Mis Publicaciones
         </h1>
@@ -467,26 +499,7 @@ const ViewPublications = () => {
             </div>
 
             <div className="text-center"></div>
-            <div className="flex flex-col items-center space-y-4 mt-4">
-              <Link
-                href="/dashboard/createPublications"
-                className="w-full text-lg"
-                onClick={(e) => {
-                  if (!canCreateMorePublications) {
-                    e.preventDefault(); // Evita la navegación si el botón está deshabilitado
-                  }
-                }}
-              >
-                <Button
-                  className="w-full text-lg"
-                  disabled={!canCreateMorePublications}
-                >
-                  Crear Publicaciones
-                </Button>
-              </Link>
-
-              <Button className="w-full text-lg">Estadísticas</Button>
-            </div>
+            <div className="flex flex-col items-center space-y-4 mt-4"></div>
           </div>
         </div>
       </div>

@@ -14,12 +14,6 @@ const adminPanel = () => {
               validacion de publicaciones
             </Button>
           </Link>
-          <Link href="/dashboard/viewPublications" className="w-full text-lg">
-            <Button className="w-full text-lg">Estadisticas 1</Button>
-          </Link>
-
-          <Button className="w-full text-lg">Estadisticas de ingresos</Button>
-          <Button className="w-full text-lg">Estadísticas</Button>
         </div>
       </div>
     </div>
