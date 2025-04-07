@@ -31,6 +31,7 @@ import getPublicationsNOTOP from "./routes/getPublicationsNOTOP";
 import updatePublicationsEndTop from "./routes/updatePublicationsEndTop";
 import configureSocketChat from "./sockets/index";
 import metricsRoutes from "./routes/metrics"; // Importamos el router correctamente
+import metricsRoutesAdmin from "./routes/metricsRoutesAdmin"; // Importamos el router correctamente
 
 const app = express();
 
@@ -130,6 +131,9 @@ app.use("/api/updatePublicationsEndTop", updatePublicationsEndTop);
 
 // RUTA PARA LAS METRICAS
 app.use("/api/metrics", metricsRoutes); // Usa el router en la ruta "/api/metrics"
+
+// ruta PARA LAS METRICAS DEL ADMIN
+app.use("/api/metricsAdmin", metricsRoutesAdmin);
 
 app.use(errorHandler);
 server.listen(PORT, async () => {
