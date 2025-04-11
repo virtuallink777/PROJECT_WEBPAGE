@@ -32,6 +32,7 @@ import updatePublicationsEndTop from "./routes/updatePublicationsEndTop";
 import configureSocketChat from "./sockets/index";
 import metricsRoutes from "./routes/metrics"; // Importamos el router correctamente
 import metricsRoutesAdmin from "./routes/metricsRoutesAdmin"; // Importamos el router correctamente
+import contactRoutes from "./routes/contactRoute"; // Importamos el router correctamente
 
 const app = express();
 
@@ -134,6 +135,9 @@ app.use("/api/metrics", metricsRoutes); // Usa el router en la ruta "/api/metric
 
 // ruta PARA LAS METRICAS DEL ADMIN
 app.use("/api/metricsAdmin", metricsRoutesAdmin);
+
+// ruta para contactos
+app.use("/api/contact", contactRoutes);
 
 app.use(errorHandler);
 server.listen(PORT, async () => {

@@ -32,8 +32,15 @@ const SignUp = () => {
     // Validaciones en el cliente
     const clientErrors: Partial<RegisterInput> = {};
 
-    if (formData.password.length < 6) {
-      clientErrors.password = "La contraseña debe tener al menos 6 caracteres.";
+    // Expresión regular: al menos una mayúscula y un número
+    const regexMayusculaYNumero = /^(?=.*[A-Z])(?=.*\d).+$/;
+
+    if (
+      formData.password.length < 8 ||
+      !regexMayusculaYNumero.test(formData.password)
+    ) {
+      clientErrors.password =
+        "La contraseña debe tener al menos 8 caracteres, una mayúscula y un número.";
     }
     if (formData.password !== formData.confirmPassword) {
       clientErrors.confirmPassword = "Las contraseñas no coinciden.";

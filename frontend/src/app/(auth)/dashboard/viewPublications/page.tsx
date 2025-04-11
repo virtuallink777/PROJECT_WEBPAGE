@@ -337,7 +337,7 @@ const ViewPublications = () => {
           <h1 className="text-2xl font-bold"></h1>
 
           {/* Botones a la derecha */}
-          <div className="flex gap-4">
+          <div className="flex gap-4 mt-4 mr-4">
             <Link
               href="/dashboard/createPublications"
               className="w-full text-lg"

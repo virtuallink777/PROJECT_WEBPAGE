@@ -1,9 +1,8 @@
 "use client";
 
-import PaymentMethodSelector from "@/components/PaymentMethodSelector";
 import PricingTable from "@/components/TableValuesPublication";
 import TimePicker from "@/components/TimePicker";
-import { Button } from "@/components/ui/button";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -16,7 +15,7 @@ const PayPublication = () => {
   } | null>(null);
   // state for select time
   const [selectedTime, setSelectedTime] = useState(""); // Estado para la hora seleccionada
-  const [selectedPayment, setSelectedPayment] = useState("");
+
   const [transactionId, setTransactionId] = useState("");
   const [status, setStatus] = useState(false); // Estado del método de pago seleccionado
   const [DataTransaction, setDataTransaction] = useState({
@@ -32,7 +31,7 @@ const PayPublication = () => {
   const router = useRouter();
 
   const handlePayment = async () => {
-    if (!selectedPricing || !selectedTime || !selectedPayment) {
+    if (!selectedPricing || !selectedTime) {
       alert("Por favor selecciona todos los campos antes de pagar.");
       return;
     }
@@ -48,7 +47,6 @@ const PayPublication = () => {
       const paymentData = {
         selectedPricing,
         selectedTime,
-        selectedPayment,
         status: true,
         transactionId: newTransactionId,
         transactionDate,
@@ -123,18 +121,24 @@ const PayPublication = () => {
         )}
 
         {/* Sección de método de pago */}
-        <div className="mt-8">
-          <PaymentMethodSelector
-            selectedPayment={selectedPayment}
-            setSelectedPayment={setSelectedPayment}
-          />
+        <div className="mt-8 p-6 bg-white shadow-md rounded-lg text-center mb-8">
+          <h3>PAGA CON MERCADO PAGO</h3>
+
+          <a
+            href="https://link.mercadopago.com.co/deviapay"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Image
+              src="/MP_RGB_HANDSHAKE_color-azul_hori-izq.svg"
+              alt="Botón de pago Mercado Pago"
+              width={200}
+              height={60} // puedes ajustar el alto también si quieres
+            />
+          </a>
         </div>
       </div>
-      <div>
-        <Button className="p-6 max-w-4xl mx-auto " onClick={handlePayment}>
-          Pagar
-        </Button>
-      </div>
+      <div></div>
     </>
   );
 };

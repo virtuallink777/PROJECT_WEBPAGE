@@ -360,7 +360,7 @@ const CreatePublications: React.FC = () => {
                   <p className="text-sm text-gray-600">
                     Al confirmar que eres mayor de 18 años, aceptas nuestros{" "}
                     <a
-                      href="/terminos"
+                      href="/TermsyCond"
                       className="text-blue-600 underline hover:text-blue-800"
                     >
                       términos y condiciones
