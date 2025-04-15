@@ -400,6 +400,7 @@ const AdminPanel = () => {
                       "el rostro no coincide",
                       "la cara no se distingue bien",
                       "la imagen del rostro es borrosa",
+                      "Por favor envia una foto legible por lado y lado de tu documento original (no fotocopia) de identidad al correo:  virtuallink@gmail.com , para validar tu edad",
                     ];
 
                     const razon = prompt(

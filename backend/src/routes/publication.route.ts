@@ -78,6 +78,8 @@ publicationsRouter.post("/", async (req: Request, res: Response) => {
       videos,
     });
 
+    console.log("Nueva descripcion corregida:", descripcion);
+
     const result = await nuevaPublicacion.save();
 
     res.status(201).json({
