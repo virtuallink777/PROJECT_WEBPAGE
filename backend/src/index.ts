@@ -33,6 +33,7 @@ import configureSocketChat from "./sockets/index";
 import metricsRoutes from "./routes/metrics"; // Importamos el router correctamente
 import metricsRoutesAdmin from "./routes/metricsRoutesAdmin"; // Importamos el router correctamente
 import contactRoutes from "./routes/contactRoute"; // Importamos el router correctamente
+import pseRoutes from "./routes/pseRoutes"; // Importamos el router correctamente
 
 const app = express();
 
@@ -138,6 +139,9 @@ app.use("/api/metricsAdmin", metricsRoutesAdmin);
 
 // ruta para contactos
 app.use("/api/contact", contactRoutes);
+
+// RUTA PARA PAGO openpay
+app.use("/api/pse", pseRoutes);
 
 app.use(errorHandler);
 server.listen(PORT, async () => {

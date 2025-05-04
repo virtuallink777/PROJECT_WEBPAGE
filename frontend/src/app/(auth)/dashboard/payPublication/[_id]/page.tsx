@@ -1,10 +1,11 @@
 "use client";
 
+import PSEPaymentButton from "@/components/PSEPaymentButton";
 import PricingTable from "@/components/TableValuesPublication";
 import TimePicker from "@/components/TimePicker";
-import Image from "next/image";
+
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const PayPublication = () => {
   // state for select cell
@@ -22,13 +23,44 @@ const PayPublication = () => {
     transactionDate: "",
     transactionTime: "",
   });
+  const [Publicacion, setPublicacion] = useState<any>(null); // Estado para almacenar la publicación
 
-  const _id = useParams();
-  console.log("id", _id);
-
-  const id = _id._id;
+  const _idParams = useParams();
+  const id = _idParams._id as string; // Obtener el ID de la URL
 
   const router = useRouter();
+
+  // traemos la publicacion por id
+
+  const addPublication = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:4004/api/editPublications/${id}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Error al obtener la publicación");
+      } else {
+        const data = await response.json();
+        console.log(data);
+        setPublicacion(data); // Guardar la publicación en el estado
+        console.log("Publicación obtenida:", data);
+      }
+    } catch (error) {
+      console.error("Error al obtener la publicación:", error);
+    }
+  };
+
+  // Llamar a la función para obtener la publicación al cargar el componente
+
+  useEffect(() => {
+    addPublication();
+  }, []); // Llamar a la función al cargar el componente
 
   const handlePayment = async () => {
     if (!selectedPricing || !selectedTime) {
@@ -48,45 +80,20 @@ const PayPublication = () => {
         selectedPricing,
         selectedTime,
         status: true,
-        transactionId: newTransactionId,
+
         transactionDate,
         transactionTime,
       };
 
       console.log("Datos de pago:", paymentData);
 
+      // Guarda temporalmente en sessionStorage y el id de la publicacion
+      sessionStorage.setItem("publicationId", id);
+      sessionStorage.setItem("pendingPaymentData", JSON.stringify(paymentData));
+
       // Enviar datos al servidor
-      const response = await fetch(
-        `http://localhost:4004/api/updatePublicationPayment/${id}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(paymentData),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Error al procesar el pago");
-      }
-
-      const data = await response.json();
-      console.log("Respuesta del servidor:", data);
-
-      // Una vez confirmado el éxito, actualizar estados locales
-      setTransactionId(newTransactionId);
-      setStatus(true);
-      setDataTransaction({
-        transactionDate,
-        transactionTime,
-      });
-
-      alert(`Pago exitoso. ID de transacción: ${newTransactionId}`);
-      router.push("/dashboard/viewPublications");
     } catch (error) {
-      console.error("Error al realizar el pago:", error);
-      alert("Ha ocurrido un error al procesar el pago.");
+      console.error("Error al enviar los datos de pago:", error);
     }
   };
 
@@ -122,23 +129,16 @@ const PayPublication = () => {
 
         {/* Sección de método de pago */}
         <div className="mt-8 p-6 bg-white shadow-md rounded-lg text-center mb-8">
-          <h3>PAGA CON MERCADO PAGO</h3>
-
-          <a
-            href="https://link.mercadopago.com.co/deviapay"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              src="/MP_RGB_HANDSHAKE_color-azul_hori-izq.svg"
-              alt="Botón de pago Mercado Pago"
-              width={200}
-              height={60} // puedes ajustar el alto también si quieres
+          <h3>PAGA POR OPENPAY</h3>
+          {selectedPricing && (
+            <PSEPaymentButton
+              selectedPricing={selectedPricing}
+              selectedTime={selectedTime}
+              handlePayment={handlePayment}
             />
-          </a>
+          )}
         </div>
       </div>
-      <div></div>
     </>
   );
 };

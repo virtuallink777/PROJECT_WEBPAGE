@@ -38,6 +38,7 @@ type Publication = {
   selectedTime: string;
   transactionDate: string;
   transactionTime: string;
+  status: boolean;
 };
 
 // Función para obtener el ID del cliente
@@ -129,6 +130,7 @@ const ViewPublications = () => {
         }
 
         const response = await api.get(`/api/publicationsThumbnails/${_id}`);
+
         setPublications(response.data);
       } catch (error: any) {
         console.error("Error al cargar publicaciones:", error);
@@ -143,7 +145,11 @@ const ViewPublications = () => {
     };
 
     fetchPublications();
-  }, [router]);
+  }, [router]); // Dependencia para evitar bucle infinito
+
+  useEffect(() => {
+    console.log("Publicaciones actualizadas:", publications);
+  }, [publications]);
 
   // alimentar la informacion del pago y de la rotacion de las publicaciones
   useEffect(() => {
@@ -321,6 +327,7 @@ const ViewPublications = () => {
   }
 
   console.log("dataPay", dataPay);
+
   console.log(
     "publications: selectedTime ",
     publications.map((pub) => pub.selectedTime)
@@ -328,6 +335,16 @@ const ViewPublications = () => {
 
   const baseURL = "http://localhost:4004";
   console.log("Renderizando publicaciones:", publications);
+
+  const publicationsWithPayment = publications.map((pub) => {
+    const payData = dataPay[pub._id] || {};
+    return {
+      ...pub,
+      ...payData,
+    };
+  });
+
+  console.log("publicationsWithPayment", publicationsWithPayment);
 
   return (
     <>
@@ -364,7 +381,7 @@ const ViewPublications = () => {
         </h1>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6  ">
-          {publications.map((pub) => (
+          {publicationsWithPayment.map((pub) => (
             <Card
               key={pub._id}
               className="overflow-hidden hover:shadow-lg transition-shadow lg:w-[20vw] lg:h-[80vh] sm:w-[30vw] sm:h-[90vh] md:w-[20vw] md:h-[115vh]"
@@ -434,7 +451,7 @@ const ViewPublications = () => {
                   {pub.estado === "PENDIENTE" ||
                   pub.estado === "RECHAZADA" ? null : (
                     <>
-                      {pub.selectedTime ? ( // ✅ Verifica si existe información de pago para esta publicación
+                      {pub.publication?.status ? ( // ✅ Verifica si existe información de pago para esta publicación
                         <div>
                           <p className="text-green-500 font-semibold">
                             TOP CONTRATADO: {pub.selectedPricing.days}
