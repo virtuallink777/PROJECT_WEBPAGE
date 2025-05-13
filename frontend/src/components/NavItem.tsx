@@ -55,7 +55,7 @@ const Cities: React.FC = () => {
     <>
       <div className="">
         {/* Fila de botones agrupados */}
-        <div className="flex flex-row items-center space-x-2 ml-16 mr-2">
+        <div className="flex flex-wrap items-center gap-2 ml-4 mr-2">
           {menuConfig.map(({ id, label }) => {
             const options = getAvailableOptions(id);
             const isDisabled =
@@ -129,7 +129,7 @@ const Cities: React.FC = () => {
           </div>
 
           {/* Botón "Limpiar filtros" centrado y debajo */}
-          <div className="flex justify-center w-full  ">
+          <div>
             <Button
               onClick={clearSelections}
               variant="outline"

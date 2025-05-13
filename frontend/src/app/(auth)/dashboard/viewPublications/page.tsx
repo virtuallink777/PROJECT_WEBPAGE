@@ -451,7 +451,8 @@ const ViewPublications = () => {
                   {pub.estado === "PENDIENTE" ||
                   pub.estado === "RECHAZADA" ? null : (
                     <>
-                      {pub.publication?.status ? ( // ✅ Verifica si existe información de pago para esta publicación
+                      {pub.transactionDate ? (
+                        // ✅ Verifica si existe información de pago para esta publicación
                         <div>
                           <p className="text-green-500 font-semibold">
                             TOP CONTRATADO: {pub.selectedPricing.days}

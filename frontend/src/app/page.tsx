@@ -59,6 +59,169 @@ export default function Home() {
     });
   };
 
+  // Función para filtrar las publicaciones TOP válidas
+  const filterValidTopPublications: (
+    publications: IPublication[]
+  ) => IPublication[] = (publications) => {
+    const now = new Date();
+    console.log("🕒 Hora actual:", now.toLocaleString());
+
+    return publications.filter((pub) => {
+      if (
+        !pub.transactionDate ||
+        !pub.selectedTime ||
+        !pub.selectedPricing?.hours ||
+        !pub.selectedPricing?.days
+      ) {
+        console.log("⛔ Publicación con datos faltantes:", pub);
+        return false;
+      }
+
+      // Convertir transactionDate a objeto Date
+      const [day, month, year] = pub.transactionDate.split("/").map(Number);
+
+      // Función para convertir formato de hora
+      const startHour = (timeStr) => {
+        const [hourStr, period] = timeStr.split(" ");
+        const hour = parseInt(hourStr);
+
+        if (period === "PM" && hour !== 12) return hour + 12;
+        if (period === "AM" && hour === 12) return 0;
+
+        return hour;
+      };
+
+      const startHourValue = startHour(pub.selectedTime);
+      let startDate = new Date(year, month - 1, day, startHourValue, 0, 0);
+
+      // Crear correctamente el objeto Date para la transacción
+      let transactionHour = 0;
+      let transactionMinutes = 0;
+
+      // Parseamos la hora de transacción
+      if (pub.transactionTime) {
+        // Si transactionTime ya es un objeto Date
+        if (pub.transactionTime instanceof Date) {
+          transactionHour = pub.transactionTime.getHours();
+          transactionMinutes = pub.transactionTime.getMinutes();
+        }
+        // Si es un string, parseamos según su formato
+        else if (typeof pub.transactionTime === "string") {
+          const timeMatch = pub.transactionTime.match(/(\d+):(\d+)/);
+          if (timeMatch) {
+            transactionHour = parseInt(timeMatch[1]);
+            transactionMinutes = parseInt(timeMatch[2]);
+          }
+        }
+      }
+
+      const transactionDateTimeObj = new Date(
+        year,
+        month - 1,
+        day,
+        transactionHour,
+        transactionMinutes
+      );
+
+      console.log(
+        "📅 Fecha de transacción:",
+        transactionDateTimeObj.toLocaleString()
+      );
+
+      // Comparar sólo si es el mismo día pero hora posterior
+      const sameDay =
+        transactionDateTimeObj.getDate() === startDate.getDate() &&
+        transactionDateTimeObj.getMonth() === startDate.getMonth() &&
+        transactionDateTimeObj.getFullYear() === startDate.getFullYear();
+
+      if (
+        sameDay &&
+        (transactionDateTimeObj.getHours() > startHourValue ||
+          (transactionDateTimeObj.getHours() === startHourValue &&
+            transactionDateTimeObj.getMinutes() > 0))
+      ) {
+        // Si la transacción es el mismo día pero después de la hora de inicio,
+        // mover la fecha de inicio al día siguiente
+        startDate.setDate(startDate.getDate() + 1);
+        console.log(
+          "⚠️ Transacción después de hora de inicio - movido a mañana"
+        );
+      }
+
+      console.log("📅 Fecha de inicio con hora:", startDate.toLocaleString());
+
+      // Parsear la duración en días y horas diarias
+      let daysDuration = 0;
+      if (pub.selectedPricing.days.includes("MES")) {
+        // Asume 30 días para un mes (puedes ajustar según necesidades)
+        daysDuration =
+          31 * parseInt(pub.selectedPricing.days.match(/\d+/)?.[0] || "1", 10);
+      } else {
+        daysDuration =
+          parseInt(pub.selectedPricing.days.replace(/\D/g, ""), 10) || 0;
+      }
+
+      const dailyHours =
+        parseInt(pub.selectedPricing.hours.replace(/\D/g, ""), 10) || 0;
+
+      // Calcular fecha de fin
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + daysDuration);
+
+      // Validar si la publicación está dentro del rango de días permitidos
+      const isWithinDateRange =
+        now >= startDate && now <= new Date(endDate.getTime() + 86400000); // +1 día para cubrir todo el último día
+
+      // Validar si la hora actual está dentro del horario permitido
+      const nowHour = now.getHours();
+      const endHour = (startHourValue + dailyHours) % 24;
+
+      // valida las 24 h:
+      const is24Hours =
+        dailyHours === 24 || pub.selectedPricing.hours.includes("24 H");
+
+      // CORRECCIÓN: Manejo especial cuando las horas son iguales
+      let isWithinDailyHours;
+
+      if (is24Hours) {
+        isWithinDailyHours = true; // Si es 24 horas, siempre está dentro
+      } else if (dailyHours === 0) {
+        isWithinDailyHours = false; // Si es 0 horas, nunca está dentro
+      } else if (startHourValue === endHour) {
+        // Si la hora de inicio y fin son iguales, significa que es un ciclo de 24 horas
+        // cuando no se ha especificado explícitamente como tal
+        isWithinDailyHours = true;
+      } else {
+        isWithinDailyHours =
+          startHourValue < endHour
+            ? nowHour >= startHourValue && nowHour < endHour
+            : nowHour >= startHourValue || nowHour < endHour;
+      }
+
+      console.log(`🕒 Ahora: ${now.toLocaleString()}`);
+      console.log(`📅 Publicación ID: ${pub._id}`);
+      console.log(`⏳ Fecha de inicio: ${startDate.toLocaleString()}`);
+      console.log(`⏳ Fecha de fin: ${endDate.toLocaleString()}`);
+      console.log(`🕐 Hora inicio: ${startHourValue}, Hora fin: ${endHour}`);
+      console.log(
+        `💡 ¿Debe estar en TOP?`,
+        isWithinDateRange && isWithinDailyHours
+      );
+
+      // La publicación solo está en TOP si cumple ambas condiciones
+      if (!isWithinDateRange || !isWithinDailyHours) {
+        console.log(
+          `⛔ Publicación fuera de horario: ${pub._id} | Hora actual: ${nowHour} | Horario permitido: ${startHourValue} - ${endHour}`
+        );
+        return false;
+      }
+
+      console.log(`✅ Publicación en TOP: ${pub._id}`);
+      // Verifica si la fecha actual está dentro del rango de validez
+      return now <= endDate;
+    });
+  };
+
   // OBTENER PUBLICACIONES TOP Y NOTOP
   useEffect(() => {
     const loadAllPublications = async () => {
@@ -186,146 +349,9 @@ export default function Home() {
 
   console.log("Publicaciones TOP:", topPublications);
 
-  // Función para filtrar las publicaciones TOP válidas
-  const filterValidTopPublications: (
-    publications: IPublication[]
-  ) => IPublication[] = (publications) => {
-    const now = new Date();
-    console.log("🕒 Hora actual:", now.toLocaleString());
-
-    return publications.filter((pub) => {
-      if (
-        !pub.transactionDate ||
-        !pub.selectedTime ||
-        !pub.selectedPricing?.hours ||
-        !pub.selectedPricing?.days
-      ) {
-        console.log("⛔ Publicación con datos faltantes:", pub);
-        return false;
-      }
-
-      // Convertir transactionDate a objeto Date
-      const [day, month, year] = pub.transactionDate.split("/").map(Number);
-
-      // Función para convertir formato de hora
-      const startHour = (timeStr) => {
-        const [hourStr, period] = timeStr.split(" ");
-        const hour = parseInt(hourStr);
-
-        if (period === "PM" && hour !== 12) return hour + 12;
-        if (period === "AM" && hour === 12) return 0;
-
-        return hour;
-      };
-
-      const startHourValue = startHour(pub.selectedTime);
-      let startDate = new Date(year, month - 1, day, startHourValue, 0, 0);
-
-      // Crear correctamente el objeto Date para la transacción
-      // Asumiendo que pub.transactionTime tiene horas y minutos
-      let transactionHour = 0;
-      let transactionMinutes = 0;
-
-      // Parseamos la hora de transacción (ajusta según tu formato)
-      if (pub.transactionTime) {
-        // Si transactionTime ya es un objeto Date
-        if (pub.transactionTime instanceof Date) {
-          transactionHour = pub.transactionTime.getHours();
-          transactionMinutes = pub.transactionTime.getMinutes();
-        }
-        // Si es un string, parseamos según su formato
-        else if (typeof pub.transactionTime === "string") {
-          // Ajusta este parsing según el formato real de pub.transactionTime
-          const timeMatch = pub.transactionTime.match(/(\d+):(\d+)/);
-          if (timeMatch) {
-            transactionHour = parseInt(timeMatch[1]);
-            transactionMinutes = parseInt(timeMatch[2]);
-          }
-        }
-      }
-
-      const transactionDateTimeObj = new Date(
-        year,
-        month - 1,
-        day,
-        transactionHour,
-        transactionMinutes
-      );
-
-      console.log(
-        "📅 Fecha de transacción:",
-        transactionDateTimeObj.toLocaleString()
-      );
-
-      // Comparar sólo si es el mismo día pero hora posterior
-      const sameDay =
-        transactionDateTimeObj.getDate() === startDate.getDate() &&
-        transactionDateTimeObj.getMonth() === startDate.getMonth() &&
-        transactionDateTimeObj.getFullYear() === startDate.getFullYear();
-
-      if (
-        sameDay &&
-        (transactionDateTimeObj.getHours() > startHourValue ||
-          (transactionDateTimeObj.getHours() === startHourValue &&
-            transactionDateTimeObj.getMinutes() > 0))
-      ) {
-        // Si la transacción es el mismo día pero después de la hora de inicio,
-        // mover la fecha de inicio al día siguiente
-        startDate.setDate(startDate.getDate() + 1);
-        console.log(
-          "⚠️ Transacción después de hora de inicio - movido a mañana"
-        );
-      }
-
-      console.log("📅 Fecha de inicio con hora:", startDate.toLocaleString());
-
-      // El resto de tu código continúa igual...
-      const daysDuration =
-        parseInt(pub.selectedPricing.days.replace(/\D/g, ""), 10) || 0;
-      const dailyHours =
-        parseInt(pub.selectedPricing.hours.replace(/\D/g, ""), 10) || 0;
-
-      // Calcular fecha de fin
-      const endDate = new Date(startDate);
-      endDate.setDate(endDate.getDate() + daysDuration);
-
-      // Validar si la publicación está dentro del rango de días permitidos
-      const isWithinDateRange = now >= startDate && now <= endDate;
-
-      // Validar si la hora actual está dentro del horario permitido
-      const nowHour = now.getHours();
-      const endHour = (startHourValue + dailyHours) % 24;
-
-      // Verificar si las horas cruzan a otro día
-      const isWithinDailyHours =
-        startHourValue < endHour
-          ? nowHour >= startHourValue && nowHour < endHour
-          : nowHour >= startHourValue || nowHour < endHour;
-
-      console.log(`🕒 Ahora: ${now.toLocaleString()}`);
-      console.log(`📅 Publicación ID: ${pub._id}`);
-      console.log(`⏳ Fecha de inicio: ${startDate.toLocaleString()}`);
-      console.log(`⏳ Fecha de fin: ${endDate.toLocaleString()}`);
-      console.log(`🕐 Hora inicio: ${startHourValue}, Hora fin: ${endHour}`);
-      console.log(
-        `💡 ¿Debe estar en TOP?`,
-        isWithinDateRange && isWithinDailyHours
-      );
-
-      // La publicación solo está en TOP si cumple ambas condiciones
-      if (!isWithinDateRange || !isWithinDailyHours) {
-        console.log(
-          `⛔ Publicación fuera de horario: ${pub._id} | Hora actual: ${nowHour} | Horario permitido: ${startHourValue} - ${endHour}`
-        );
-        return false;
-      }
-
-      console.log(`✅ Publicación en TOP: ${pub._id}`);
-      return true;
-    });
-  };
-
-  const filteredTopPublications = filterPublications(topPublications);
+  // CORRECCIÓN: Eliminar el segundo filtrado de publicaciones TOP
+  // Usar directamente los filtros aplicados a las selecciones, pero no volver a filtrar
+  // las publicaciones TOP por horario
   const filteredNonTopPublications = filterPublications(nonTopPublications);
 
   const handleClick = async (postId: string, eventType: "click") => {
@@ -355,8 +381,8 @@ export default function Home() {
         <div className="mt-8 flex flex-col">
           <h2 className="text-2xl font-semibold mb-4">Publicaciones TOP</h2>
           <div className="grid grid-cols-4 gap-4">
-            {filteredTopPublications.length > 0 ? (
-              filteredTopPublications.map((data) => (
+            {topPublications.length > 0 ? (
+              filterPublications(topPublications).map((data) => (
                 <div
                   key={data._id}
                   onClick={() => handleClick(data._id, "click")}

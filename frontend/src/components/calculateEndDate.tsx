@@ -1,9 +1,9 @@
 const calculateEndDate = (
-  startDate: string | undefined, // Formato: "dd/mm/yyyy"
-  days: string | undefined, // Ejemplo: "1 DÍA", "1 MES"
-  selectedTime: string = "12:00 AM", // Hora de inicio (ej: "7 AM")
-  hours: string | undefined // Duración en horas (ej: "6 H")
-) => {
+  startDate: string | undefined, // Ej: "4/5/2025"
+  days: string | undefined, // Ej: "1 DÍA" o "1 MES"
+  selectedTime: string = "12:00 AM", // Ej: "3 PM"
+  hours: string | undefined // Ej: "24 H"
+): string => {
   console.log("calculateEndDate recibió:", {
     startDate,
     days,
@@ -11,77 +11,76 @@ const calculateEndDate = (
     hours,
   });
 
-  if (!startDate) {
-    console.error("startDate es undefined o vacío");
-    return "Fecha inválida";
-  }
-  if (!days) {
-    console.error("days es undefined o vacío");
-    return "Fecha inválida";
-  }
-  if (!hours) {
-    console.error("hours es undefined o vacío");
+  if (!startDate || !days || !hours) {
+    console.error("Uno o más valores son inválidos");
     return "Fecha inválida";
   }
 
+  // Parsear fecha en formato dd/mm/yyyy
   const [day, month, year] = startDate.split("/");
   if (!day || !month || !year) {
     throw new Error("Formato de fecha inválido. Debe ser 'dd/mm/yyyy'.");
   }
 
-  const formattedMonth = month.padStart(2, "0");
   const formattedDay = day.padStart(2, "0");
+  const formattedMonth = month.padStart(2, "0");
+  const formattedDate = `${year}-${formattedMonth}-${formattedDay}`;
 
-  const start = new Date(`${year}-${formattedMonth}-${formattedDay}`);
+  const baseDate = new Date(formattedDate); // 2025-05-04
 
-  // Convertir "1 MES" a 30 días, y extraer número si es "1 DÍA", "3 DÍAS", etc.
+  // Parsear selectedTime (ej: "3 PM")
+  const timeParts = selectedTime.split(" ");
+  if (timeParts.length !== 2) {
+    throw new Error("Formato de hora inválido. Debe ser como '3 PM'.");
+  }
+
+  let [hourStr, period] = timeParts;
+  let hour = parseInt(hourStr);
+
+  if (isNaN(hour)) {
+    throw new Error("Hora inválida en selectedTime.");
+  }
+
+  if (period.toUpperCase() === "PM" && hour !== 12) {
+    hour += 12;
+  } else if (period.toUpperCase() === "AM" && hour === 12) {
+    hour = 0;
+  }
+
+  baseDate.setHours(hour, 0, 0, 0); // Hora exacta sin minutos ni segundos
+
+  // Determinar cantidad de días
   let numberOfDays = 0;
   if (days.toUpperCase().includes("MES")) {
-    numberOfDays = 30; // Puedes ajustar según tus reglas de negocio
+    numberOfDays = 30; // Ajusta si tus reglas lo definen distinto
   } else {
     const parsedDays = parseInt(days);
     if (isNaN(parsedDays)) {
-      throw new Error("Formato de días inválido. Debe ser un número.");
+      throw new Error("Número de días inválido.");
     }
     numberOfDays = parsedDays;
   }
 
-  // Procesar la hora de inicio
-  const timeParts = selectedTime.split(" ");
-  if (timeParts.length !== 2) {
-    throw new Error(
-      "Formato de hora inválido. Debe ser como '7 AM' o '1:30 PM'."
-    );
-  }
-
-  let [hour, minute] = timeParts[0].split(":").map(Number);
-  const period = timeParts[1].toUpperCase();
-
-  if (period === "PM" && hour !== 12) {
-    hour += 12;
-  } else if (period === "AM" && hour === 12) {
-    hour = 0;
-  }
-
-  start.setHours(hour, minute || 0, 0, 0);
-
-  // Extraer cantidad de horas (ej: "24 H" => 24)
+  // Determinar cantidad de horas
   const numberOfHours = parseInt(hours);
   if (isNaN(numberOfHours)) {
-    throw new Error("Formato de horas inválido. Debe ser un número.");
+    throw new Error("Número de horas inválido.");
   }
 
-  // Calcular fecha final correctamente
-  const endDate = new Date(start);
-  endDate.setDate(start.getDate() + numberOfDays); // ✅ SIN +1 innecesario
-  endDate.setHours(start.getHours() + numberOfHours);
+  // Calcular fecha de finalización
+  const endDate = new Date(baseDate);
+  endDate.setDate(endDate.getDate() + numberOfDays);
+  endDate.setHours(endDate.getHours() + numberOfHours);
 
-  // Formatear salida
+  // Debug
+  console.log("Fecha final calculada:", endDate.toISOString());
+
+  // Formato legible de salida
   const formattedEndDate = `${endDate.getDate()}/${
     endDate.getMonth() + 1
   }/${endDate.getFullYear()} ${endDate.toLocaleTimeString("es-CO", {
     hour: "numeric",
-    minute: "numeric",
+    minute: "2-digit",
     hour12: true,
   })}`;
 
