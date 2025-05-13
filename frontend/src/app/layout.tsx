@@ -16,10 +16,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="min-h-screen flex flex-col antialiased bg-rose-100 bg-opacity-50">
+      <body className="min-h-screen flex flex-col antialiased bg-rose-100 bg-opacity-50 ">
         <Navbar />
 
-        <main className="flex-grow">{children}</main>
+        <main className="flex-grow ">{children}</main>
 
         <Footer />
       </body>
