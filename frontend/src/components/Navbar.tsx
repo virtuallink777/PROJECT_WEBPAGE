@@ -13,7 +13,7 @@ export const Navbar = async () => {
 
   return (
     <div className="bg-rose-300 sticky top-0 z-50 w-full border-b border-gray-500 py-2">
-      <div className="flex h-24 items-center mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="flex h-24 items-center      mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Menú de móviles (solo visible en móviles) */}
         <div className="flex lg:hidden">
           <MobileNav user={user} />
@@ -22,7 +22,7 @@ export const Navbar = async () => {
         {/* Logo (visible en todas las pantallas) */}
         <div className="flex flex-1 justify-center lg:justify-start">
           <Link href="/">
-            <Icons.logo className=" sm:h-24 sm:w-24 md:h-36 md:w-36 lg:h-64 lg:w-64" />
+            <Icons.logo className=" -ml-24  sm:h-24 sm:w-24 md:h-36 md:w-36 lg:h-64 lg:w-64" />
           </Link>
         </div>
 
@@ -53,7 +53,7 @@ export const Navbar = async () => {
             {user ? (
               <span className="h-6 w-px bg-gray-500" aria-hidden="true" />
             ) : null}
-
+            <span className="h-6 w-px bg-gray-500" aria-hidden="true" />
             <div className="flex ml-2">
               <Link href="/contact" className={buttonVariants()}>
                 Contactanos

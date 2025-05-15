@@ -17,7 +17,16 @@ export interface CategoriesData {
 export function useCategoriesData(): CategoriesData {
   return useMemo(
     () => ({
-      Categorias: ["S", "M", "W", "T", "L", "G", "P"],
+      Categorias: [
+        "SCORT",
+        "TRAVESTIS",
+        "GAYS",
+        "GIGOLOS",
+        "AGENCIAS",
+        "WEBCAM",
+        "SEXSHOP",
+        "OTROS",
+      ],
       countries: ["COLOMBIA", "PERU"],
       departments: {
         COLOMBIA: [
