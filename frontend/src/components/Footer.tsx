@@ -1,3 +1,4 @@
+import Link from "next/link";
 import React from "react";
 
 export const Footer = () => {
@@ -9,12 +10,22 @@ export const Footer = () => {
         </div>
 
         <div className="flex flex-col md:flex-row gap-2 md:gap-4">
-          <a href="/TermsyCond" className="hover:underline">
+          <Link
+            href="/TermsyCond"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:underline"
+          >
             Términos y condiciones
-          </a>
-          <a href="/privacyPolicy" className="hover:underline">
+          </Link>
+          <Link
+            href="/privacyPolicy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:underline"
+          >
             Política de privacidad
-          </a>
+          </Link>
         </div>
       </div>
     </footer>

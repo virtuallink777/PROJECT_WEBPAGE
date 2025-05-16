@@ -11,6 +11,7 @@ import api from "@/lib/api";
 
 import DuplicateFilesPopup from "@/components/ShowImageVideoCreatePub";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 interface FormData {
   email: string;
@@ -331,7 +332,7 @@ const CreatePublications: React.FC = () => {
         )}
       </div>
 
-      <div className="container mx-auto px-8 py-8">
+      <div className="container mx-auto px-8 py-8 mt-8">
         <div className="max-w-4xl mx-auto">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Primer bloque */}
@@ -359,12 +360,14 @@ const CreatePublications: React.FC = () => {
                 {formData.esMayorDeEdad && (
                   <p className="text-sm text-gray-600">
                     Al confirmar que eres mayor de 18 años, aceptas nuestros{" "}
-                    <a
+                    <Link
                       href="/TermsyCond"
-                      className="text-blue-600 underline hover:text-blue-800"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:underline text-blue-600"
                     >
-                      términos y condiciones
-                    </a>
+                      Términos y condiciones
+                    </Link>
                   </p>
                 )}
                 <div>
@@ -660,6 +663,7 @@ const CreatePublications: React.FC = () => {
             <div className="border-b border-gray-500" />
 
             {/* Subir Fotos */}
+
             <HandleFileChange
               onImagesChange={(images, mainPhoto) =>
                 setFormData({

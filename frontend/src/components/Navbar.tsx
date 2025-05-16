@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { Icons } from "./Icons";
+
 import { buttonVariants } from "./ui/button";
 import Cities from "./NavItem";
 import UserAccountNav from "./UserAccountNav";
 import { cookies } from "next/headers";
 import { getServerSideUser } from "@/lib/serverSideUser";
 import { MobileNav } from "./Movilnav";
+import Image from "next/image";
 
 export const Navbar = async () => {
   const nextCookies = cookies();
@@ -20,9 +21,14 @@ export const Navbar = async () => {
         </div>
 
         {/* Logo (visible en todas las pantallas) */}
-        <div className="flex flex-1 justify-center lg:justify-start">
-          <Link href="/">
-            <Icons.logo className=" -ml-24  sm:h-24 sm:w-24 md:h-36 md:w-36 lg:h-64 lg:w-64" />
+        <div className="flex items-center justify-start  w-fit h-fit">
+          <Link href="/" className="inline-block w-fit h-fit">
+            <Image
+              src="/3d3.png" // Asegúrate de usar la ruta real
+              alt="Logo"
+              width={300}
+              height={300}
+            />
           </Link>
         </div>
 

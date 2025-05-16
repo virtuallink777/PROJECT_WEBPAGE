@@ -68,7 +68,7 @@ const PostStats = () => {
   const baseURL = "http://localhost:4004";
 
   return (
-    <div className="flex flex-col gap-4 w-full h-full items-center justify-center">
+    <div className="flex flex-col gap-4 w-full h-full items-center justify-center mt-4">
       {loading ? (
         <div>Cargando publicaciones...</div>
       ) : (
