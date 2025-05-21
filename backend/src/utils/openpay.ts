@@ -1,5 +1,5 @@
 // utils/openpay.ts
-import Openpay from "openpay";
+const Openpay = require("openpay"); // Usa import con namespace
 
 const openpay = new Openpay(
   process.env.OPENPAY_MERCHANT_ID || "", // tu ID
