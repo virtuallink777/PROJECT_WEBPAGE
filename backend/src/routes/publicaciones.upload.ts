@@ -1,199 +1,268 @@
+// En publicacionesUpload.ts
 import express from "express";
 import { upload } from "../middleware/upload";
-import { FileHashService } from "../services/fileHashService";
 import { UserHash } from "../models/hashImagesVideos";
-import path from "path";
-import fs from "fs";
+import cloudinary from "../utils/cloudinary"; // Este es tu SDK configurado
+import {
+  FileHashService,
+  GeneratedHashInfo,
+} from "../services/fileHashService"; // Importa el servicio y la interfaz
 
 const router = express.Router();
-const fileHashService = new FileHashService();
+const fileHashService = new FileHashService(); // Crea una instancia
 
-// 🔹 **Ruta para subir imágenes y videos (general)**
+interface CloudinaryMulterFile extends Express.Multer.File {
+  /* ... */
+}
+
 const publicacionesUpload = router.post(
   "/upload/:userId",
   upload.array("files"),
-
   async (req, res) => {
     try {
       const userId = req.params.userId || req.body.userId;
-
-      if (!req.files || (req.files as Express.Multer.File[]).length === 0) {
-        console.log("el frontend no ha enviado archivos");
-        return res
-          .status(400)
-          .json({ message: "el frontend no ha enviado archivos" });
-      }
-
-      const files = req.files as Express.Multer.File[];
-      console.log("ARCHIVOS RECBIDOS DEL FRONTEND:", files);
-
-      // Generar hashes para todos los archivos (imágenes y videos)
-      const fileHashes = await Promise.all(
-        files.map(async (file) => {
-          const fileType = file.mimetype.startsWith("image")
-            ? "image"
-            : "video"; // Determinar el tipo de archivo
-          return await fileHashService.generateFileHash(
-            file.path,
-            file.filename,
-            fileType
-          );
-        })
+      // ... (validación de req.files) ...
+      const filesFromCloudinary = req.files as CloudinaryMulterFile[];
+      console.log(
+        "Archivos subidos a Cloudinary:",
+        filesFromCloudinary.map((f) => ({ o: f.originalname, url: f.path }))
       );
 
-      // Buscar archivos duplicados en UserHash
-      const existingHashes = await UserHash.findOne({ userId });
-      const duplicateFiles = fileHashes.filter(
-        (hash) =>
-          existingHashes?.imageHashes.some((img) => img.hash === hash.hash) ||
-          existingHashes?.videoHashes.some((vid) => vid.hash === hash.hash)
-      );
-
-      //****************aca va logica para buscar en mongodb los hashes */
-      const duplicateImages = existingHashes?.imageHashes.filter((img) =>
-        duplicateFiles.some((f) => f.hash === img.hash)
-      );
-      const duplicateVideos = existingHashes?.videoHashes.filter((vid) =>
-        duplicateFiles.some((f) => f.hash === vid.hash)
-      );
-      // combinamos resultados
-      const duplicateFilesExport = [
-        ...(duplicateImages?.map((img) => ({
-          filename: img.fileName,
-          filePath: `http://localhost:4004/uploads/${userId}/${img.fileName}`,
-        })) || []),
-        ...(duplicateVideos?.map((vid) => ({
-          filename: vid.fileName,
-          filePath: `http://localhost:4004/uploads/${userId}/${vid.fileName}`,
-        })) || []),
-      ];
-      console.log("ARCHIVOS Duplicados para export:", duplicateFilesExport);
-
-      // ACA VA  LA LOGICA DE BUSCAR HASHES A NIVEL GENERAL EN MONGODB PARA EL ADMIN
-      // Esto busca todos los usuarios que tengan al menos uno de los hashes subidos, excluyendo al usuario actual.
-      const globalDuplicateFiles = await UserHash.find({
-        $or: [
-          { "imageHashes.hash": { $in: fileHashes.map((f) => f.hash) } },
-          { "videoHashes.hash": { $in: fileHashes.map((f) => f.hash) } },
-        ],
-        userId: { $ne: userId }, // Excluir al usuario actual
-      }).select("userId imageHashes videoHashes");
-
-      // Como globalDuplicateFiles contiene varios usuarios, hay que recorrerlos y extraer los archivos duplicados:
-      const globalDuplicates = globalDuplicateFiles.flatMap((user) => {
-        return [
-          ...user.imageHashes
-            .filter((img) => fileHashes.some((f) => f.hash === img.hash))
-            .map((img) => ({
-              filename: img.fileName,
-              filePath: `http://localhost:4004/uploads/${user.userId}/${img.fileName}`,
-              owner: user.userId, // mostrar quien tiene el archivo
-            })),
-          ...user.videoHashes
-            .filter((vid) => fileHashes.some((f) => f.hash === vid.hash))
-            .map((vid) => ({
-              filename: vid.fileName,
-              filePath: `http://localhost:4004/uploads/${user.userId}/${vid.fileName}`,
-              owner: user.userId, // mostrar quien tiene el archivo
-            })),
-        ];
-      });
-
-      // Si hay archivos duplicados, no subir nada y responder con un mensaje
-      if (duplicateFiles.length > 0) {
-        console.log(`Archivos duplicados detectados: ${duplicateFiles.length}`);
-        // Eliminar TODOS los archivos subidos (duplicados y no duplicados)
-        files.forEach((file) => {
+      // ----- PASO 2 (REVISADO OTRA VEZ): Usar FileHashService -----
+      const processedFileDataPromises = filesFromCloudinary.map(
+        async (file) => {
           try {
-            const uploadPath = path.join(
-              __dirname,
-              `../uploads/${userId}/${file.filename}`
+            const fileType = file.mimetype.startsWith("video/")
+              ? "video"
+              : "image";
+
+            // Usar FileHashService para generar el hash desde la URL de Cloudinary
+            const hashInfo: GeneratedHashInfo =
+              await fileHashService.generateFileHash(
+                file.path, // URL del archivo en Cloudinary
+                file.originalname,
+                fileType
+              );
+
+            return {
+              hash: hashInfo.hash, // Hash generado por tu servicio
+              fileName: file.originalname, // o hashInfo.fileName, que debería ser originalname
+              fileType: fileType, // o hashInfo.fileType
+              cloudinaryUrl: file.path,
+              cloudinaryPublicId: file.filename,
+              mimetype: file.mimetype,
+            };
+          } catch (hashError) {
+            console.error(
+              `Error al generar hash para ${file.originalname}:`,
+              hashError
             );
-
-            console.log(`Intentando eliminar archivo: ${file.filename}`);
-            console.log(`Ruta de uploads: ${uploadPath}`);
-
-            // Eliminar archivo de la carpeta de uploads
-            if (fs.existsSync(uploadPath)) {
-              fs.unlinkSync(uploadPath);
-              console.log(`Archivo eliminado: ${uploadPath}`);
-            } else {
-              console.log(`El archivo no existe en uploads: ${uploadPath}`);
-            }
-          } catch (error) {
-            console.error(`Error eliminando archivo: ${file.filename}`, error);
+            throw new Error(
+              `Fallo al generar hash para el archivo ${file.originalname}.`
+            );
           }
-        });
+        }
+      );
 
-        return res.status(400).json({
-          message:
-            "Se detectaron archivos duplicados. No se subió ningún archivo.",
-          duplicateFiles: duplicateFilesExport, // Duplicados dentro del mismo usuario
-        });
-      }
+      const processedFileData = await Promise.all(processedFileDataPromises);
+      console.log(
+        "Datos de archivos procesados (con hashes SHA256):",
+        processedFileData
+      );
 
-      if (globalDuplicates.length > 0) {
-        console.log(
-          `Archivos duplicados detectados en otros usuarios: ${globalDuplicates.length}`
+      // ----- PASO 3 en adelante: La lógica de duplicados, guardado, etc., se mantiene igual -----
+      // Usarás 'processedFileData' que ahora tiene el 'hash' (ETag de la API).
+
+      const userDoc = await UserHash.findOne({ userId });
+
+      const userDuplicateFiles = processedFileData.filter(
+        (pf) =>
+          userDoc?.imageFiles.some((img) => img.hash === pf.hash) ||
+          userDoc?.videoFiles.some((vid) => vid.hash === pf.hash)
+      );
+
+      const userDuplicateFilesExport = userDuplicateFiles.map((pf) => {
+        const existingImg = userDoc?.imageFiles.find(
+          (img) => img.hash === pf.hash
         );
-        // Eliminar TODOS los archivos subidos (duplicados y no duplicados)
-        files.forEach((file) => {
+        const existingVid = userDoc?.videoFiles.find(
+          (vid) => vid.hash === pf.hash
+        );
+        return {
+          filename:
+            existingImg?.fileName || existingVid?.fileName || pf.fileName,
+          filePath:
+            existingImg?.cloudinaryUrl ||
+            existingVid?.cloudinaryUrl ||
+            pf.cloudinaryUrl,
+        };
+      });
+      if (userDuplicateFiles.length > 0) {
+        console.log(
+          "Archivos duplicados para el usuario actual:",
+          userDuplicateFilesExport
+        );
+      }
+
+      const globalDuplicateDocs = await UserHash.find({
+        $or: [
+          {
+            "imageFiles.hash": { $in: processedFileData.map((pf) => pf.hash) },
+          },
+          {
+            "videoFiles.hash": { $in: processedFileData.map((pf) => pf.hash) },
+          },
+        ],
+        userId: { $ne: userId },
+      }).select("userId imageFiles videoFiles");
+
+      const globalDuplicatesExport = globalDuplicateDocs.flatMap((doc) =>
+        processedFileData
+          .map((pf) => {
+            const imgMatch = doc.imageFiles.find((img) => img.hash === pf.hash);
+            if (imgMatch)
+              return {
+                filename: imgMatch.fileName,
+                filePath: imgMatch.cloudinaryUrl,
+                owner: doc.userId.toString(),
+              }; // Convertir ObjectId a string si userId es ObjectId
+
+            const vidMatch = doc.videoFiles.find((vid) => vid.hash === pf.hash);
+            if (vidMatch)
+              return {
+                filename: vidMatch.fileName,
+                filePath: vidMatch.cloudinaryUrl,
+                owner: doc.userId.toString(),
+              };
+
+            return null;
+          })
+          .filter((item): item is NonNullable<typeof item> => item !== null)
+      ) as { filename: string; filePath: string; owner: string }[];
+      if (globalDuplicatesExport.length > 0) {
+        console.log(
+          "Archivos duplicados en otros usuarios:",
+          globalDuplicatesExport
+        );
+      }
+
+      if (userDuplicateFiles.length > 0 || globalDuplicatesExport.length > 0) {
+        const isUserDuplicate = userDuplicateFiles.length > 0;
+        // ... (Lógica de eliminación de Cloudinary)
+        const message = isUserDuplicate
+          ? "Se detectaron archivos duplicados para este usuario."
+          : "Se detectaron archivos duplicados en otros usuarios.";
+        console.log(
+          message +
+            " Procediendo a eliminar los archivos recién subidos de Cloudinary."
+        );
+
+        for (const pf of processedFileData) {
           try {
-            const uploadPath = path.join(
-              __dirname,
-              `../uploads/${userId}/${file.filename}`
+            // pf.fileType ya es 'image' o 'video'
+            await cloudinary.uploader.destroy(pf.cloudinaryPublicId, {
+              resource_type: pf.fileType,
+            });
+            console.log(
+              `Archivo ${pf.cloudinaryPublicId} eliminado de Cloudinary.`
             );
-
-            console.log(`Intentando eliminar archivo: ${file.filename}`);
-            console.log(`Ruta de uploads: ${uploadPath}`);
-
-            // Eliminar archivo de la carpeta de uploads
-            if (fs.existsSync(uploadPath)) {
-              fs.unlinkSync(uploadPath);
-              console.log(`Archivo eliminado: ${uploadPath}`);
-            } else {
-              console.log(`El archivo no existe en uploads: ${uploadPath}`);
-            }
-          } catch (error) {
-            console.error(`Error eliminando archivo: ${file.filename}`, error);
+          } catch (deleteError) {
+            console.error(
+              `Error eliminando ${pf.cloudinaryPublicId} de Cloudinary:`,
+              deleteError
+            );
           }
-        });
-
+        }
         return res.status(400).json({
-          message:
-            "Se detectaron archivos duplicados en otros usuarios. No se subió ninguno.",
-          duplicateFiles: globalDuplicates, // Duplicados en otros usuarios
+          message: message + " No se guardó ningún archivo nuevo.",
+          duplicateFiles: isUserDuplicate
+            ? userDuplicateFilesExport
+            : globalDuplicatesExport,
         });
       }
 
       await UserHash.findOneAndUpdate(
         { userId },
         {
-          $push: {
-            imageHashes: {
-              $each: fileHashes.filter((f) => f.fileType === "image"), // Solo imágenes
+          $addToSet: {
+            imageFiles: {
+              $each: processedFileData
+                .filter((pf) => pf.fileType === "image")
+                .map((pf) => ({
+                  /* ...datos completos... */ hash: pf.hash,
+                  fileName: pf.fileName,
+                  cloudinaryUrl: pf.cloudinaryUrl,
+                  cloudinaryPublicId: pf.cloudinaryPublicId,
+                  fileType: pf.fileType,
+                })),
             },
-            videoHashes: {
-              $each: fileHashes.filter((f) => f.fileType === "video"), // Solo videos
+            videoFiles: {
+              $each: processedFileData
+                .filter((pf) => pf.fileType === "video")
+                .map((pf) => ({
+                  /* ...datos completos... */ hash: pf.hash,
+                  fileName: pf.fileName,
+                  cloudinaryUrl: pf.cloudinaryUrl,
+                  cloudinaryPublicId: pf.cloudinaryPublicId,
+                  fileType: pf.fileType,
+                })),
             },
           },
         },
         { upsert: true, new: true }
       );
 
+      console.log(
+        "Archivos guardados/actualizados en MongoDB para el usuario:",
+        userId
+      );
+
       res.status(200).json({
-        message: "Archivos subidos exitosamente",
-        uploadedFiles: fileHashes.map((f) => ({
-          url: `/uploads/${userId}/${f.fileName}`,
-          filename: f.fileName,
-          type: f.fileType, // Incluir el tipo de archivo (image o video)
+        message: "Archivos subidos y registrados exitosamente.",
+        uploadedFiles: processedFileData.map((pf) => ({
+          url: pf.cloudinaryUrl,
+          filename: pf.fileName,
+          type: pf.fileType,
+          public_id: pf.cloudinaryPublicId,
         })),
       });
     } catch (error) {
-      console.error("Error al subir archivos:", error);
-      res.status(500).json({ message: "Error al subir archivos", error });
+      // ... (Manejo de errores y limpieza de Cloudinary)
+      console.error("Error general en la ruta /upload/:userId :", error);
+      if (req.files && (req.files as CloudinaryMulterFile[]).length > 0) {
+        const filesToClean = req.files as CloudinaryMulterFile[];
+        console.error(
+          "Intentando limpiar archivos de Cloudinary debido a un error en el procesamiento..."
+        );
+        for (const fileToClean of filesToClean) {
+          if (fileToClean.filename) {
+            try {
+              const resource_type = fileToClean.mimetype.startsWith("video/")
+                ? "video"
+                : fileToClean.mimetype.startsWith("image/")
+                ? "image"
+                : "raw";
+              await cloudinary.uploader.destroy(fileToClean.filename, {
+                resource_type,
+              });
+              console.log(
+                `Limpieza por error: Archivo ${fileToClean.filename} eliminado de Cloudinary.`
+              );
+            } catch (cleanupError) {
+              console.error(
+                `Error en limpieza de Cloudinary para ${fileToClean.filename}:`,
+                cleanupError
+              );
+            }
+          }
+        }
+      }
+      res.status(500).json({
+        message: "Error interno del servidor al procesar archivos.",
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 );
 
-export default publicacionesUpload;
+export default router; // Asumo que exportas el router, no la función publicacionesUpload directamente

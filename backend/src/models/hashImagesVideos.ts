@@ -1,31 +1,41 @@
+// En hashImagesVideos.ts (o como se llame tu archivo de modelo)
+
 import mongoose from "mongoose";
 
-export interface FileHash {
+// Interfaz para los detalles del archivo guardado
+export interface StoredFileDetails {
   hash: string;
   fileName: string;
-  filePath: string;
+  cloudinaryUrl: string;
+  cloudinaryPublicId: string;
   createdAt: Date;
   fileType: "image" | "video";
 }
 
-interface UserHash {
-  userId: string;
-  imageHashes: FileHash[];
-  videoHashes: FileHash[];
+// Interfaz para el documento principal del usuario
+interface UserStoredFiles {
+  userId: string; // <--- CAMBIADO A string PARA COINCIDIR CON EL ESQUEMA
+  imageFiles: StoredFileDetails[];
+  videoFiles: StoredFileDetails[];
 }
 
-const fileHashSchema = new mongoose.Schema<FileHash>({
-  hash: { type: String, required: true },
+const storedFileDetailsSchema = new mongoose.Schema<StoredFileDetails>({
+  hash: { type: String, required: true, index: true },
   fileName: { type: String, required: true },
-  filePath: { type: String, required: true },
+  cloudinaryUrl: { type: String, required: true },
+  cloudinaryPublicId: { type: String, required: true, unique: true },
   createdAt: { type: Date, default: Date.now },
   fileType: { type: String, enum: ["image", "video"], required: true },
 });
 
-const userHashSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: "User" },
-  imageHashes: [fileHashSchema], // Array para hashes de imágenes
-  videoHashes: [fileHashSchema], // Array para hashes de videos
+const userStoredFilesSchema = new mongoose.Schema<UserStoredFiles>({
+  userId: { type: String, required: true, unique: true, index: true }, // userId es un String
+  imageFiles: [storedFileDetailsSchema],
+  videoFiles: [storedFileDetailsSchema],
 });
 
-export const UserHash = mongoose.model("UserHash", userHashSchema);
+// Mantienes el nombre de exportación UserHash, lo cual está bien.
+export const UserHash = mongoose.model<UserStoredFiles>( // La interfaz genérica es UserStoredFiles
+  "UserHash", // Nombre de la colección/modelo
+  userStoredFilesSchema
+);

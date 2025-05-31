@@ -10,6 +10,14 @@ import PhoneNumberWithFlag from "@/components/PhoneNumberWithFlag";
 import WhatsAppLink from "@/components/WhatsAppLink";
 import Chat from "@/components/Chat";
 
+// Define una interfaz para un objeto de imagen individual (basado en tus datos reales)
+interface SingleImage {
+  url: string;
+  filename: string;
+  isPrincipal: boolean;
+  _id: string;
+}
+
 // id dinamico para chat con el propietario
 const getOrCreateClientId = () => {
   if (typeof window !== "undefined") {
@@ -25,10 +33,6 @@ const getOrCreateClientId = () => {
   }
   return null; // O manejarlo de otra forma
 };
-
-interface ImageItem {
-  images: { url: string }[];
-}
 
 interface VideoItem {
   url: string;
@@ -52,7 +56,7 @@ interface IPublication {
   titulo: string;
   descripcion: string;
   adicionales: string;
-  images: ImageItem[];
+  images: SingleImage[]; // <--- CAMBIO CLAVE: 'images' es un array de 'SingleImage'
   videos: VideoItem[];
   transactionId: string;
   whatsappClicks: string;
@@ -311,25 +315,25 @@ const PublicacionDetalle = () => {
         {/* Tabs para imágenes y videos */}
         <div className="mb-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-4 p-4">
-            {publicacion?.images?.map((image, index) => (
+            {publicacion?.images?.map((singleImage, index) => (
               <div
-                key={index}
+                key={singleImage._id} // Usa el _id que es único
                 className="relative w-full max-w-[500px] h-120 aspect-video border rounded-lg overflow-hidden bg-gray-200 shadow-sm cursor-pointer"
                 onClick={() => handleImageClick(index)}
               >
                 <Image
-                  src={`http://localhost:4004${image.url}`}
-                  alt={`Image ${index + 1}`}
+                  src={singleImage.url} // Correcto: singleImage.url existe y es la URL de Cloudinary
+                  alt={`Image ${index + 1}`} // o mejor: alt={singleImage.filename || `Image ${index + 1}`}
                   className="w-full h-full object-cover"
                   width={500}
-                  height={500}
+                  height={500} // Revisa estas dimensiones para el aspect ratio si es necesario
                 />
               </div>
             ))}
           </div>
-          {isCarouselOpen && (
+          {isCarouselOpen && publicacion?.images && (
             <ImageCarousel
-              images={publicacion?.images}
+              images={publicacion.images.map((img) => ({ url: img.url }))} // <--- Transformación aquí
               initialIndex={selectedImageIndex}
               onClose={closeCarousel}
             />
@@ -342,7 +346,7 @@ const PublicacionDetalle = () => {
                 className="relative w-full max-w-[500px] h-120 aspect-video border rounded-lg overflow-hidden bg-gray-200 shadow-sm"
               >
                 <video
-                  src={`http://localhost:4004${videos.url}`}
+                  src={videos.url}
                   controls
                   className="w-full h-full object-cover"
                 />

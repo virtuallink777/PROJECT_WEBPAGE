@@ -333,7 +333,6 @@ const ViewPublications = () => {
     publications.map((pub) => pub.selectedTime)
   );
 
-  const baseURL = "http://localhost:4004";
   console.log("Renderizando publicaciones:", publications);
 
   const publicationsWithPayment = publications.map((pub) => {
@@ -345,6 +344,9 @@ const ViewPublications = () => {
   });
 
   console.log("publicationsWithPayment", publicationsWithPayment);
+
+  const razonRechazoCedula =
+    "Por favor envia una foto legible por lado y lado de tu documento de identidad original (no fotocopia)";
 
   return (
     <>
@@ -390,9 +392,7 @@ const ViewPublications = () => {
               {/* Ajusta el tamaño aquí */}
               <Image
                 src={
-                  pub.images[0]?.url
-                    ? `${baseURL}${pub.images[0].url}`
-                    : "/default-image.png"
+                  pub.images[0]?.url ? pub.images[0].url : "/default-image.png"
                 }
                 width={300}
                 height={300}
@@ -418,7 +418,7 @@ const ViewPublications = () => {
                       APROBADA ✅
                     </span>
                   ) : pub.estado === "RECHAZADA" ? (
-                    <span className="text-red-500 font-semibold line-clamp-4">
+                    <span className="text-red-500 font-semibold line-clamp-6">
                       RECHAZADA ❌ - Motivo: {pub.razon}, Por favor intenta de
                       nuevo
                     </span>
@@ -429,23 +429,46 @@ const ViewPublications = () => {
                   )}
                 </p>
 
-                <p className="text-gray-700 mt-2 line-clamp-2">
-                  {pub.estado === "RECHAZADA" ? (
-                    <Link
-                      href={`/dashboard/validateRejected/${pub.userId}/${pub._id}`}
-                      passHref
-                    >
-                      <span
-                        className="text-blue-500 cursor-pointer hover:underline"
-                        onMouseDown={() =>
-                          console.log("Validando:", pub.userId, pub._id)
-                        }
-                      >
-                        Valida Nuevamente tu publicidad
-                      </span>
-                    </Link>
-                  ) : null}
-                </p>
+                {/* Mostramos el siguiente párrafo solo si el estado es RECHAZADA */}
+                {pub.estado === "RECHAZADA" && (
+                  <p className="text-gray-700 mt-2 line-clamp-2">
+                    {(() => {
+                      // Determinar el Href basado en la razón del rechazo
+                      let targetHref = `/dashboard/validateRejected/${pub.userId}/${pub._id}`; // Ruta por defecto
+
+                      // Si la razón es la de la cédula, cambiamos la ruta
+                      if (pub.razon === razonRechazoCedula) {
+                        targetHref = `/dashboard/validateIdentityDocument/${pub.userId}/${pub._id}`; // NUEVA RUTA para la cédula
+                        // Asegúrate de que esta ruta exista o la crees en tu router (Next.js, etc.)
+                        // por ejemplo: pages/dashboard/validateIdentityDocument/[userId]/[pubId].js
+                      }
+
+                      return (
+                        <Link
+                          href={targetHref} // Usamos la ruta determinada dinámicamente
+                          passHref
+                        >
+                          <span
+                            className="text-blue-500 cursor-pointer hover:underline"
+                            onMouseDown={() =>
+                              console.log(
+                                "Validando:",
+                                pub.userId,
+                                pub._id,
+                                "Motivo:",
+                                pub.razon,
+                                "Redirigiendo a:",
+                                targetHref
+                              )
+                            }
+                          >
+                            Valida Nuevamente tu publicidad
+                          </span>
+                        </Link>
+                      );
+                    })()}
+                  </p>
+                )}
 
                 <div className="text-gray-700 mt-2  text-center">
                   {pub.estado === "PENDIENTE" ||

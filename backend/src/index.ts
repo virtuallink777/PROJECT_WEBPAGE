@@ -18,7 +18,7 @@ import path from "node:path";
 import { getPublicationById } from "./routes/editPublication";
 import updatePublicationRoutes from "./routes/updatedPublication.route";
 import { updatePublicationImagesVideos } from "./controllers/updatePublicationImagesVideos";
-import checkHashesCreatePub from "./routes/checkHashesCreatePub";
+
 import http from "http"; // ⚡ Para usar WebSockets
 import { Server } from "socket.io"; // ⚡ Importar socket.io
 import validateAdmin from "./routes/validatesAdmin";
@@ -34,6 +34,7 @@ import metricsRoutes from "./routes/metrics"; // Importamos el router correctame
 import metricsRoutesAdmin from "./routes/metricsRoutesAdmin"; // Importamos el router correctamente
 import contactRoutes from "./routes/contactRoute"; // Importamos el router correctamente
 import pseRoutes from "./routes/pseRoutes"; // Importamos el router correctamente
+import identityValidationRouterFromFile from "./routes/identityValidationRoutes";
 
 const app = express();
 
@@ -86,7 +87,7 @@ app.use("/sessions", authenticate, sessionRoutes);
 // prefix: /dashboard
 app.use("/dashboard", authenticate, dashboardRoutes);
 
-// ruta para subir las imagenes NUEVAS DE CREATE PUB A uploads  con creacion y verificacion de hashes
+// ruta para subir las imagenes NUEVAS DE CREATE PUB A cloudinary  con creacion y verificacion de hashes
 app.use("/api/publicacionesImage", publicacionesUpload);
 console.log("Ruta de uploads por primera ok registrada correctamente");
 
@@ -107,11 +108,11 @@ app.put(
   updatePublicationImagesVideos
 );
 
-//RUTA PARA COMPARAR HASHES DE CREATEPUB
-app.use("/api/check-hashes", checkHashesCreatePub);
-
 // RUTA PÁRA GUARDAR LAS IMG DE VALIDATE Y ENVIAR DATOS AL ADMIN
 app.use("/api/validate", validateAdmin);
+
+// RUTA PARA VALIDAR EL DOCUMENTO DE IDENTIDAD
+app.use("/api/validate-identity", identityValidationRouterFromFile);
 
 // RUTA PARA GUARDAR EL ESTADO DE LA PUBLICACION
 app.use("/api/state-publication", statePublications);

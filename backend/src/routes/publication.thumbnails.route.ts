@@ -43,22 +43,33 @@ const getPublicationsThumbnailsByUserId = router.get(
           transactionTime: 1,
         }); // Seleccionamos solo los campos necesarios para la vista miniatura
 
-      if (!publications) {
+      if (!publications || publications.length === 0) {
         return res.status(404).json({
           message: "Publicaciones no encontradas",
         });
       }
 
-      // Añadimos la URL base para las imágenes
-      const publicationsWithFullUrls = publications.map((pub) => ({
-        ...pub.toObject(),
-        images: pub.images.map((image) => ({
-          ...image,
-          url: `/uploads/${userId}/${image.filename}`,
-        })),
-      }));
+      // ----- CAMBIO IMPORTANTE AQUÍ -----
+      // Simplemente convierte los documentos de Mongoose a objetos planos.
+      // La 'url' en 'image.url' ya es la URL correcta de Cloudinary desde la base de datos.
+      const publicationsToSend = publications.map((pub) => {
+        const pubObject = pub.toObject();
+        // Si necesitas asegurarte de que 'images' sea un array y tenga elementos
+        if (pubObject.images && Array.isArray(pubObject.images)) {
+          // No necesitas mapear 'images' para cambiar la URL si ya es correcta.
+          // Solo nos aseguramos de que la estructura es la que el frontend espera.
+          // El $filter en la consulta ya debería haberte dado solo la imagen principal.
+        } else {
+          // Si por alguna razón images no es un array o está vacío después del filtro,
+          // podrías querer manejarlo, aunque el filtro debería asegurar que si hay una principal,
+          // el array 'images' tendrá un elemento.
+          pubObject.images = []; // O alguna lógica de fallback
+        }
+        return pubObject;
+      });
+      // ----- FIN DEL CAMBIO IMPORTANTE -----
 
-      res.json(publicationsWithFullUrls);
+      res.json(publicationsToSend);
     } catch (error) {
       console.error("Error al obtener las publicaciones:", error);
       res.status(500).json({ error: "Error al obtener las publicaciones" });

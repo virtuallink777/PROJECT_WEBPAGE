@@ -8,7 +8,6 @@ import VideoUploadComponentEdit from "@/components/UploadVideosEdit";
 
 import { useParams, useRouter } from "next/navigation";
 import DuplicateFilesPopup from "@/components/ShowImageVideoCreatePub";
-import api from "@/lib/api";
 
 async function obtenerIdCliente() {
   try {
@@ -210,8 +209,6 @@ const UploadImagesVideos = () => {
 
       formDataToSend.append("videoUrls", JSON.stringify(videoUrls));
       console.log("formDataToSend:", formDataToSend);
-
-      ///////////////////***************HAY QUE CABIAR DESDE ACA */
 
       //enviar las imagenes al sessionStorage
 

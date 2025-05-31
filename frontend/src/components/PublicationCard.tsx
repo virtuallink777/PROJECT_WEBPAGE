@@ -53,13 +53,13 @@ const PublicationCard: React.FC<PublicationCardProps> = ({
 
   const router = useRouter();
 
-  // URL del backend
-  const backendUrl = "http://localhost:4004";
-
   // URL de la imagen
-  const imageUrl = principalImage
-    ? `${backendUrl}${principalImage.url}`
-    : "/default-image.png";
+  const imageUrl = principalImage?.url // Usa optional chaining por si principalImage es null/undefined
+    ? principalImage.url // Si principalImage.url existe, úsala directamente
+    : "/default-image.png"; // Sino, usa la imagen por defecto
+
+  console.log("PublicationCard - imageUrl:", imageUrl); // <--- AÑADE ESTO
+  console.log("PublicationCard - principalImage:", principalImage); // <--- Y ESTO también es útil
 
   const isActuallyTop = publication.status && isTopSection; // Solo es "realmente TOP" si tiene status=true Y está en sección TOP
   const cardWidth = isActuallyTop ? "20vw" : "18vw";

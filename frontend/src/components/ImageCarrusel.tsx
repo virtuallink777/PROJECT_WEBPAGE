@@ -50,7 +50,7 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({
       </button>
       <div className="relative w-full h-full max-w-[90vw] max-h-[90vh] flex items-center justify-center">
         <Image
-          src={`http://localhost:4004${images[currentIndex].url}`}
+          src={images[currentIndex].url} // <--- CORREGIDO: Sin el prefijo
           alt={`Image ${currentIndex + 1}`}
           className="object-contain w-full h-full"
           width={1200}
