@@ -3,9 +3,11 @@
 import PSEPaymentButton from "@/components/PSEPaymentButton";
 import PricingTable from "@/components/TableValuesPublication";
 import TimePicker from "@/components/TimePicker";
-
-import { useParams, useRouter } from "next/navigation";
+import api from "@/lib/api";
+import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import axios from "axios";
+import { AxiosError } from "axios";
 
 const PayPublication = () => {
   // state for select cell
@@ -17,50 +19,96 @@ const PayPublication = () => {
   // state for select time
   const [selectedTime, setSelectedTime] = useState(""); // Estado para la hora seleccionada
 
-  const [transactionId, setTransactionId] = useState("");
-  const [status, setStatus] = useState(false); // Estado del método de pago seleccionado
-  const [DataTransaction, setDataTransaction] = useState({
-    transactionDate: "",
-    transactionTime: "",
-  });
   const [Publicacion, setPublicacion] = useState<any>(null); // Estado para almacenar la publicación
 
   const _idParams = useParams();
   const id = _idParams._id as string; // Obtener el ID de la URL
 
-  const router = useRouter();
-
   // traemos la publicacion por id
 
-  const addPublication = async () => {
+  const addPublication = async (id: string) => {
+    if (!id) {
+      console.error("ID de publicación no proporcionado");
+      return;
+    }
     try {
-      const response = await fetch(
-        `http://localhost:4004/api/editPublications/${id}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
+      const response = await api.get(`/api/editPublications/${id}`);
+
+      // Verificar si la respuesta es exitosa
+      console.log("Datos de la publicación obtenida:", response.data);
+      setPublicacion(response.data); // Guardar la publicación en el estado
+    } catch (error: any) {
+      console.error(
+        "[addPublication] Error capturado en el componente:",
+        error
       );
-      if (!response.ok) {
-        throw new Error("Error al obtener la publicación");
-      } else {
-        const data = await response.json();
-        console.log(data);
-        setPublicacion(data); // Guardar la publicación en el estado
-        console.log("Publicación obtenida:", data);
+
+      let isErrorFromInterceptor401 = false;
+
+      // El error que llega aquí es el 'new Error(...)' que creaste en el interceptor para el 401.
+      // Este nuevo error NO es un AxiosError y no tiene 'error.response'.
+      // Verificamos por el mensaje que le pusimos en el interceptor.
+      if (error instanceof Error) {
+        // Primero, asegurarnos que es un objeto Error
+        const errorMessageString = error.message.toLowerCase(); // Convertir a minúsculas para ser flexible
+        if (
+          errorMessageString.includes("401") ||
+          errorMessageString.includes("autenticación") ||
+          errorMessageString.includes("session expired")
+        ) {
+          // Estas palabras clave indican que es probable que el interceptor haya manejado un 401.
+          isErrorFromInterceptor401 = true;
+          console.log(
+            "[addPublication Component Catch] Error parece ser un 401 manejado por el interceptor (basado en mensaje). No se mostrará alert adicional."
+          );
+        }
       }
-    } catch (error) {
-      console.error("Error al obtener la publicación:", error);
+
+      if (!isErrorFromInterceptor401) {
+        // Si no fue un 401 manejado por el interceptor (o no pudimos identificarlo por el mensaje),
+        // entonces es otro tipo de error (ej. 404, 500, error de red que el interceptor no redirigió).
+        console.log(
+          "[addPublication Component Catch] Error NO es un 401 del interceptor, mostrando alert."
+        );
+        let displayMessage =
+          "Ocurrió un error al obtener los detalles de la publicación.";
+
+        if (axios.isAxiosError(error)) {
+          // Aunque el 401 se envuelve, otros errores de Axios podrían llegar aquí directamente
+          const axiosError = error as AxiosError<any>; // Cast seguro aquí porque ya verificamos
+          displayMessage =
+            axiosError.response?.data?.message ||
+            axiosError.message ||
+            `Error del servidor: ${axiosError.response?.status}`;
+        } else if (error instanceof Error) {
+          // Error genérico
+          displayMessage = error.message;
+        }
+        alert(displayMessage);
+        // setPublicacion(null);
+        // setErrorState(displayMessage);
+      }
+    } finally {
+      // setLoading(false);
     }
   };
 
   // Llamar a la función para obtener la publicación al cargar el componente
-
   useEffect(() => {
-    addPublication();
-  }, []); // Llamar a la función al cargar el componente
+    // Asegúrate que 'id' (el ID de la publicación a cargar) esté disponible aquí.
+    // Ejemplo: si 'id' viene de router.query o de un estado.
+    // const publicationIdToLoad = id; // Asumiendo que 'id' es la variable correcta
+
+    if (id) {
+      // Solo llama si 'id' tiene un valor
+      addPublication(id);
+    } else {
+      console.log(
+        "[useEffect addPublication] No hay ID para cargar la publicación al montar."
+      );
+      // Podrías querer manejar este caso, ej. mostrando un mensaje o no haciendo nada.
+    }
+  }, [id]); // Ejecutar cuando 'id' cambie (y al montar si 'id' ya tiene valor)
 
   const handlePayment = async () => {
     if (!selectedPricing || !selectedTime) {

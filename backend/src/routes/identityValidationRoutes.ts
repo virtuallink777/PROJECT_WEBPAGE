@@ -10,6 +10,7 @@ import {
   adminSocketId as adminSocketIdFromHandler, // Importar la variable global
   connectedAdmin as connectedAdminFromHandler, // Importar el objeto global
 } from "./socketHandler";
+import publicationsModels from "../models/publications.models";
 
 // Interfaz para los archivos de Multer que esperamos para este endpoint
 interface IdentityMulterFiles {
@@ -128,6 +129,41 @@ identityRouter.post(
       return res.status(400).json({
         success: false,
         message: "Falta el ID de la publicación (publicationId).",
+      });
+    }
+
+    // <<< PASO 2: Realiza la actualización en MongoDB ANTES de notificar al admin >>>
+
+    try {
+      const updatedPublication = await publicationsModels.findByIdAndUpdate(
+        publicationIdFromBody, // El ID de la publicación a actualizar
+        { $set: { estado: "pendiente" } }, // El cambio: poner el campo 'estado' en 'pendiente'
+        { new: true } // Opcional: para que devuelva el documento ya actualizado
+      );
+
+      if (!updatedPublication) {
+        // Si no se encuentra la publicación, es un error.
+        console.error(
+          `Error: La publicación con ID ${publicationIdFromBody} no fue encontrada.`
+        );
+        // Aunque los archivos se subieron, la referencia está rota. Es mejor devolver un error.
+        return res
+          .status(404)
+          .json({ success: false, message: "Publicación no encontrada." });
+      }
+
+      console.log(
+        `✅ Estado de la publicación ${publicationIdFromBody} actualizado a '${updatedPublication.estado}'.`
+      );
+    } catch (dbError) {
+      console.error(
+        `❌ Error al actualizar la publicación en MongoDB:`,
+        dbError
+      );
+      // Si la base de datos falla, es un error del servidor.
+      return res.status(500).json({
+        success: false,
+        message: "Error interno al actualizar el estado de la publicación.",
       });
     }
 

@@ -13,6 +13,13 @@ import DuplicateFilesPopup from "@/components/ShowImageVideoCreatePub";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
+const SimpleSpinner: React.FC = () => (
+  <div className="flex flex-col items-center justify-center">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+    <p className="text-xl text-gray-700">Subiendo la información</p>
+  </div>
+);
+
 interface FormData {
   email: string;
   userId: string;
@@ -35,31 +42,19 @@ interface FormData {
   esMayorDeEdad: boolean;
 }
 
-// Función para obtener el ID del cliente
-async function obtenerIdCliente() {
-  try {
-    const response = await fetch("/api/userId");
-    const data = await response.json();
-    console.log("ID del usuario obtenido:", data.userId);
-    console.log("email:", data.email); // Este console.log debería aparecer en la consola
-    return data.userId; // Esto devuelve directamente el ID alfanumérico
-  } catch (error) {
-    console.error("Error al obtener el ID del usuario:", error);
-    return null;
-  }
+interface ImageObjectForBackend {
+  url: string;
+  filename: string; // El que Cloudinary genera (ej: giww7ybd0a0dbtjynjbp.png)
+  originalFilename: string; // El nombre original del archivo (ej: Captura de pantalla (1).png)
+  isPrincipal: boolean;
+  cloudinaryPublicId: string; // El public_id completo de Cloudinary (ej: publicidades/userId/...)
 }
 
-//funcion para obtener el email del cliente
-async function obtenerEmailCliente() {
-  try {
-    const response = await fetch("/api/userId");
-    const data = await response.json();
-    console.log("email:", data.email); // Este console.log debería aparecer en la consola
-    return data.email; // Esto devuelve directamente el ID alfanumérico
-  } catch (error) {
-    console.error("Error al obtener el ID del usuario:", error);
-    return null;
-  }
+interface VideoObjectForBackend {
+  url: string;
+  filename: string; // El que Cloudinary genera
+  originalFilename: string; // El nombre original
+  cloudinaryPublicId: string; // El public_id completo de Cloudinary
 }
 
 const CreatePublications: React.FC = () => {
@@ -88,32 +83,58 @@ const CreatePublications: React.FC = () => {
   const [duplicateFiles, setDuplicateFiles] = useState<
     { filename: string; filePath: string }[]
   >([]);
+  const [isLoading, setIsLoading] = useState(true); // Inicia en true para mostrar loader
 
   const router = useRouter();
 
-  // Obtenemos el ID del cliente al montar el componente
+  // Unifica los useEffect para cargar datos iniciales
   useEffect(() => {
-    async function fetchUserId() {
-      const id = await obtenerIdCliente();
-      if (id) {
-        setFormData((prev) => ({ ...prev, userId: id }));
-        console.log("ID del usuario obtenido:", id); // Este console.log debería aparecer en la consola
-      }
-    }
-    fetchUserId();
-  }, []);
+    async function fetchInitialUserData() {
+      setIsLoading(true); // Asegúrate de que está en true al comenzar
+      let userId = null;
+      let userEmail = null;
 
-  // obtenemos el email del cliente al montar el componente
-  useEffect(() => {
-    async function fetchUserEmail() {
-      const email = await obtenerEmailCliente();
-      if (email) {
-        setFormData((prev) => ({ ...prev, email: email }));
-        console.log("email del usuario obtenido:", email); // Este console.log debería aparecer en la consola
+      try {
+        // Intenta obtener el ID del cliente
+        const idResponse = await fetch("/api/userId");
+
+        if (idResponse.status === 401) {
+          console.error("No autorizado, redirigiendo a /sign-in");
+          // Si la respuesta es 401, redirige al usuario a la página de inicio de sesión
+          router.push("/sign-in");
+        }
+
+        if (!idResponse.ok) {
+          console.error(
+            "Error en la respuesta de /api/userId (ID):",
+            idResponse.status
+          );
+          // Considera mostrar un error al usuario aquí
+        } else {
+          const idData = await idResponse.json();
+          userId = idData.userId;
+          userEmail = idData.email; // Puedes obtener ambos de la misma llamada si la API lo permite
+          console.log("ID del usuario obtenido:", userId);
+          console.log("Email del usuario obtenido:", userEmail);
+        }
+      } catch (error) {
+        console.error("Error al obtener datos del usuario:", error);
+        // Considera mostrar un error al usuario aquí
       }
+
+      // Actualiza el formData si los datos se obtuvieron
+      if (userId) {
+        setFormData((prev) => ({ ...prev, userId }));
+      }
+      if (userEmail) {
+        setFormData((prev) => ({ ...prev, email: userEmail }));
+      }
+
+      setIsLoading(false); // Establece en false DESPUÉS de intentar obtener los datos
     }
-    fetchUserEmail();
-  }, []);
+
+    fetchInitialUserData();
+  }, []); // El array vacío asegura que se ejecute solo una vez al montar
 
   const categoriesData = useCategoriesData();
 
@@ -152,8 +173,6 @@ const CreatePublications: React.FC = () => {
     e.preventDefault();
     setError("");
 
-    console.log("primer CONSOLE.LOG DE HANDLESUBMIT", formData);
-
     if (!formData.esMayorDeEdad) {
       alert("Debes ser mayor de edad para publicar.");
       return;
@@ -168,6 +187,8 @@ const CreatePublications: React.FC = () => {
       alert("Por favor, selecciona una foto principal.");
       return;
     }
+    setIsLoading(true); // ← Comienza el loading
+    console.log("primer CONSOLE.LOG DE HANDLESUBMIT", formData);
 
     try {
       const formDataToSend = new FormData();
@@ -242,71 +263,152 @@ const CreatePublications: React.FC = () => {
 
       // Verificar que imageData.uploadedFiles exista y tenga datos
       if (!imageData.uploadedFiles || !Array.isArray(imageData.uploadedFiles)) {
+        setIsLoading(false); // ¡Importante!
         throw new Error("No se recibieron archivos subidos desde el backend.");
       }
 
-      // Si no hay duplicados, continuar con el proceso
-      // Separar las URLs de imágenes y videos
-      const imageUrls: string[] = [];
-      const videoUrls: string[] = [];
-      const isPrincipalFlags: string[] = [];
+      // --- NUEVA LÓGICA: Preparar datos de archivos para enviar a /publications ---
+      const imageObjectsForBackend: ImageObjectForBackend[] = [];
+      const videoObjectsForBackend: VideoObjectForBackend[] = [];
 
+      // El tipo de 'file' viene de la respuesta de tu endpoint de subida.
+      // Asegúrate de que coincide con la estructura real.
+      // Asumo que tiene: url, filename (original), type, public_id (completo de Cloudinary)
       imageData.uploadedFiles.forEach(
-        (file: { url: string; type: string }, index: number) => {
+        (
+          file: {
+            url: string;
+            filename: string;
+            type: string;
+            public_id: string;
+          },
+          index: number
+        ) => {
+          // Extraer el "filename" de Cloudinary (ej: giww7ybd0a0dbtjynjbp.png) del public_id completo
+          // El public_id completo es algo como "publicidades/userId/giww7ybd0a0dbtjynjbp" (sin extensión)
+          // Necesitamos "giww7ybd0a0dbtjynjbp.png"
+          const publicIdParts = file.public_id.split("/");
+          const cloudinaryFilenameBase =
+            publicIdParts[publicIdParts.length - 1]; // "giww7ybd0a0dbtjynjbp"
+
+          // Obtener la extensión de la URL, ya que public_id no la tiene
+          let extension = "";
+          const lastDotIndex = file.url.lastIndexOf(".");
+          if (lastDotIndex !== -1 && lastDotIndex > file.url.lastIndexOf("/")) {
+            // Asegura que el punto es para la extensión
+            extension = file.url.substring(lastDotIndex); // ".png" o ".mp4"
+          } else {
+            console.warn(
+              `No se pudo determinar la extensión para el archivo con URL: ${file.url}`
+            );
+            // Decide un fallback o maneja este caso. Por ahora, podría ser un string vacío.
+          }
+          const cloudinaryFilenameWithExt = cloudinaryFilenameBase + extension;
+
           if (file.type === "image") {
-            imageUrls.push(file.url);
-            isPrincipalFlags.push(index === 0 ? "true" : "false"); // Marcar la primera imagen como principal
+            imageObjectsForBackend.push({
+              url: file.url,
+              filename: cloudinaryFilenameWithExt, // El que Cloudinary usa (ej: randomid.png)
+              originalFilename: file.filename, // El nombre original (ej: mi_foto.png)
+              isPrincipal: index === 0, // O cómo determines la foto principal
+              cloudinaryPublicId: file.public_id, // El public_id completo (ej: carpeta/randomid)
+            });
           } else if (file.type === "video") {
-            videoUrls.push(file.url);
+            videoObjectsForBackend.push({
+              url: file.url,
+              filename: cloudinaryFilenameWithExt,
+              originalFilename: file.filename,
+              cloudinaryPublicId: file.public_id,
+            });
           }
         }
       );
 
-      // Agregar campos básicos
+      console.log(
+        "Objetos de imagen preparados para /publications:",
+        imageObjectsForBackend
+      );
+      console.log(
+        "Objetos de video preparados para /publications:",
+        videoObjectsForBackend
+      );
+
+      // --- Agregar campos básicos al formDataToSend (el que va a /publications) ---
       Object.entries(formData).forEach(([key, value]) => {
         if (
-          key !== "images" &&
-          key !== "videos" &&
-          key !== "fotoPrincipal" &&
-          value != null
+          key !== "images" && // Estos son los File objects, no los enviaremos a /publications
+          key !== "videos" && // Estos son los File objects
+          key !== "fotoPrincipal" && // Este es un File object
+          value != null // Evitar enviar nulls
         ) {
-          formDataToSend.append(key, value.toString());
+          if (typeof value === "boolean") {
+            formDataToSend.append(key, value.toString()); // 'true' o 'false'
+          } else {
+            formDataToSend.append(key, String(value));
+          }
         }
       });
 
-      // Agregar las URLs de imágenes y videos al FormData
-      formDataToSend.append("imageUrls", JSON.stringify(imageUrls));
-      formDataToSend.append("isPrincipal", JSON.stringify(isPrincipalFlags));
-      formDataToSend.append("videoUrls", JSON.stringify(videoUrls));
-
-      // Hacer la petición final para crear la publicación
-      const response = await api.post(
-        "http://localhost:4004/publications",
-        formDataToSend
+      // --- NUEVA LÓGICA: Agregar los arrays de objetos de archivo al formDataToSend ---
+      formDataToSend.append(
+        "imagesData",
+        JSON.stringify(imageObjectsForBackend)
       );
-      console.log("Publicación creada:", response.data);
+      formDataToSend.append(
+        "videosData",
+        JSON.stringify(videoObjectsForBackend)
+      );
+
+      // Ya no necesitas enviar imageUrls, isPrincipal, videoUrls por separado
+      // porque toda esa información (y más) está dentro de imagesData y videosData.
+
+      // --- Petición final para crear la publicación (a /publications) ---
+      console.log("Enviando a /publications con formData:", formDataToSend); // Puedes loguear para ver qué se envía
+      // Para inspeccionar FormData, no puedes hacer console.log(formDataToSend) directamente.
+      // Tendrías que iterar: for (let [key, value] of formDataToSend.entries()) { console.log(key, value); }
+
+      for (let [key, value] of formDataToSend.entries()) {
+        console.log(`FormData para /publications: ${key} =`, value);
+      }
+
+      const response = await api.post("/api/publications", formDataToSend);
+
+      console.log(
+        "Respuesta de /publications (creación de publicación):",
+        response.data
+      );
       alert("¡Publicación creada con éxito!, pasa ahora a validarla.");
 
-      //enviar las imagenes al sessionStorage
-
+      // --- Manejo de sessionStorage y redirección (sin cambios) ---
       const dataToStorage = {
         userId: response.data.publicacion.userId,
-        images: response.data.publicacion.images,
+        images: response.data.publicacion.images, // Esto ahora debería tener originalFilename si el backend lo guardó
         _id: response.data.publicacion._id,
         email: response.data.publicacion.email,
         updatedAt: response.data.publicacion.updatedAt,
       };
-
-      console.log("dataToStorage:", dataToStorage);
-
+      console.log(
+        "dataToStorage (después de crear publicación):",
+        dataToStorage
+      );
       sessionStorage.setItem("dataToStorage", JSON.stringify(dataToStorage));
-
       router.push(
         `/dashboard/validate/${formData.userId}/${response.data.publicacion._id}`
       );
     } catch (error) {
       console.error("Error al crear la publicación:", error);
-      alert("Error al crear la publicación. Por favor, intenta de nuevo.");
+      // Podrías querer ser más específico con el mensaje de error
+      if (error instanceof Error) {
+        alert(
+          `Error al crear la publicación: ${error.message}. Por favor, intenta de nuevo.`
+        );
+      } else {
+        alert(
+          "Error desconocido al crear la publicación. Por favor, intenta de nuevo."
+        );
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -319,6 +421,15 @@ const CreatePublications: React.FC = () => {
   const textareaStyle =
     "w-full border border-gray-300 rounded p-2 min-h-[200px] resize-y";
   const checkboxContainerStyle = "flex items-center space-x-2";
+
+  // --- RENDERIZADO CONDICIONAL ---
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-8 py-8 flex justify-center items-center min-h-screen">
+        <SimpleSpinner />
+      </div>
+    );
+  }
 
   return (
     <>

@@ -35,6 +35,8 @@ import metricsRoutesAdmin from "./routes/metricsRoutesAdmin"; // Importamos el r
 import contactRoutes from "./routes/contactRoute"; // Importamos el router correctamente
 import pseRoutes from "./routes/pseRoutes"; // Importamos el router correctamente
 import identityValidationRouterFromFile from "./routes/identityValidationRoutes";
+import ImagesVideosUpload from "./routes/ImagesVideosUpload";
+import { authorizePublicationAccess } from "./middleware/authorization"; // El nuevo middleware
 
 const app = express();
 
@@ -92,13 +94,23 @@ app.use("/api/publicacionesImage", publicacionesUpload);
 console.log("Ruta de uploads por primera ok registrada correctamente");
 
 // ruta para subir la publicacion nuevas a mongodb
-app.use("/publications", publicationsRouter);
+app.use("/api/publications", authenticate, publicationsRouter);
+
+// ruta para subir nuevas imagens y videos de publicaciones ya existentes a cloudinary con hashes
+app.use("/api/publicacionesImageUpdate", ImagesVideosUpload);
 
 // ruta para MONTAR LA MINIATURA DE LA PUBLICACION
 app.use("/api/publicationsThumbnails", getPublicationsThumbnailsByUserId);
 
+// RUTA PARA RENDERIZAR LAS PUBLICACIONES DE UN USUARIO
+app.use("/api/publicationsByUserId/:id", getPublicationById);
+
 // RUTA PARA ENCONTRAR LA PUBLICACION POR ID
-app.use("/api/editPublications/:id", getPublicationById);
+app.use(
+  "/api/editPublications/:id",
+
+  getPublicationById
+);
 
 // RUTA PARA ACTUALIZAR LA PUBLICACION
 app.use("/api/updatePublications", updatePublicationRoutes);
@@ -118,7 +130,7 @@ app.use("/api/validate-identity", identityValidationRouterFromFile);
 app.use("/api/state-publication", statePublications);
 
 // RUTA PARA ELIMINAR PUBLICACIONES Y BORAR HASHES Y ARCHIVOS
-app.use("/api/delete-publication", deletePublications);
+app.use("/api/delete-publication", authenticate, deletePublications);
 
 // RUTA PARA EL MANEJO DE ACTULIZACION DE PUBLICACIONES CON PAGO
 app.post("/api/updatePublicationPayment/:id", updatePublicationPayment);

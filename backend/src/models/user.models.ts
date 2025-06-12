@@ -1,12 +1,20 @@
 import mongoose from "mongoose";
 import { compareValue, hashValue } from "../utils/bcrypt";
 
+// Define los roles posibles para mayor consistencia y autocompletado
+export enum UserRole {
+  USER = "user",
+  ADMIN = "admin",
+  VALIDATOR = "validador", // O 'editor', 'moderator', como lo llames
+}
+
 export interface UserDocument extends mongoose.Document {
   __v: number;
   id: string;
   email: string;
   password: string;
   verify: boolean;
+  role: UserRole; // <--- NUEVO CAMPO ROLE
 
   createdAt: Date;
   updatedAt: Date;
@@ -21,10 +29,14 @@ const userSchema = new mongoose.Schema(
   {
     email: { type: String, unique: true, required: true },
     password: { type: String, required: true },
-    verified: { type: Boolean, require: true, default: false },
-
-    createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now },
+    verified: { type: Boolean, required: true, default: false },
+    role: {
+      // <--- DEFINICIÓN DEL NUEVO CAMPO ROLE
+      type: String,
+      enum: Object.values(UserRole), // Usa los valores del enum para validación
+      default: UserRole.USER, // Por defecto, un nuevo usuario es 'user'
+      required: true,
+    },
   },
   {
     timestamps: true,

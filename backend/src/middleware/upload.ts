@@ -8,7 +8,7 @@ const storage = new CloudinaryStorage({
     const userId = req.params.userId; // Obtiene el userId de la URL
     return {
       folder: `publicidades/${userId}`, // ¡Carpetas organizadas por usuario!
-      allowed_formats: ["jpg", "png", "jpeg", "mp4"],
+      allowed_formats: ["jpg", "png", "jpeg", "mp4", "webm", "webp"],
       resource_type: "auto",
     };
   },

@@ -13,8 +13,10 @@ import { Button } from "@/components/ui/button";
 import ChatReceptor from "@/components/ChatReceptor";
 import parseBackendDate from "@/lib/parseBackendDate";
 import { useRouter } from "next/navigation";
+import axios, { AxiosError } from "axios"; // Importa AxiosError
 
-const socket = io("http://localhost:4004");
+// El socket para la comunicación en tiempo real no relacionada con 'api' de Axios// revisar primero
+const socket = io("http://localhost:4004"); // Renombrado para evitar confusión con el hook useSocket
 
 type Publication = {
   _id: string;
@@ -286,6 +288,7 @@ const ViewPublications = () => {
     console.log("Eliminar publicación con ID:", id);
     if (!id) {
       console.error("No hay una publicación para eliminar");
+      alert("No se puede eliminar la publicación: ID no encontrado.");
       return;
     }
     const confirmDelete = window.confirm(
@@ -294,26 +297,44 @@ const ViewPublications = () => {
     if (!confirmDelete) return; // Si el usuario cancela, no hace nada
 
     try {
-      const res = await fetch(`/api/delete-publication/`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
+      const res = await api.delete(`/api/delete-publication/`, {
+        data: { id }, // Enviamos el ID de la publicación a eliminar
       });
-      if (!res.ok) {
-        throw new Error("Error al eliminar la publicación");
-      }
-      if (res.status === 200) {
-        const data = await res.json();
-        console.log("Publicación eliminada:", data);
-        // Actualiza la lista de publicaciones después de la eliminación
-        const updatedPublications = publications.filter(
-          (pub) => pub._id !== id
-        );
-        setPublications(updatedPublications);
-        alert("Publicación eliminada exitosamente");
-      }
+      console.log("Respuesta del backend al eliminar:", res.data);
+      // Actualiza la lista de publicaciones en el frontend
+      setPublications((prevPublications) =>
+        prevPublications.filter((pub) => pub._id !== id)
+      );
+
+      // Usa el mensaje del backend si existe, o uno por defecto
+      alert(res.data.message || "Publicación eliminada exitosamente");
     } catch (error) {
-      console.error("Error al eliminar la publicación:", error);
+      console.error(
+        "Error en la operación handleDeletePublication (después del interceptor):",
+        error
+      );
+
+      let errorMessageToShow =
+        "Ocurrió un error desconocido al intentar eliminar la publicación.";
+
+      if (axios.isAxiosError(error)) {
+        // Dentro de este bloque, TypeScript ya sabe que 'error' es de tipo AxiosError
+        // por lo tanto, puedes acceder a error.response, error.message, etc.
+        // sin necesidad de un cast adicional 'as AxiosError'.
+        if (error.response?.status !== 401) {
+          // 'error' aquí ya es tratado como AxiosError
+          errorMessageToShow =
+            error.response?.data?.message || // Acceso directo
+            error.message || // Acceso directo
+            `Error del servidor: ${error.response?.status || "desconocido"}`;
+          alert(errorMessageToShow);
+        }
+      } else if (error instanceof Error) {
+        errorMessageToShow = error.message;
+        alert(errorMessageToShow);
+      } else {
+        alert(errorMessageToShow);
+      }
     }
   };
 
@@ -388,8 +409,6 @@ const ViewPublications = () => {
               key={pub._id}
               className="overflow-hidden hover:shadow-lg transition-shadow lg:w-[20vw] lg:h-[80vh] sm:w-[30vw] sm:h-[90vh] md:w-[20vw] md:h-[115vh]"
             >
-              {" "}
-              {/* Ajusta el tamaño aquí */}
               <Image
                 src={
                   pub.images[0]?.url ? pub.images[0].url : "/default-image.png"
@@ -411,6 +430,7 @@ const ViewPublications = () => {
                   {new Date(pub.createdAt).toLocaleDateString("es-ES")}
                 </p>
 
+                {/* --- Muestra del Estado (Sin cambios) --- */}
                 <p className="text-gray-700 mt-2 line-clamp-3">
                   Estado:{" "}
                   {pub.estado === "APROBADA" ? (
@@ -429,54 +449,17 @@ const ViewPublications = () => {
                   )}
                 </p>
 
-                {/* Mostramos el siguiente párrafo solo si el estado es RECHAZADA */}
-                {pub.estado === "RECHAZADA" && (
-                  <p className="text-gray-700 mt-2 line-clamp-2">
-                    {(() => {
-                      // Determinar el Href basado en la razón del rechazo
-                      let targetHref = `/dashboard/validateRejected/${pub.userId}/${pub._id}`; // Ruta por defecto
+                {/* ================================================================== */}
+                {/*           INICIO DE LA SECCIÓN MODIFICADA Y CORREGIDA            */}
+                {/* ================================================================== */}
 
-                      // Si la razón es la de la cédula, cambiamos la ruta
-                      if (pub.razon === razonRechazoCedula) {
-                        targetHref = `/dashboard/validateIdentityDocument/${pub.userId}/${pub._id}`; // NUEVA RUTA para la cédula
-                        // Asegúrate de que esta ruta exista o la crees en tu router (Next.js, etc.)
-                        // por ejemplo: pages/dashboard/validateIdentityDocument/[userId]/[pubId].js
-                      }
-
-                      return (
-                        <Link
-                          href={targetHref} // Usamos la ruta determinada dinámicamente
-                          passHref
-                        >
-                          <span
-                            className="text-blue-500 cursor-pointer hover:underline"
-                            onMouseDown={() =>
-                              console.log(
-                                "Validando:",
-                                pub.userId,
-                                pub._id,
-                                "Motivo:",
-                                pub.razon,
-                                "Redirigiendo a:",
-                                targetHref
-                              )
-                            }
-                          >
-                            Valida Nuevamente tu publicidad
-                          </span>
-                        </Link>
-                      );
-                    })()}
-                  </p>
-                )}
-
-                <div className="text-gray-700 mt-2  text-center">
-                  {pub.estado === "PENDIENTE" ||
-                  pub.estado === "RECHAZADA" ? null : (
+                <div className="mt-4 flex flex-col items-center space-y-3 text-center">
+                  {/* --- CASO 1: Estado APROBADA --- */}
+                  {pub.estado === "APROBADA" && (
                     <>
+                      {/* Lógica de Pago o Información de Pago */}
                       {pub.transactionDate ? (
-                        // ✅ Verifica si existe información de pago para esta publicación
-                        <div>
+                        <div className="text-sm">
                           <p className="text-green-500 font-semibold">
                             TOP CONTRATADO: {pub.selectedPricing.days}
                           </p>
@@ -501,34 +484,64 @@ const ViewPublications = () => {
                         </div>
                       ) : (
                         <Link href={`/dashboard/payPublication/${pub._id}`}>
-                          <span className="text-blue-500 cursor-pointer hover:underline">
+                          <span className="text-blue-500 font-bold cursor-pointer hover:underline">
                             PAGAR PUBLICIDAD
                           </span>
                         </Link>
                       )}
 
-                      <div className="text-gray-700 mt-2 line-clamp-2 text-center">
-                        {/* Enlace de editar */}
-                        <Link href={`/dashboard/editPublication/${pub._id}`}>
-                          <span className="text-blue-500 cursor-pointer hover:underline">
-                            Edita tu Publicacion
-                          </span>
-                        </Link>
-                      </div>
+                      {/* Acción de Editar */}
+                      <Link href={`/dashboard/editPublication/${pub._id}`}>
+                        <span className="text-blue-500 cursor-pointer hover:underline">
+                          Edita tu Publicacion
+                        </span>
+                      </Link>
 
-                      <div>
-                        {/* Enlace de editar */}
-                        <button
-                          onClick={() => handleDeletePublication(pub._id)}
-                        >
-                          <span className="text-red-600 cursor-pointer hover:underline">
-                            Elimina tu Publicacion
-                          </span>
-                        </button>
-                      </div>
+                      {/* Acción de Eliminar */}
+                      <button onClick={() => handleDeletePublication(pub._id)}>
+                        <span className="text-red-600 cursor-pointer hover:underline">
+                          Elimina tu Publicacion
+                        </span>
+                      </button>
+                    </>
+                  )}
+
+                  {/* --- CASO 2: Estado PENDIENTE --- */}
+                  {pub.estado === "PENDIENTE" && (
+                    <>
+                      {/* Solo mostrar el botón de eliminar */}
+                      <button onClick={() => handleDeletePublication(pub._id)}>
+                        <span className="text-red-600 cursor-pointer hover:underline">
+                          Elimina tu Publicacion
+                        </span>
+                      </button>
+                    </>
+                  )}
+
+                  {/* --- CASO 3: Estado RECHAZADA --- */}
+                  {pub.estado === "RECHAZADA" && (
+                    <>
+                      {/* Solo mostrar el link para validar de nuevo */}
+                      {(() => {
+                        let targetHref = `/dashboard/validateRejected/${pub.userId}/${pub._id}`;
+                        if (pub.razon === razonRechazoCedula) {
+                          targetHref = `/dashboard/validateIdentityDocument/${pub.userId}/${pub._id}`;
+                        }
+                        return (
+                          <Link href={targetHref} passHref>
+                            <span className="text-blue-500 font-bold cursor-pointer hover:underline">
+                              Valida Nuevamente tu publicidad
+                            </span>
+                          </Link>
+                        );
+                      })()}
                     </>
                   )}
                 </div>
+
+                {/* ================================================================== */}
+                {/*             FIN DE LA SECCIÓN MODIFICADA Y CORREGIDA             */}
+                {/* ================================================================== */}
               </div>
             </Card>
           ))}

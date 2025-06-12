@@ -7,9 +7,19 @@ import { ThirdBlockPublications } from "@/components/ThirdBlockPublications";
 import { Button } from "@/components/ui/button";
 import ChargerVideosPubEdit from "@/components/ChargerVideosPub";
 import Link from "next/link";
+import api from "@/lib/api";
 
 import { useParams, useRouter } from "next/navigation";
 import React, { useState, useEffect } from "react";
+
+// Define una interfaz más específica para el spinner si usas uno complejo
+// o simplemente usa un div con clases de Tailwind como en el ejemplo.
+const SimpleSpinner: React.FC = () => (
+  <div className="flex flex-col items-center justify-center">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+    <p className="text-xl text-gray-700">Cargando datos de la publicación...</p>
+  </div>
+);
 
 interface ImageData {
   url: string;
@@ -40,31 +50,40 @@ interface FormData {
   titulo: string;
   descripcion: string;
   adicionales: string;
-  images: ImageData[]; // Cambiamos de `File[]` a `ImageData[]`
-  fotoPrincipal: File | null;
+  images: ImageData[];
+  fotoPrincipal: File | string | null; // Permite string para URL existente, File para nueva
   videos: VideoData[];
 }
 
-const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+const API_URL = "http://localhost:4004"; // Asegúrate de que esta URL sea correcta para tu entorno
 
-// Crea una variable fuera del componente para almacenar los valores
-let imagesCount = 0;
-let videosCount = 0;
-
-let _Id = "";
+// No son necesarias como variables globales, se derivarán del estado
+// let imagesCount = 0;
+// let videosCount = 0;
+// let _Id = "";
 
 async function obtenerIdCliente() {
   try {
     const response = await fetch("/api/userId");
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        message:
+          "Error en la respuesta del servidor para obtener ID de usuario",
+      }));
+      throw new Error(
+        errorData.message || "No se pudo obtener el ID del usuario"
+      );
+    }
     const data = await response.json();
-    return data.userId; // Esto devuelve directamente el ID alfanumérico
+    return data.userId;
   } catch (error) {
     console.error("Error al obtener el ID del usuario:", error);
+    // Podrías lanzar el error para manejarlo en el componente si es crítico
     return null;
   }
 }
 
-const EditPublication: React.FC = ({}) => {
+const EditPublication: React.FC = () => {
   const [formData, setFormData] = useState<FormData>({
     _id: "",
     userId: "",
@@ -86,54 +105,53 @@ const EditPublication: React.FC = ({}) => {
     videos: [],
   });
 
-  const handleImagesChange = (updatedImages: ImageData[]) => {
-    setFormData((prev) => ({
-      ...prev,
-      images: updatedImages, // Actualiza solo el campo de imágenes
-    }));
-  };
+  const [isLoading, setIsLoading] = useState(true); // Inicia en true para mostrar loader
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleVideosChange = (updatedVideos: VideoData[]) => {
-    setFormData((prev) => ({
-      ...prev,
-      videos: updatedVideos, // Actualiza solo el campo de videos
-    }));
-  };
+  const { id: publicationIdFromParams } = useParams(); // Renombrado para claridad
+  const router = useRouter();
 
-  // Obtenemos el ID del cliente al montar el componente
+  // Obtener el ID del cliente (opcional, considerar si es necesario aquí o si userId viene con la publicación)
   useEffect(() => {
     async function fetchUserId() {
-      const id = await obtenerIdCliente();
-      if (id) {
-        setFormData((prev) => ({ ...prev, userId: id }));
-        console.log("ID del usuario obtenido:", id); // Este console.log debería aparecer en la consola
+      const clienteId = await obtenerIdCliente();
+      if (clienteId) {
+        // Solo actualiza si formData.userId aún no ha sido establecido por fetchPublication
+        // O decide cuál fuente tiene prioridad para userId.
+        setFormData((prev) => ({ ...prev, userId: prev.userId || clienteId }));
+        console.log("ID del usuario obtenido (si no existía ya):", clienteId);
+      } else {
+        // Considera cómo manejar si no se puede obtener el ID del cliente y es esencial
+        console.warn("No se pudo obtener el ID del cliente.");
       }
     }
     fetchUserId();
-  }, []);
+  }, []); // Corre una vez al montar
 
-  // constantes de los 3 bloques
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const { id } = useParams();
-  const router = useRouter();
-
-  console.log("ID de la publicación:", id);
-
+  // Obtener los datos de la publicación
   useEffect(() => {
     const fetchPublication = async () => {
+      if (!publicationIdFromParams) {
+        setError("No se proporcionó un ID de publicación.");
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
       try {
-        const response = await fetch(`${API_URL}/api/editPublications/${id}`);
-        if (!response.ok) throw new Error("No se pudo obtener la publicación");
+        const response = await api.get(
+          `/api/editPublications/${publicationIdFromParams}`
+        );
 
-        const data = await response.json();
-        console.log(data);
-
-        // Guardar los datos en el estado
+        const data = response.data;
+        console.log("Datos de la publicación recibidos:", data);
 
         setFormData({
           _id: data._id || "",
-          userId: data.userId || "",
+          userId: data.userId || formData.userId, // Prioriza userId de la publicación, o el ya obtenido
           nombre: data.nombre || "",
           edad: data.edad || "",
           telefono: data.telefono || "",
@@ -148,32 +166,56 @@ const EditPublication: React.FC = ({}) => {
           descripcion: data.descripcion || "",
           adicionales: data.adicionales || "",
           images: data.images || [],
+          // Asumiendo que data.fotoPrincipal es una URL si existe, o null
+          // El componente HandleFileChangeEdit debería poder manejar una URL como valor inicial
           fotoPrincipal: data.fotoPrincipal || null,
           videos: data.videos || [],
         });
+      } catch (error: any) {
+        // Este bloque 'catch' se ejecutará si:
+        // 1. El interceptor de Axios manejó un 401 y RECHAZÓ la promesa.
+        // 2. Hubo otro error HTTP (404 Not Found, 500 Internal Server Error, etc.).
+        // 3. Hubo un error de red.
 
-        const imagesData = data.images;
-        console.log("imagesData:", imagesData);
-        console.log("VideosData:", data.videos);
+        console.error(
+          "Error al obtener la publicación (después del interceptor):",
+          error
+        );
 
-        // Actualiza las variables globales
-        imagesCount = data.images?.length || 0;
-        videosCount = data.videos?.length || 0;
-        _Id = data._id || "";
-
-        console.log("imagesCount:", imagesCount);
-        console.log("videosCount:", videosCount);
-      } catch (error) {
-        console.error("Error al obtener la publicación:", error);
+        // Si el error es 401, el interceptor ya mostró un alert y redirigió.
+        // No necesitamos mostrar otro alert aquí para el 401.
+        // Para otros errores, sí es útil mostrar un mensaje.
+        if (error.response?.status !== 401) {
+          const errorMessage =
+            error.response?.data?.message || // Mensaje específico del backend
+            error.message || // Mensaje genérico del error de Axios
+            "Ocurrió un error al obtener los detalles de la publicación.";
+          alert(errorMessage);
+          // Podrías querer limpiar el estado de 'publicacion' o establecer un estado de error aquí
+          // setPublicacion(null);
+          // setErrorState(errorMessage);
+        }
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchPublication();
-  }, [id]);
+  }, [publicationIdFromParams, formData.userId]); // formData.userId aquí es para asegurar que si se obtiene después, no cause un re-fetch innecesario si no cambia.
+  // Podrías quitar formData.userId si la lógica de userId es más simple.
 
-  // Elimina dependencias innecesarias
+  const handleImagesChange = (updatedImages: ImageData[]) => {
+    setFormData((prev) => ({ ...prev, images: updatedImages }));
+  };
 
-  const handleFormChange = (name: keyof FormData, value: string | boolean) => {
+  const handleVideosChange = (updatedVideos: VideoData[]) => {
+    setFormData((prev) => ({ ...prev, videos: updatedVideos }));
+  };
+
+  const handleFormChange = (
+    name: keyof FormData,
+    value: string | boolean | File | null
+  ) => {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -182,97 +224,172 @@ const EditPublication: React.FC = ({}) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     setIsSubmitting(true);
     setError(null);
 
+    // 1. Logging para verificar si handleSubmit se llama
+    console.log("FRONTEND: handleSubmit - INICIO"); // <--- AÑADIR ESTE LOG
+
+    // Crear un FormData para enviar si tienes archivos (fotoPrincipal)
+    // Si solo es JSON, JSON.stringify(formData) está bien.
+    // Aquí asumiré que si fotoPrincipal es un File, se maneja en el backend para subida.
+    // Si no, y fotoPrincipal es solo una URL, JSON.stringify es suficiente.
+
+    const payload = { ...formData };
+    // Si fotoPrincipal es un File, necesitarías un FormData y el backend adaptado.
+    // Si fotoPrincipal es la URL y no la estás cambiando, o si la cambias por otra URL,
+    // el payload actual está bien. Aquí la lógica dependerá de tu backend.
+
+    // 2. Logging para verificar la URL y el payload
+    const targetUrl = `${API_URL}/api/updatePublications/${publicationIdFromParams}`;
+    console.log("FRONTEND: handleSubmit - Intentando PUT a:", targetUrl);
+    // console.log("FRONTEND: handleSubmit - Payload:", JSON.stringify(payload, null, 2)); // Puede ser muy largo, pero útil
+
     try {
-      const dataResponse = await fetch(
-        `${API_URL}/api/updatePublications/${id}`,
+      const response = await fetch(
+        `${API_URL}/api/updatePublications/${publicationIdFromParams}`,
         {
           method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(formData),
+          headers: { "Content-Type": "application/json" }, // Cambiar si envías FormData
+          body: JSON.stringify(payload),
         }
       );
 
-      if (!dataResponse.ok) {
-        throw new Error("Error al subir los Datos");
+      // 3. Logging para ver la respuesta cruda del fetch
+      console.log(
+        "FRONTEND: handleSubmit - Respuesta del fetch recibida. Status:",
+        response.status
+      );
+
+      if (!response.ok) {
+        const errorData = await response
+          .json()
+          .catch(() => ({ message: "Error al actualizar la publicación" }));
+        throw new Error(errorData.message || "Error al subir los Datos");
       }
-    } catch (error) {
-      console.error("Error al subir las imágenes:", error);
+
+      // Opcional: mostrar un mensaje de éxito antes de redirigir
+      // alert("Publicación actualizada con éxito!");
+      router.push("/dashboard/viewPublications");
+    } catch (err: any) {
+      console.error("Error al actualizar la publicación:", err);
+      setError(err.message || "Ocurrió un error al guardar los cambios.");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setIsSubmitting(false);
-
-    router.push("/dashboard/viewPublications");
   };
 
+  // --- RENDERIZADO CONDICIONAL ---
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-8 py-8 flex justify-center items-center min-h-screen">
+        <SimpleSpinner />
+      </div>
+    );
+  }
+
   return (
-    <div className="container mx-auto px-8 py-8">
-      <div className="max-w-4xl mx-auto">
-        <form onSubmit={handleSubmit} className="container mx-auto px-8 py-8">
-          <div>
-            <FirstBlockPublication
-              formData={formData}
-              onFormChange={handleFormChange}
-            />
+    <div className="container mx-auto px-4 sm:px-8 py-8">
+      <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-lg p-6 sm:p-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-6 text-center">
+          Editar Publicación
+        </h1>
 
-            {error && <div className="mt-4 text-red-600">{error}</div>}
+        {/* Mostrar errores de submit */}
+        {error && formData._id && (
+          <div className="mb-4 p-3 bg-red-100 text-red-600 border border-red-300 rounded-md">
+            {error}
+          </div>
+        )}
 
-            <SecondBlockPublication
-              formData={formData} // PASA EL ESTADO DEL PADRE
-              onFormChange={
-                (name, value) =>
-                  setFormData((prev) => ({ ...prev, [name]: value })) // Actualiza el estado del padre
-              }
-            />
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <FirstBlockPublication
+            formData={formData}
+            onFormChange={handleFormChange}
+          />
 
-            {error && <div className="mt-4 text-red-600">{error}</div>}
+          <SecondBlockPublication
+            formData={formData}
+            onFormChange={handleFormChange} // Simplificado, asumiendo que la firma coincide
+          />
 
-            <ThirdBlockPublications
-              formData={formData}
-              onFormChange={handleFormChange}
-            />
+          <ThirdBlockPublications
+            formData={formData}
+            onFormChange={handleFormChange}
+          />
 
-            {error && <div className="mt-4 text-red-600">{error}</div>}
-
-            {/* Subir Fotos */}
+          {/* Componentes para subir/editar archivos */}
+          <div className="pt-4">
+            <h2 className="text-xl font-semibold text-gray-700 mb-3">
+              Imágenes
+            </h2>
             <HandleFileChangeEdit
               images={formData.images}
               onImagesChange={handleImagesChange}
+              // fotoPrincipal={formData.fotoPrincipal} // Pasa fotoPrincipal si el componente lo maneja
+              // onFotoPrincipalChange={(file) => handleFormChange('fotoPrincipal', file)}
             />
+          </div>
 
-            {/* Subir Videos */}
+          <div className="pt-4">
+            <h2 className="text-xl font-semibold text-gray-700 mb-3">Videos</h2>
             <ChargerVideosPubEdit
               videos={formData.videos}
               onVideosChange={handleVideosChange}
             />
+          </div>
 
-            <div className="border-b border-gray-500 mt-2 mb-2" />
+          <div className="border-t border-gray-300 mt-8 mb-6" />
 
-            <div className="mt-6 flex justify-center">
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                className={`className="w-full text-lg
-              ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""}`}
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className={`w-full sm:w-auto text-lg px-8 py-2.5 ${
+                isSubmitting
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700"
+              } text-white font-medium rounded-md transition-colors duration-150`}
+            >
+              {isSubmitting ? (
+                <span className="flex items-center">
+                  <svg
+                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  Guardando...
+                </span>
+              ) : (
+                "Guardar Cambios"
+              )}
+            </Button>
+
+            {formData._id && ( // Solo muestra si hay un ID de publicación cargado
+              <Link
+                href={`/dashboard/uploadImagesVideos/${formData._id}`}
+                legacyBehavior
               >
-                {isSubmitting ? "Guardando..." : "Guardar cambios"}
-              </Button>
-            </div>
-
-            {/* Enlace para subir nuevas fotos y videos*/}
-
-            <div className="flex justify-center mt-6">
-              <Link href={`/dashboard/uploadImagesVideos/${_Id}`}>
-                <Button className="w-full text-lg">
-                  Si deseas añadir nuevas fotos o videos has Click aca:
-                </Button>
+                <a className="w-full sm:w-auto text-lg px-8 py-2.5 text-center text-blue-600 hover:text-blue-700 border border-blue-600 hover:border-blue-700 rounded-md font-medium transition-colors duration-150">
+                  Añadir fotos o videos
+                </a>
               </Link>
-            </div>
+            )}
           </div>
         </form>
       </div>

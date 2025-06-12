@@ -2,74 +2,111 @@ import express from "express";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { io } from "..";
+import { io } from ".."; // Asumo que 'io' se exporta desde tu archivo principal (index.ts o app.ts)
 import {
-  connectedAdmin,
-  connectedUsers,
-  getAdminSocket,
-} from "../routes/socketHandler";
+  connectedAdmin, // Lo usaremos para loguear
+  getAdminSocket, // Esta función solo debe devolver el adminSocketId almacenado
+} from "../routes/socketHandler"; // Asegúrate que la ruta a socketHandler es correcta
 import { Request, Response } from "express";
-// Importar la interfaz SocketIOServer desde socket.io
-import { Server as SocketIOServer } from "socket.io"; // Si necesitas usar SocketIOServer en otro lugar
 
 const validateAdmin = express.Router();
 const VALIDATIONS_FILE = path.join(__dirname, "../validations.json");
 
-console.log("📂 Archivo de validaciones:", VALIDATIONS_FILE);
-
-interface PendingValidation {
-  body: any; // Si puedes definir mejor este tipo, es recomendable
-  fileUrls: Record<string, string>;
+// --- Definición de Tipos para Claridad ---
+interface BasePendingValidation {
+  type: "identity" | "publication";
+  userId: string;
+  originalBody: any; // El req.body original que se envió en la solicitud de validación
+  fileUrls: Record<string, string>; // URLs de los archivos relevantes para esta validación
 }
 
-// Interfaz para los datos que llegan del evento "validate-identity-document"
+export interface PendingIdentityValidation extends BasePendingValidation {
+  type: "identity";
+  publicationId: string; // El ID de la publicación asociada a esta validación de identidad
+}
+
+export interface PendingPublicationValidation extends BasePendingValidation {
+  type: "publication";
+  // No necesita publicationId aquí, ya que el body (originalBody) contendrá dataItems con el ID de la publicación
+}
+
+export type PendingValidation =
+  | PendingIdentityValidation
+  | PendingPublicationValidation;
+
+// Interfaz para el payload que se emite al admin para validación de identidad
 interface IdentityValidationPayload {
-  // <--- AQUÍ ESTÁ
   userId: string;
-  publicationId: string; // ID de la publicación a la que pertenecen estos documentos
-  body: any;
+  publicationId: string;
+  body: any; // El req.body original
   fileUrls: {
-    // URLs de documentFront y documentBack
+    // Solo las URLs de los documentos
     documentFront: string;
     documentBack: string;
   };
 }
 
-// Función para cargar validaciones desde el archivo al iniciar el servidor
+// --- Carga y Guardado de Validaciones Pendientes ---
 const loadPendingValidations = (): PendingValidation[] => {
   try {
     if (fs.existsSync(VALIDATIONS_FILE)) {
       const data = fs.readFileSync(VALIDATIONS_FILE, "utf-8");
-      return JSON.parse(data) as PendingValidation[];
+      const parsedData = JSON.parse(data);
+      // Validar que parsedData es un array antes de castear
+      if (Array.isArray(parsedData)) {
+        return parsedData as PendingValidation[];
+      }
+      console.error(
+        "[VALIDATES_ADMIN] ❌ El contenido de validations.json no es un array."
+      );
+    } else {
+      console.log(
+        `[VALIDATES_ADMIN] No se encontró ${VALIDATIONS_FILE}, iniciando con 0 validaciones pendientes.`
+      );
     }
   } catch (error) {
-    console.error("❌ Error al cargar validaciones:", error);
+    console.error("[VALIDATES_ADMIN] ❌ Error al cargar validaciones:", error);
   }
-  return []; // Siempre devuelve un array vacío si hay error
+  return [];
 };
 
-// 🔹 Inicializar validaciones pendientes
-let pendingValidations: PendingValidation[] = [];
-pendingValidations = loadPendingValidations();
+console.log("[VALIDATES_ADMIN] 📂 Archivo de validaciones:", VALIDATIONS_FILE);
+let pendingValidations: PendingValidation[] = loadPendingValidations();
+console.log(
+  `[VALIDATES_ADMIN] Iniciado con ${pendingValidations.length} validaciones pendientes cargadas.`
+);
 
-// 🔹 Función para guardar validaciones en el archivo
 const savePendingValidations = () => {
   try {
-    console.log("💾 Guardando validaciones pendientes en el archivo...");
+    console.log(
+      `[VALIDATES_ADMIN] 💾 Guardando ${pendingValidations.length} validaciones pendientes en el archivo...`
+    );
     fs.writeFileSync(
       VALIDATIONS_FILE,
       JSON.stringify(pendingValidations, null, 2),
       "utf-8"
     );
-    console.log("✅ Validaciones guardadas correctamente en validations.json");
+    console.log(
+      "[VALIDATES_ADMIN] ✅ Validaciones guardadas correctamente en validations.json"
+    );
   } catch (error) {
-    console.error("❌ Error al guardar en validations.json:", error);
+    console.error(
+      "[VALIDATES_ADMIN] ❌ Error al guardar en validations.json:",
+      error
+    );
   }
 };
 
+// --- Configuración de Multer ---
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     const userId = req.params.userId;
+    if (!userId) {
+      console.error(
+        "[VALIDATES_ADMIN][MULTER] userId no encontrado en req.params para la subida."
+      );
+      return cb(new Error("userId no encontrado para la subida"), "");
+    }
     const uploadPath = path.join(__dirname, `../uploads/${userId}`);
     if (!fs.existsSync(uploadPath)) {
       fs.mkdirSync(uploadPath, { recursive: true });
@@ -77,9 +114,9 @@ const storage = multer.diskStorage({
     cb(null, uploadPath);
   },
   filename: function (req, file, cb) {
-    let timestamp = Date.now();
-    let customFileName = file.fieldname;
-    cb(null, `${customFileName}_${timestamp}.png`);
+    const timestamp = Date.now();
+    const originalExtension = path.extname(file.originalname) || ".png"; // Usar extensión original o png por defecto
+    cb(null, `${file.fieldname}_${timestamp}${originalExtension}`);
   },
 });
 
@@ -88,130 +125,241 @@ const upload = multer({ storage });
 const uploadFields = upload.fields([
   { name: "fotoCartel", maxCount: 1 },
   { name: "fotoRostro", maxCount: 1 },
-  { name: "documentFront", maxCount: 1 }, // Nuevo
-  { name: "documentBack", maxCount: 1 }, // Nuevo
+  { name: "documentFront", maxCount: 1 },
+  { name: "documentBack", maxCount: 1 },
 ]);
 
 interface MulterFiles {
   fotoCartel?: Express.Multer.File[];
   fotoRostro?: Express.Multer.File[];
-  documentFront?: Express.Multer.File[]; // Nuevo
-  documentBack?: Express.Multer.File[]; // Nuevo
+  documentFront?: Express.Multer.File[];
+  documentBack?: Express.Multer.File[];
 }
 
-validateAdmin.post("/:userId", uploadFields, (req, res) => {
-  const dataItems = req.body.dataItems ? JSON.parse(req.body.dataItems) : {};
+// --- Ruta POST para Validaciones ---
+validateAdmin.post("/:userId", uploadFields, (req: Request, res: Response) => {
+  const userIdFromParams = req.params.userId;
+  const publicationIdFromBody = req.body.publicationId; // Para validación de identidad
+  const dataItemsString = req.body.dataItems;
 
-  const requestId = Date.now(); // Identificador único para cada solicitud
-  console.log(`🆔 [${requestId}] Nueva solicitud recibida para validación`);
-  console.log("Body:", req.body);
-  console.log("Files:", req.files);
-  console.log("DataItems:", dataItems);
+  const requestId = Date.now();
+  console.log(
+    `\n[VALIDATES_ADMIN][${requestId}] --- Inicio de Solicitud de Validación ---`
+  );
+  console.log(
+    `[VALIDATES_ADMIN][${requestId}] 🆔 Para userId: ${userIdFromParams}`
+  );
+  console.log(`[VALIDATES_ADMIN][${requestId}] Body recibido:`, req.body);
+  console.log(`[VALIDATES_ADMIN][${requestId}] Files recibidos:`, req.files);
 
-  const userId = req.params.userId;
-  const baseUrl = `http://localhost:4004/uploads/${userId}`;
-  const baseUrlId = `http://localhost:4004/uploads/${userId}/identity_docs`;
+  let parsedDataItems = {}; // Para 'dataItems for sessionStorage'
+  if (dataItemsString && typeof dataItemsString === "string") {
+    try {
+      parsedDataItems = JSON.parse(dataItemsString);
+      console.log(
+        `[VALIDATES_ADMIN][${requestId}] DataItems parseados:`,
+        parsedDataItems
+      );
+    } catch (e) {
+      console.error(
+        `[VALIDATES_ADMIN][${requestId}] Error parseando dataItems:`,
+        e
+      );
+    }
+  }
 
   const files = req.files as MulterFiles;
   const responseUrls: Record<string, string> = {};
 
-  // Para fotoCartel y fotoRostro
-  if (files.fotoCartel && files.fotoCartel[0]) {
-    responseUrls.fotoCartel = `${baseUrl}/${files.fotoCartel[0].filename}`;
-  }
-  if (files.fotoRostro && files.fotoRostro[0]) {
-    responseUrls.fotoRostro = `${baseUrl}/${files.fotoRostro[0].filename}`;
-  }
+  const generateFileUrl = (userId: string, filename: string) => {
+    // Asumiendo que tu servidor sirve estáticos desde una ruta base como /uploads
+    return `http://localhost:4004/uploads/${userId}/${filename}`;
+  };
 
-  // Para documentFront y documentBack
-  if (files.documentFront && files.documentFront[0]) {
-    responseUrls.documentFront = `${baseUrlId}/${files.documentFront[0].filename}`;
+  if (files.fotoCartel?.[0]?.filename) {
+    responseUrls.fotoCartel = generateFileUrl(
+      userIdFromParams,
+      files.fotoCartel[0].filename
+    );
   }
-  if (files.documentBack && files.documentBack[0]) {
-    responseUrls.documentBack = `${baseUrlId}/${files.documentBack[0].filename}`;
+  if (files.fotoRostro?.[0]?.filename) {
+    responseUrls.fotoRostro = generateFileUrl(
+      userIdFromParams,
+      files.fotoRostro[0].filename
+    );
   }
+  if (files.documentFront?.[0]?.filename) {
+    responseUrls.documentFront = generateFileUrl(
+      userIdFromParams,
+      files.documentFront[0].filename
+    );
+  }
+  if (files.documentBack?.[0]?.filename) {
+    responseUrls.documentBack = generateFileUrl(
+      userIdFromParams,
+      files.documentBack[0].filename
+    );
+  }
+  console.log(
+    `[VALIDATES_ADMIN][${requestId}] URLs de archivos construidas:`,
+    responseUrls
+  );
 
-  console.log("datos enviados al admin:", req.body);
-  console.log("urls de las imagenes:", responseUrls);
-
+  // Enviar respuesta HTTP al cliente que subió los archivos inmediatamente
   res.status(200).json({
-    message: "Datos recibidos correctamente",
+    message: "Datos de validación recibidos correctamente por el backend.",
     body: req.body,
     fileUrls: responseUrls,
   });
 
-  // Emitir evento al administrador
-  console.log("📡 Buscando socket del admin para userId:", userId);
-  console.log("🔍 Sockets de admins conectados:", connectedAdmin);
+  // --- Lógica para Emitir al Admin o Guardar como Pendiente ---
+  const adminSocketId = getAdminSocket(); // Obtiene el ID almacenado
+  const isAdminConnectedAndActive =
+    adminSocketId && io.sockets.sockets.get(adminSocketId); // Verifica si el socket con ese ID está activo
 
-  const adminSocket = getAdminSocket();
+  console.log(
+    `[VALIDATES_ADMIN][${requestId}] 📡 Verificando estado del admin...`
+  );
+  console.log(
+    `[VALIDATES_ADMIN][${requestId}]   adminSocketId obtenido de getAdminSocket(): ${adminSocketId}`
+  );
+  console.log(
+    `[VALIDATES_ADMIN][${requestId}]   ¿Socket de admin ${adminSocketId} está activo?: ${!!isAdminConnectedAndActive}`
+  );
+  console.log(
+    `[VALIDATES_ADMIN][${requestId}]   Contenido de connectedAdmin (mapa en socketHandler):`,
+    connectedAdmin
+  );
 
-  const publicationIdFromBody = req.body.publicationId;
-  const userIdFromParams = req.params.userId; // Ya lo tienes: const userId = req.params.userId;
+  if (isAdminConnectedAndActive && adminSocketId) {
+    // Asegurarse que adminSocketId no es null aquí
+    console.log(
+      `[VALIDATES_ADMIN][${requestId}] ✅ Admin CONECTADO y ACTIVO (${adminSocketId}). Emitiendo en tiempo real...`
+    );
 
-  if (adminSocket) {
-    // Condición para identificar que es una carga de documentos de identidad
     if (files.documentFront && files.documentBack && publicationIdFromBody) {
       console.log(
-        `📤 Enviando datos de VALIDACIÓN DE DOCUMENTO al admin (${adminSocket})`
+        `[VALIDATES_ADMIN][${requestId}]   Tipo: VALIDACIÓN DE DOCUMENTO para publicationId ${publicationIdFromBody}`
       );
-
-      const payloadForIdentityValidation: IdentityValidationPayload = {
-        userId: userIdFromParams, // El userId de la URL de la ruta
-        publicationId: publicationIdFromBody, // El ID de la publicación del body
-        body: req.body, // Puedes enviar el req.body completo o solo partes específicas
+      const payloadForIdentity: IdentityValidationPayload = {
+        userId: userIdFromParams,
+        publicationId: publicationIdFromBody,
+        body: req.body, // El body original de la solicitud
         fileUrls: {
-          // responseUrls ya tiene documentFront y documentBack con las URLs correctas
-          documentFront: responseUrls.documentFront!, // El '!' asume que si entraste al if, existen
+          documentFront: responseUrls.documentFront!,
           documentBack: responseUrls.documentBack!,
         },
       };
-
-      // Emitir el evento correcto para la validación de identidad
-      io.to(adminSocket).emit(
+      io.to(adminSocketId).emit(
         "validate-identity-document",
-        payloadForIdentityValidation
+        payloadForIdentity
       );
       console.log(
-        "✅ Datos de VALIDACIÓN DE DOCUMENTO enviados al admin con el evento 'validate-identity-document'."
+        `[VALIDATES_ADMIN][${requestId}]   🚀 Evento 'validate-identity-document' emitido a ${adminSocketId}.`
       );
     } else if (files.fotoCartel || files.fotoRostro) {
-      // Lógica para la validación de PUBLICACIÓN (cartel/rostro)
       console.log(
-        `📤 Enviando datos de VALIDACIÓN DE PUBLICACIÓN al admin (${adminSocket})`
+        `[VALIDATES_ADMIN][${requestId}]   Tipo: VALIDACIÓN DE PUBLICACIÓN`
       );
-      // Asegúrate que responseUrls solo contenga fotoCartel/fotoRostro o que el admin lo maneje
-      const publicationResponseUrls: Record<string, string> = {};
+      const publicationFileUrls: Record<string, string> = {};
       if (responseUrls.fotoCartel)
-        publicationResponseUrls.fotoCartel = responseUrls.fotoCartel;
+        publicationFileUrls.fotoCartel = responseUrls.fotoCartel;
       if (responseUrls.fotoRostro)
-        publicationResponseUrls.fotoRostro = responseUrls.fotoRostro;
+        publicationFileUrls.fotoRostro = responseUrls.fotoRostro;
 
-      io.to(adminSocket).emit(
+      // El primer argumento para 'validate-publication' es el 'body' que contiene 'dataItems for sessionStorage'
+      io.to(adminSocketId).emit(
         "validate-publication",
         req.body,
-        publicationResponseUrls
-      ); // req.body aquí debería tener 'dataItems for sessionStorage'
+        publicationFileUrls
+      );
       console.log(
-        "✅ Datos de VALIDACIÓN DE PUBLICACIÓN enviados al admin con el evento 'validate-publication'."
+        `[VALIDATES_ADMIN][${requestId}]   🚀 Evento 'validate-publication' emitido a ${adminSocketId}.`
       );
     } else {
-      console.log(
-        "⚠️ No se identificó un tipo de validación claro para emitir por socket o faltan datos."
+      console.warn(
+        `[VALIDATES_ADMIN][${requestId}]   ⚠️ No se identificó un tipo de validación claro (documentos o cartel/rostro) o faltan archivos para emitir en tiempo real.`
       );
     }
   } else {
-    console.log("❌ Admin no encontrado. Guardando validación pendiente.");
-    // Aquí también necesitarías una lógica similar para 'pendingValidations'
-    // para guardar el tipo correcto de datos y poder emitir el evento correcto después.
+    console.log(
+      `[VALIDATES_ADMIN][${requestId}] ❌ Admin NO CONECTADO o socket no activo. Guardando validación pendiente.`
+    );
+
+    let validationToPush: PendingValidation | null = null;
+
+    if (files.documentFront && files.documentBack && publicationIdFromBody) {
+      validationToPush = {
+        type: "identity",
+        userId: userIdFromParams,
+        publicationId: publicationIdFromBody,
+        originalBody: req.body, // Guardar el body completo
+        fileUrls: {
+          // Solo las URLs relevantes para este tipo
+          documentFront: responseUrls.documentFront!,
+          documentBack: responseUrls.documentBack!,
+        },
+      };
+      console.log(
+        "[VALIDATES_ADMIN]   Preparada validación de IDENTIDAD para guardar:",
+        JSON.stringify(validationToPush, null, 2)
+      );
+    } else if (files.fotoCartel || files.fotoRostro) {
+      const relevantFileUrls: Record<string, string> = {};
+      if (responseUrls.fotoCartel)
+        relevantFileUrls.fotoCartel = responseUrls.fotoCartel;
+      if (responseUrls.fotoRostro)
+        relevantFileUrls.fotoRostro = responseUrls.fotoRostro;
+
+      if (Object.keys(relevantFileUrls).length > 0) {
+        validationToPush = {
+          type: "publication",
+          userId: userIdFromParams,
+          originalBody: req.body, // Guardar el body completo
+          fileUrls: relevantFileUrls,
+        };
+        console.log(
+          "[VALIDATES_ADMIN]   Preparada validación de PUBLICACIÓN para guardar:",
+          JSON.stringify(validationToPush, null, 2)
+        );
+      } else {
+        console.warn(
+          "[VALIDATES_ADMIN]   No hay URLs de fotoCartel o fotoRostro para guardar en validación de publicación pendiente."
+        );
+      }
+    }
+
+    if (validationToPush) {
+      pendingValidations.push(validationToPush);
+      console.log(
+        `[VALIDATES_ADMIN][${requestId}]   💾 Validación añadida a pendingValidations. Total pendientes ahora: ${pendingValidations.length}`
+      );
+      // Loguear el contenido completo puede ser muy verboso si hay muchas, pero útil para depurar una:
+      // console.log(`[VALIDATES_ADMIN][${requestId}]   Contenido de UN PENDIENTE (el último):`, JSON.stringify(validationToPush, null, 2));
+      savePendingValidations();
+    } else {
+      console.warn(
+        `[VALIDATES_ADMIN][${requestId}]   ⚠️ No se pudo determinar el tipo de validación para guardar como pendiente o no había archivos relevantes.`
+      );
+    }
   }
+  console.log(
+    `[VALIDATES_ADMIN][${requestId}] --- Fin de Solicitud de Validación ---`
+  );
 });
 
-// 🔹 Función para limpiar validaciones pendientes sin reasignar
+// --- Funciones de Ayuda ---
 export const clearPendingValidations = () => {
-  pendingValidations.length = 0; // Vacía el array sin cambiar la referencia
-  savePendingValidations();
+  if (pendingValidations.length > 0) {
+    console.log(
+      `[VALIDATES_ADMIN] Limpiando ${pendingValidations.length} validaciones pendientes.`
+    );
+    pendingValidations.length = 0;
+    savePendingValidations(); // Guarda el array vacío en el archivo
+  } else {
+    // console.log("[VALIDATES_ADMIN] No hay validaciones pendientes que limpiar."); // Puede ser ruidoso
+  }
 };
 
-export default validateAdmin;
 export { savePendingValidations, pendingValidations };
+export default validateAdmin;

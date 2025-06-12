@@ -24,10 +24,12 @@ export interface IPublication extends Document {
     url: string;
     isPrincipal: boolean;
     filename: string;
+    originalFilename: String; // <--- AÑADIR ESTE CAMPO
   }>;
   videos: Array<{
     url: string;
     filename: string;
+    originalFilename: String; // <--- AÑADIR ESTE CAMPO
   }>;
   createdAt: Date;
   updatedAt: Date;
@@ -72,12 +74,14 @@ const PublicacionSchema = new mongoose.Schema<IPublication>({
       url: { type: String, required: true },
       isPrincipal: { type: Boolean, default: false },
       filename: { type: String, required: true },
+      originalFilename: { type: String, required: true }, // AÑADIDO
     },
   ],
   videos: [
     {
       url: { type: String },
       filename: { type: String },
+      originalFilename: { type: String }, // AÑADIDO
     },
   ],
 

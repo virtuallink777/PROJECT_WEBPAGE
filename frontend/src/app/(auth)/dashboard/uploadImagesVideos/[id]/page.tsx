@@ -9,6 +9,14 @@ import VideoUploadComponentEdit from "@/components/UploadVideosEdit";
 import { useParams, useRouter } from "next/navigation";
 import DuplicateFilesPopup from "@/components/ShowImageVideoCreatePub";
 
+// SPINNER
+const SimpleSpinner: React.FC = () => (
+  <div className="flex flex-col items-center justify-center">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+    <p className="text-xl text-gray-700">Subiendo la información</p>
+  </div>
+);
+
 async function obtenerIdCliente() {
   try {
     const response = await fetch("/api/userId");
@@ -62,7 +70,7 @@ const UploadImagesVideos = () => {
     images: [],
     videos: [],
   });
-
+  const [isLoading, setIsLoading] = useState(false); // Estado para la carga
   const router = useRouter();
   const { id } = useParams();
 
@@ -100,7 +108,7 @@ const UploadImagesVideos = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    setIsLoading(true); // <--- Iniciar carga
     console.log("primer CONSOLE.LOG DE HANDLESUBMIT", formData);
 
     try {
@@ -122,6 +130,12 @@ const UploadImagesVideos = () => {
         });
       }
 
+      // agregar el id de la publicación
+      if (!id) {
+        throw new Error("El ID de la publicación no está definido.");
+      }
+      combinedFormData.append("id", id.toString()); // Asegurarse de que id no sea undefined
+
       combinedFormData.append("userId", formData.userId);
 
       // Subir videos (si hay)
@@ -136,7 +150,7 @@ const UploadImagesVideos = () => {
       console.log("combinedFormData:", combinedFormData);
       console.log("formData.userId:", formData.userId);
       const ResponseImageVideo = await fetch(
-        `http://localhost:4004/api/publicacionesImage/upload/${formData.userId}`,
+        `http://localhost:4004/api/publicacionesImageUpdate/upload/${formData.userId}`,
         {
           method: "POST",
           body: combinedFormData,
@@ -228,6 +242,8 @@ const UploadImagesVideos = () => {
     } catch (error) {
       console.error("Error al crear la publicación:", error);
       alert("Error al crear la publicación. Por favor, intenta de nuevo.");
+    } finally {
+      setIsLoading(false); // <--- Finalizar carga
     }
   };
 
@@ -262,8 +278,23 @@ const UploadImagesVideos = () => {
             <div className="mt-6 flex justify-center">
               {/* Botón de envío */}
               <div className="flex justify-center ">
-                <Button type="submit" className="min-w-[20rem] text-lg">
-                  Enviar y seguir con la validación
+                <Button
+                  type="submit"
+                  className="min-w-[20rem] text-lg"
+                  disabled={
+                    isLoading ||
+                    !formData.userId ||
+                    (!formData.images.length && !formData.videos.length)
+                  } // Deshabilitar si está cargando, no hay userId o no hay archivos
+                >
+                  {isLoading ? (
+                    <>
+                      <SimpleSpinner />
+                      Actualizando la Publicidad
+                    </>
+                  ) : (
+                    "Enviar y seguir con la validación"
+                  )}
                 </Button>
               </div>
             </div>

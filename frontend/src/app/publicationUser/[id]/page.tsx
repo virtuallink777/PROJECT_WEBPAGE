@@ -84,7 +84,7 @@ const PublicacionDetalle = () => {
     const fetchPublicacion = async () => {
       try {
         const response = await fetch(
-          `http://localhost:4004/api/editPublications/${publicationId}`
+          `http://localhost:4004/api/publicationsByUserId/${publicationId}`
         );
         if (!response.ok) {
           throw new Error("No se pudo obtener la publicación");

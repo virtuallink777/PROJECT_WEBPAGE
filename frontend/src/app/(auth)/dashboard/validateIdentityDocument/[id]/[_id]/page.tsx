@@ -136,7 +136,7 @@ export default function ValidateIdentityDocumentPage() {
     try {
       // Asegúrate que la URL de la API sea correcta.
       // El userId (que viene de params.id) se usa en la URL.
-      const apiUrl = `http://localhost:4004/api/validate/${userId}`;
+      const apiUrl = `http://localhost:4004/api/validate-identity/${userId}`;
 
       const response = await fetch(apiUrl, {
         method: "POST",
