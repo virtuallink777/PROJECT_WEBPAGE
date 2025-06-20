@@ -50,10 +50,33 @@ interface IdentityValidationPayload {
 const loadPendingValidations = (): PendingValidation[] => {
   try {
     if (fs.existsSync(VALIDATIONS_FILE)) {
+      console.log(`[VALIDATES_ADMIN] 📂 Leyendo archivo ${VALIDATIONS_FILE}`);
+
       const data = fs.readFileSync(VALIDATIONS_FILE, "utf-8");
+      console.log("[VALIDATES_ADMIN] 📝 Contenido crudo del archivo:", {
+        length: data.length,
+        first100Chars:
+          data.substring(0, 100) + (data.length > 100 ? "..." : ""),
+      });
+
       const parsedData = JSON.parse(data);
+      console.log("[VALIDATES_ADMIN] 🔍 Datos parseados:", {
+        type: typeof parsedData,
+        isArray: Array.isArray(parsedData),
+        firstItem: Array.isArray(parsedData) ? parsedData[0] : parsedData,
+      });
+
       // Validar que parsedData es un array antes de castear
       if (Array.isArray(parsedData)) {
+        console.log("[VALIDATES_ADMIN] ✔️ Datos válidos, retornando array");
+        // Log detallado del primer elemento para verificar las URLs
+        if (parsedData.length > 0) {
+          console.log("[VALIDATES_ADMIN] 🔎 Primer elemento del array:", {
+            type: parsedData[0].type,
+            userId: parsedData[0].userId,
+            fileUrls: parsedData[0].fileUrls, // <-- Esto mostrará si las URLs están bien
+          });
+        }
         return parsedData as PendingValidation[];
       }
       console.error(
@@ -66,6 +89,12 @@ const loadPendingValidations = (): PendingValidation[] => {
     }
   } catch (error) {
     console.error("[VALIDATES_ADMIN] ❌ Error al cargar validaciones:", error);
+    // Log adicional para errores de parseo
+    if (error instanceof SyntaxError) {
+      console.error(
+        "[VALIDATES_ADMIN] 🚨 El archivo JSON podría estar corrupto"
+      );
+    }
   }
   return [];
 };
@@ -175,6 +204,13 @@ validateAdmin.post("/:userId", uploadFields, (req: Request, res: Response) => {
     // Asumiendo que tu servidor sirve estáticos desde una ruta base como /uploads
     return `http://localhost:4004/uploads/${userId}/${filename}`;
   };
+
+  console.log("Archivos recibidos:", {
+    fotoCartel: files.fotoCartel?.[0]?.filename,
+    fotoRostro: files.fotoRostro?.[0]?.filename,
+    documentFront: files.documentFront?.[0]?.filename,
+    documentBack: files.documentBack?.[0]?.filename,
+  });
 
   if (files.fotoCartel?.[0]?.filename) {
     responseUrls.fotoCartel = generateFileUrl(

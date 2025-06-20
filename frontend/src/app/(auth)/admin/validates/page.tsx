@@ -203,6 +203,7 @@ const AdminPanel = () => {
       }
 
       console.log("Datos de publicación a validar:", body);
+      console.log("URLs de respuesta recibidas:", responseUrls);
 
       let extractedData = {};
 
@@ -230,6 +231,7 @@ const AdminPanel = () => {
         id,
         images: formattedImages,
         email,
+
         shippingDateValidate,
         responseUrls,
       };

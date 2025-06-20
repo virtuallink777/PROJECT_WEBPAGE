@@ -88,6 +88,13 @@ export const configureSockets = (io: Server) => {
           console.log(
             `[Socket ${socket.id}]   -> Procesando validación pendiente: tipo ${validation.type}`
           );
+          // 👇 Añade estos logs de verificación
+          console.log("=== INICIO DE VALIDACIÓN PENDIENTE ===");
+          console.log("Tipo de validación:", validation.type);
+          console.log(
+            "Contenido completo de la validación:",
+            JSON.stringify(validation, null, 2)
+          );
           if (validation.type === "identity") {
             const identityValidation = validation as PendingIdentityValidation;
             const payloadForIdentity: IdentityValidationPayload = {
@@ -104,6 +111,10 @@ export const configureSockets = (io: Server) => {
             );
             socket.emit("validate-identity-document", payloadForIdentity);
           } else if (validation.type === "publication") {
+            console.log("📢 Emitiendo validate-publication");
+            console.log("Contenido de fileUrls:", validation.fileUrls);
+            console.log("Tipo de fileUrls:", typeof validation.fileUrls);
+
             console.log(
               `[Socket ${socket.id}]     Emitiendo 'validate-publication'`
             );
