@@ -4,7 +4,7 @@ import { fifteenMinutesFromNow, thirtyDaysFromNow } from "./date";
 const secure = process.env.NODE_ENV !== "development";
 
 const defaults: CookieOptions = {
-  sameSite: "strict",
+  sameSite: "none",
   httpOnly: true,
   secure,
 };
@@ -35,12 +35,12 @@ export const clearAuthCookies = (res: Response) => {
     .clearCookie("accessToken", {
       httpOnly: true,
       secure,
-      sameSite: "strict",
+      sameSite: "none",
     })
     .clearCookie("refreshToken", {
       path: "/auth/refresh",
       httpOnly: true,
       secure,
-      sameSite: "strict",
+      sameSite: "none",
     });
 };
