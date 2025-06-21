@@ -234,7 +234,7 @@ export default function Home() {
 
         // 1. Primero cargar todas las publicaciones TOP
         const topRes = await fetch(
-          "http://localhost:4004/api/publicationsTOP",
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/publicationsTOP`,
           {
             method: "GET",
           }
@@ -252,7 +252,7 @@ export default function Home() {
         // 2. Luego cargar todas las publicaciones NOTOP
 
         const nonTopRes = await fetch(
-          "http://localhost:4004/api/publicationsNOTOP",
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/publicationsNOTOP`,
           {
             method: "GET",
           }
@@ -359,7 +359,7 @@ export default function Home() {
 
   const handleClick = async (postId: string, eventType: "click") => {
     try {
-      await fetch("http://localhost:4004/api/metrics", {
+      await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/metrics`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ postId, eventType }),

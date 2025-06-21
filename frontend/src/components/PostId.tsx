@@ -9,7 +9,7 @@ const PostMetrics = ({ postId }: { postId?: string }) => {
     if (!postId) return; // Si postId es undefined, no hacemos la petición
     console.log("Obteniendo métricas para postId:", postId); // 👈 Agrega esto
 
-    fetch(`http://localhost:4004/api/metrics/${postId}`) // ✅ Enviamos correctamente los datos
+    fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/metrics/${postId}`) // ✅ Enviamos correctamente los datos
       .then((res) => res.json())
       .then((data) => {
         console.log("Datos recibidos:", data); // 👈 Verifica qué devuelve el backend

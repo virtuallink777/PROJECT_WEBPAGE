@@ -18,7 +18,9 @@ const PaymentSuccessPage = () => {
     if (transactionId) {
       // Pedimos al backend validar el pago
       axios
-        .get(`http://localhost:4004/api/pse/status/${transactionId}`)
+        .get(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/pse/status/${transactionId}`
+        )
         .then((res) => {
           const transaction = res.data;
           if (
@@ -52,7 +54,7 @@ const PaymentSuccessPage = () => {
       paymentData.transactionId = transactionId;
 
       fetch(
-        `http://localhost:4004/api/updatePublicationPayment/${publicationId}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/updatePublicationPayment/${publicationId}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

@@ -55,8 +55,6 @@ interface FormData {
   videos: VideoData[];
 }
 
-const API_URL = "http://localhost:4004"; // Asegúrate de que esta URL sea correcta para tu entorno
-
 // No son necesarias como variables globales, se derivarán del estado
 // let imagesCount = 0;
 // let videosCount = 0;
@@ -241,13 +239,13 @@ const EditPublication: React.FC = () => {
     // el payload actual está bien. Aquí la lógica dependerá de tu backend.
 
     // 2. Logging para verificar la URL y el payload
-    const targetUrl = `${API_URL}/api/updatePublications/${publicationIdFromParams}`;
+    const targetUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/updatePublications/${publicationIdFromParams}`;
     console.log("FRONTEND: handleSubmit - Intentando PUT a:", targetUrl);
     // console.log("FRONTEND: handleSubmit - Payload:", JSON.stringify(payload, null, 2)); // Puede ser muy largo, pero útil
 
     try {
       const response = await fetch(
-        `${API_URL}/api/updatePublications/${publicationIdFromParams}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/updatePublications/${publicationIdFromParams}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" }, // Cambiar si envías FormData

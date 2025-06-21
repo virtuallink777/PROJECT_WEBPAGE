@@ -13,10 +13,9 @@ import { Button } from "@/components/ui/button";
 import ChatReceptor from "@/components/ChatReceptor";
 import parseBackendDate from "@/lib/parseBackendDate";
 import { useRouter } from "next/navigation";
-import axios, { AxiosError } from "axios"; // Importa AxiosError
 
 // El socket para la comunicación en tiempo real no relacionada con 'api' de Axios// revisar primero
-const socket = io("http://localhost:4004"); // Renombrado para evitar confusión con el hook useSocket
+const socket = io(process.env.NEXT_PUBLIC_BACKEND_URL); // Renombrado para evitar confusión con el hook useSocket
 
 type Publication = {
   _id: string;
@@ -77,7 +76,9 @@ const ViewPublications = () => {
   const [dataPay, setDataPay] = useState<{ [key: string]: any }>({});
   const [canCreateMorePublications, setCanCreateMorePublications] =
     useState(true);
-  const socketPay = useSocket("http://localhost:4004");
+  const socketPay = useSocket(
+    process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:4004"
+  );
   const [clientId, setClientId] = useState<string | null>(null);
   const [ownerId, setOwnerId] = useState<string | null>(null);
 
@@ -253,7 +254,7 @@ const ViewPublications = () => {
     console.log("Actualizando estado de la publicación:", _id);
     try {
       const response = await fetch(
-        `http://localhost:4004/api/updatePublicationsEndTop`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/updatePublicationsEndTop`,
         {
           method: "PUT",
           headers: {

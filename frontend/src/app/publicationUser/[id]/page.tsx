@@ -84,7 +84,7 @@ const PublicacionDetalle = () => {
     const fetchPublicacion = async () => {
       try {
         const response = await fetch(
-          `http://localhost:4004/api/publicationsByUserId/${publicationId}`
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/publicationsByUserId/${publicationId}`
         );
         if (!response.ok) {
           throw new Error("No se pudo obtener la publicación");
@@ -140,7 +140,7 @@ const PublicacionDetalle = () => {
   ) => {
     console.log("📌 handleClick ejecutado con:", { postId, eventType });
     try {
-      await fetch("http://localhost:4004/api/metrics", {
+      await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/metrics`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ postId, eventType }),

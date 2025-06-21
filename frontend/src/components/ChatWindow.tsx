@@ -26,7 +26,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     const loadMessages = async () => {
       try {
         const response = await fetch(
-          `http://localhost:4004/api/getConversations/${conversationId}/messages`
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/getConversations/${conversationId}/messages`
         );
         if (!response.ok) {
           throw new Error("Error al cargar los mensajes");
@@ -47,7 +47,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     try {
       // Llamar al endpoint para enviar un mensaje
       const response = await fetch(
-        `http://localhost:4004/api/conversations/${conversationId}/messages`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/conversations/${conversationId}/messages`,
         {
           method: "POST",
           headers: {

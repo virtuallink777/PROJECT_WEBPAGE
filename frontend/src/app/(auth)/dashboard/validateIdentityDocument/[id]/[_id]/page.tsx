@@ -51,7 +51,7 @@ export default function ValidateIdentityDocumentPage() {
       console.log("pubId:", pubId);
       try {
         const response = await fetch(
-          `http://localhost:4004/api/editPublications/${pubId}`
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/editPublications/${pubId}`
         );
 
         if (!response.ok) {
@@ -136,12 +136,14 @@ export default function ValidateIdentityDocumentPage() {
     try {
       // Asegúrate que la URL de la API sea correcta.
       // El userId (que viene de params.id) se usa en la URL.
-      const apiUrl = `http://localhost:4004/api/validate-identity/${userId}`;
 
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        body: formData,
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/validate-identity/${userId}`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
 
       const result = await response.json();
 

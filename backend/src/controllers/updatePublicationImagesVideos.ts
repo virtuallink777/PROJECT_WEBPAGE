@@ -24,7 +24,7 @@ export const updatePublicationImagesVideos = async (
 
         const fullUrl = imageUrl.startsWith("http")
           ? imageUrl
-          : `http://localhost:4004${imageUrl}`;
+          : `${process.env.NEXT_PUBLIC_BACKEND_URL}${imageUrl}`;
 
         const response = await axios.get(fullUrl, {
           responseType: "arraybuffer",

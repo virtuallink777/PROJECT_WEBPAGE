@@ -175,7 +175,7 @@ const AdminPanel = () => {
     try {
       // Llamar a la API para actualizar el estado en la base de datos
       const response = await fetch(
-        `http://localhost:4004/api/state-publication/`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/state-publication/`,
         {
           method: "PUT",
           headers: {
@@ -346,7 +346,7 @@ const AdminPanel = () => {
         );
         try {
           const response = await fetch(
-            `http://localhost:4004/api/editPublications/${data.publicationId}` // Usar data.publicationId
+            `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/editPublications/${data.publicationId}` // Usar data.publicationId
           );
 
           if (!response.ok) {

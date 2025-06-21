@@ -33,7 +33,7 @@ const handleLogoutAndRedirect = () => {
 };
 
 const api = axios.create({
-  baseURL: "http://localhost:4004", // URL base de tu API
+  baseURL: process.env.NEXT_PUBLIC_BACKEND_URL, // URL base de tu API
   headers: {
     "Content-Type": "application/json",
   },

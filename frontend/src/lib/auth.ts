@@ -16,7 +16,7 @@ interface RegisterResponse {
   isAdmin: string;
 }
 
-const socket = io("http://localhost:4004");
+const socket = io(process.env.NEXT_PUBLIC_BACKEND_URL);
 
 export const signUp = async (
   data: RegisterInput
@@ -27,7 +27,7 @@ export const signUp = async (
 
     // enviar los datos al backend
     const response = await axios.post(
-      "http://localhost:4004/auth/register",
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/register`,
       data
     );
 
@@ -60,7 +60,7 @@ export const login = async (
     } else {
       // enviar los datos al backend
       const response = await axios.post(
-        "http://localhost:4004/auth/login",
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/login`,
         data,
         {
           withCredentials: true, // Esta es la línea clave para manejar cookies
@@ -85,7 +85,7 @@ export const login = async (
 export const forgotPassword = async (email: string) => {
   try {
     const response = await axios.post(
-      "http://localhost:4004/auth/password/forgot",
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/password/forgot`,
       {
         email,
       },
@@ -122,7 +122,7 @@ export const logout = async () => {
   localStorage.removeItem("isAdmin"); // Limpiar isAdmin en logout
   try {
     const response = await axios.get(
-      "http://localhost:4004/auth/logout",
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/logout`,
 
       {
         withCredentials: true,

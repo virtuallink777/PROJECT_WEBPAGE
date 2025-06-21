@@ -63,7 +63,7 @@ const ValidateRejected = () => {
       console.log("Datos enviados al state-pub:", { estado, razon, _id });
       try {
         const response = await fetch(
-          `http://localhost:4004/api/state-publication/`,
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/state-publication/`,
           {
             method: "PUT",
             headers: {
@@ -158,7 +158,7 @@ const ValidateRejected = () => {
     }
     try {
       const response = await fetch(
-        `http://localhost:4004/api/validate/${userId}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/validate/${userId}`,
         {
           method: "POST",
           body: formData,

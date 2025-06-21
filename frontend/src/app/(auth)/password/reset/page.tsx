@@ -56,7 +56,7 @@ const ResetPassword = () => {
     try {
       setIsLoading(true);
       const response = await axios.post(
-        "http://localhost:4004/auth/password/reset",
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/password/reset`,
         {
           verificationCode: code,
           password,

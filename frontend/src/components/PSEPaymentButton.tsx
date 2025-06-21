@@ -24,24 +24,27 @@ const PSEPaymentButton = ({
     handlePayment("pse"); // Llama a la función handlePayment con el método "pse"
 
     try {
-      const response = await fetch("http://localhost:4004/api/pse/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          amount: selectedPricing.price, // usa el monto real seleccionado
-          description: `Pago de publicación (${selectedPricing.days} días - ${selectedPricing.hours} horas)`,
-          method: "bank_account", // obligatorio para PSE
-          customer: {
-            name: "Juan",
-            last_name: "Pérez",
-            email: "juan.perez@example.com",
-            phone_number: "3001234567",
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/pse/create`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-          requires_account: true,
-        }),
-      });
+          body: JSON.stringify({
+            amount: selectedPricing.price, // usa el monto real seleccionado
+            description: `Pago de publicación (${selectedPricing.days} días - ${selectedPricing.hours} horas)`,
+            method: "bank_account", // obligatorio para PSE
+            customer: {
+              name: "Juan",
+              last_name: "Pérez",
+              email: "juan.perez@example.com",
+              phone_number: "3001234567",
+            },
+            requires_account: true,
+          }),
+        }
+      );
 
       const data = await response.json();
 

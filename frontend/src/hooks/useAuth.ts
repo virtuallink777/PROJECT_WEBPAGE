@@ -8,9 +8,12 @@ export const useAuth = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await axios.get("http://localhost:4004/user/me", {
-          withCredentials: true,
-        });
+        const response = await axios.get(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/user/me`,
+          {
+            withCredentials: true,
+          }
+        );
 
         setUser(response.data);
         setLoading(false);

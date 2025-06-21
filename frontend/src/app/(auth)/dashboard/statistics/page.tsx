@@ -65,8 +65,6 @@ const PostStats = () => {
 
   console.log("Publicaciones:", publications);
 
-  const baseURL = "http://localhost:4004";
-
   return (
     <div className="flex flex-col gap-4 w-full h-full items-center justify-center mt-4">
       {loading ? (
@@ -83,7 +81,7 @@ const PostStats = () => {
               <Image
                 src={
                   pub.images[0]?.url
-                    ? `${baseURL}${pub.images[0].url}`
+                    ? `${process.env.NEXT_PUBLIC_BACKEND_URL}${pub.images[0].url}`
                     : "/default-image.png"
                 }
                 width={300}

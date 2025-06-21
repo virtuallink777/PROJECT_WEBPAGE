@@ -150,7 +150,7 @@ const UploadImagesVideos = () => {
       console.log("combinedFormData:", combinedFormData);
       console.log("formData.userId:", formData.userId);
       const ResponseImageVideo = await fetch(
-        `http://localhost:4004/api/publicacionesImageUpdate/upload/${formData.userId}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/publicacionesImageUpdate/upload/${formData.userId}`,
         {
           method: "POST",
           body: combinedFormData,

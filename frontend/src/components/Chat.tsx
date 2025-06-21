@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import io from "socket.io-client";
 
 // Inicializar el socket una sola vez
-const socket = io("http://localhost:4004");
+const socket = io(process.env.NEXT_PUBLIC_BACKEND_URL);
 
 interface ChatProps {
   conversationId: string; // ID de la conversación

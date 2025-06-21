@@ -223,7 +223,7 @@ const CreatePublications: React.FC = () => {
       }
 
       const ResponseImageVideo = await fetch(
-        `http://localhost:4004/api/publicacionesImage/upload/${formData.userId}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/publicacionesImage/upload/${formData.userId}`,
         {
           method: "POST",
           body: combinedFormData,

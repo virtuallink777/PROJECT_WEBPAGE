@@ -125,7 +125,7 @@ export default function ValidarPublicidad() {
     }
     try {
       const response = await fetch(
-        `http://localhost:4004/api/validate/${userId}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/validate/${userId}`,
         {
           method: "POST",
           body: formData,

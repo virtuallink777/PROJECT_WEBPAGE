@@ -1,6 +1,6 @@
 import { io, Socket } from "socket.io-client";
 
-const URL = "http://localhost:4004";
+const URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
 export const socket: Socket = io(URL, {
   autoConnect: false, // Evita conexión automática
