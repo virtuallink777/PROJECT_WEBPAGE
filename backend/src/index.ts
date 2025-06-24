@@ -36,7 +36,6 @@ import contactRoutes from "./routes/contactRoute"; // Importamos el router corre
 import pseRoutes from "./routes/pseRoutes"; // Importamos el router correctamente
 import identityValidationRouterFromFile from "./routes/identityValidationRoutes";
 import ImagesVideosUpload from "./routes/ImagesVideosUpload";
-import { authorizePublicationAccess } from "./middleware/authorization"; // El nuevo middleware
 
 const app = express();
 

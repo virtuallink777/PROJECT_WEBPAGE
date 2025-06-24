@@ -3,7 +3,6 @@
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { forgotPassword, login } from "@/lib/auth";
-
 import { LoginInput } from "@/typeSchema/aut.schema";
 import { Label } from "@radix-ui/react-label";
 import { isAxiosError } from "axios";

@@ -17,8 +17,16 @@ type SignOptionsAndSecret = SignOptions & {
   secret: string;
 };
 
-const defaults: SignOptions = {
-  audience: ["user"],
+//const defaults: SignOptions = {
+//audience: ["user"] as [string, ...string[]], // 👈 aquí está el fix
+//};
+
+const signDefaults: SignOptions = {
+  audience: ["user"] as [string, ...string[]],
+};
+
+const verifyDefaults: VerifyOptions = {
+  audience: ["user"] as [string | RegExp, ...(string | RegExp)[]],
 };
 
 export const accessTokenSignOptions: SignOptionsAndSecret = {
@@ -37,7 +45,7 @@ export const signToken = (
 ) => {
   const { secret, ...signOptions } = options || accessTokenSignOptions;
   return jwt.sign(payload, secret, {
-    ...defaults,
+    ...signDefaults,
     ...signOptions,
   });
 };
@@ -48,10 +56,18 @@ export const verifyToken = <TPayload extends object = AccessTokenPayload>(
 ) => {
   const { secret = JWT_SECRET, ...verifyOptions } = options || {};
   try {
-    const payload = jwt.verify(token, secret, {
-      ...defaults,
+    const decoded = jwt.verify(token, secret, {
+      ...verifyDefaults,
       ...verifyOptions,
-    }) as TPayload;
+    });
+
+    if (!decoded || typeof decoded === "string") {
+      return {
+        error: "Invalid token payload",
+      };
+    }
+
+    const payload = decoded as TPayload;
     return { payload };
   } catch (error: any) {
     return {

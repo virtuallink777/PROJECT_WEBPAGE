@@ -1,10 +1,11 @@
 import { CookieOptions, Response } from "express";
-import { fifteenMinutesFromNow, thirtyDaysFromNow } from "./date";
 
 const secure = process.env.NODE_ENV !== "development";
 
+console.log("NODE_ENV:", process.env.NODE_ENV);
+
 const defaults: CookieOptions = {
-  sameSite: "none",
+  sameSite: "lax",
   httpOnly: true,
   secure,
 };
@@ -35,12 +36,12 @@ export const clearAuthCookies = (res: Response) => {
     .clearCookie("accessToken", {
       httpOnly: true,
       secure,
-      sameSite: "none",
+      sameSite: "lax",
     })
     .clearCookie("refreshToken", {
       path: "/auth/refresh",
       httpOnly: true,
       secure,
-      sameSite: "none",
+      sameSite: "lax",
     });
 };
