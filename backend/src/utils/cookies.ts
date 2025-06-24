@@ -1,13 +1,15 @@
 import { CookieOptions, Response } from "express";
 
-const secure = process.env.NODE_ENV !== "development";
+// Determina si estamos en producción (en Render) o desarrollo (local)
+const isProduction = process.env.NODE_ENV === "production";
 
 console.log("NODE_ENV:", process.env.NODE_ENV);
+console.log("Cookies will be set with secure =", isProduction);
 
 const defaults: CookieOptions = {
-  sameSite: "lax",
+  sameSite: isProduction ? "none" : "lax",
   httpOnly: true,
-  secure,
+  secure: isProduction, // Usa secure=true solo en producción
 };
 
 export const getAccessTokenCookieOptions = (): CookieOptions => ({
@@ -32,16 +34,8 @@ export const setAuthCookies = ({ res, accessToken, refreshToken }: Params) => {
 };
 
 export const clearAuthCookies = (res: Response) => {
+  // Al limpiar, usa las mismas opciones con las que se creó la cookie
   return res
-    .clearCookie("accessToken", {
-      httpOnly: true,
-      secure,
-      sameSite: "lax",
-    })
-    .clearCookie("refreshToken", {
-      path: "/auth/refresh",
-      httpOnly: true,
-      secure,
-      sameSite: "lax",
-    });
+    .clearCookie("accessToken", getAccessTokenCookieOptions())
+    .clearCookie("refreshToken", getRefreshTokenCookieOptions());
 };
