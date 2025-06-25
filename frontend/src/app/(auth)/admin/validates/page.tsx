@@ -1,18 +1,20 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { socket } from "@/lib/socket";
+//import { socket } from "@/lib/socket";
+
+import { useSocketContext } from "@/context/SocketContext"; // NUEVO -> Importamos el hook del contexto
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { Socket } from "socket.io-client";
+//import { Socket } from "socket.io-client";
 
 // 🔹 Extender el tipo de Window para incluir 'socket'
-declare global {
-  interface Window {
-    socket: Socket;
-  }
-}
+//declare global {
+//interface Window {
+// socket: Socket;
+// }
+//}
 
 interface PublicationForValidation {
   // Renombré para mayor claridad
@@ -77,6 +79,9 @@ async function guardarUserId() {
 }
 
 const AdminPanel = () => {
+  // NUEVO -> Obtenemos el socket ÚNICO desde el contexto
+  const { socket } = useSocketContext();
+
   const [publicaciones, setPublicaciones] = useState<
     PublicationForValidation[]
   >([]);
@@ -86,76 +91,54 @@ const AdminPanel = () => {
   const [activeImages, setActiveImages] = useState<string[]>([]);
 
   useEffect(() => {
-    const handleConnect = () => {
-      console.log("ADMIN_FRONTEND: Socket conectado! ID:", socket.id); // <-- Log del ID del socket
+    // NUEVO -> Condición de seguridad, no hacer nada si el socket no está listo
+    if (!socket) return;
 
-      // Ahora que estamos conectados, intentamos identificar al admin
-      async function fetchAndIdentifyAdmin() {
-        await guardarUserId(); // Obtener y guardar el userId del admin
+    //const handleConnect = () => {
+    //console.log("ADMIN_FRONTEND: Socket conectado! ID:", socket.id); // <-- Log del ID del socket
 
-        const storedUserId = localStorage.getItem("userId");
-        console.log(
-          "📌 userId en localStorage (después de conectar):",
-          storedUserId
-        );
-        if (storedUserId) {
-          setUserId(storedUserId); // Actualizar estado local si es necesario
+    // Ahora que estamos conectados, intentamos identificar al admin
+    async function fetchAndIdentifyAdmin() {
+      await guardarUserId(); // Obtener y guardar el userId del admin
 
-          const adminData = {
-            adminId: storedUserId,
-            email: "luiscantorhitchclief@gmail.com", // O el email real del admin
-          };
-          console.log(
-            "ADMIN_FRONTEND: Enviando 'identificar-admin' con datos:",
-            adminData
-          );
-          socket.emit("identificar-admin", adminData);
-        } else {
-          console.log(
-            "ADMIN_FRONTEND: ❌ No se encontró userId en localStorage para identificar al admin."
-          );
-        }
-      }
-      fetchAndIdentifyAdmin();
-    };
-
-    const handleDisconnect = (reason: Socket.DisconnectReason) => {
-      console.log("ADMIN_FRONTEND: Socket desconectado, razón:", reason);
-    };
-
-    // Registrar los oyentes ANTES de conectar
-    socket.on("connect", handleConnect);
-    socket.on("disconnect", handleDisconnect);
-
-    // Si el socket no está conectado, intentar conectar.
-    // Si ya está conectado, el evento 'connect' podría no dispararse de nuevo
-    // a menos que se haya desconectado y reconectado.
-    // Si ya está conectado y queremos forzar la identificación, podríamos llamar a fetchAndIdentifyAdmin() directamente.
-    if (!socket.connected) {
+      const storedUserId = localStorage.getItem("userId");
       console.log(
-        "ADMIN_FRONTEND: Socket no conectado. Intentando conectar..."
+        "📌 userId en localStorage (después de conectar):",
+        storedUserId
       );
-      socket.connect();
+      if (storedUserId) {
+        setUserId(storedUserId); // Actualizar estado local si es necesario
+
+        const adminData = {
+          adminId: storedUserId,
+          email: "luiscantorhitchclief@gmail.com", // O el email real del admin
+        };
+        console.log(
+          "ADMIN_FRONTEND: Enviando 'identificar-admin' con datos:",
+          adminData
+        );
+
+        socket?.emit("identificar-admin", adminData);
+      } else {
+        console.log(
+          "ADMIN_FRONTEND: ❌ No se encontró userId en localStorage para identificar al admin."
+        );
+      }
+    }
+    // Si el socket está conectado, nos identificamos.
+    // Si no lo está, el SocketProvider lo conectará y este efecto se re-ejecutará cuando 'socket' cambie de null a una instancia.
+    if (socket.connected) {
+      fetchAndIdentifyAdmin();
     } else {
-      // Si ya estaba conectado al montar el componente, disparamos la identificación manualmente.
-      // Esto es importante si el componente se monta y el socket ya estaba conectado de una sesión previa
-      // o por otra parte de la aplicación.
-      console.log("ADMIN_FRONTEND: Socket ya estaba conectado. ID:", socket.id);
-      handleConnect(); // Llamar a handleConnect para que ejecute la lógica de identificación
+      // Opcional: escuchar el evento 'connect' solo para identificarse
+      socket.once("connect", fetchAndIdentifyAdmin);
     }
 
-    // Limpieza al desmontar
+    // Limpieza: quitar el listener por si el componente se desmonta antes de conectar
     return () => {
-      socket.off("connect", handleConnect);
-      socket.off("disconnect", handleDisconnect);
-      // Considera si realmente quieres desconectar el socket al desmontar este panel
-      // o si debe persistir para otras partes de la app.
-      // Si solo el AdminPanel usa este socket, entonces sí, desconectar está bien.
-      // if (socket.connected) {
-      //   socket.disconnect();
-      // }
+      socket.off("connect", fetchAndIdentifyAdmin);
     };
-  }, []); // El array de dependencias vacío asegura que se ejecute solo al montar/desmontar
+  }, [socket]); // NUEVO -> El efecto depende del socket
 
   // Función para manejar el clic en una imagen
   const handleImageClick = (url: string) => {
@@ -196,7 +179,11 @@ const AdminPanel = () => {
   };
 
   useEffect(() => {
-    socket.on("validate-publication", (body, responseUrls) => {
+    // NUEVO -> Condición de seguridad
+    if (!socket) return;
+
+    const handleValidatePublication = (body, responseUrls) => {
+      // ... (toda tu lógica interna de este handler permanece igual)
       if (!body || !responseUrls) {
         console.error("Datos de publicación a validar no recibidos");
         return;
@@ -251,12 +238,14 @@ const AdminPanel = () => {
 
         return nuevasPublicaciones;
       });
-    });
+    };
+
+    socket.on("validate-publication", handleValidatePublication);
 
     return () => {
-      socket.off("validate-publication");
+      socket.off("validate-publication", handleValidatePublication);
     };
-  }, []);
+  }, [socket]); // NUEVO -> Dependencia del socket
 
   // 🔹 Obtener publicaciones guardadas en localStorage
   useEffect(() => {
@@ -289,6 +278,8 @@ const AdminPanel = () => {
   ///   ****************  REVISAR ESTE USEEFFECT ***************** ///
 
   useEffect(() => {
+    // NUEVO -> Condición de seguridad
+    if (!socket) return;
     const handleIdentityDocumentValidationRequest = async (
       // <--- Convertir a async
       data: IdentityValidationPayload
@@ -441,8 +432,7 @@ const AdminPanel = () => {
         "ADMIN_FRONTEND: (useEffect 2) Oyente para 'validate-identity-document' ELIMINADO."
       );
     };
-  }, []); // Dependencias: asegúrate de que si usas algo de fuera del useEffect (que cambie) esté aquí.
-  // En este caso, como solo usa 'socket' y 'setPublicaciones', el array vacío está bien.
+  }, [socket]); // NUEVO -> Dependencia del socket
 
   const deleteValidatePublication = (id: string) => {
     console.log("ID recibido para eliminar:", id);

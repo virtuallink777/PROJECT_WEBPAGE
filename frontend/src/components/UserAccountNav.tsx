@@ -14,7 +14,7 @@ import { Button } from "./ui/button";
 import { useEffect, useState } from "react";
 import io from "socket.io-client";
 
-const socket = io(process.env.NEXT_PUBLIC_BACKEND_URL);
+const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL);
 
 const UserAccountNav = ({ user }: { user: User }) => {
   const router = useRouter();

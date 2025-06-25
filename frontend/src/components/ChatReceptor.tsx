@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import io from "socket.io-client";
 
 // Solo se inicializa una vez y se reutiliza en toda la aplicación
-const socket = io(process.env.NEXT_PUBLIC_BACKEND_URL, {
+const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL, {
   transports: ["websocket", "polling"],
   withCredentials: true,
   autoConnect: false, // Evita la conexión automática

@@ -16,7 +16,7 @@ interface RegisterResponse {
   isAdmin: string;
 }
 
-const socket = io(process.env.NEXT_PUBLIC_BACKEND_URL);
+const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL);
 
 export const signUp = async (
   data: RegisterInput

@@ -1,6 +1,9 @@
+// src>app>layout.tsx
+
 import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { SocketProvider } from "@/context/SocketContext"; // <-- 1. IMPORTAR
 
 export const metadata = {
   title: "Lujuria: Las mejores compañias",
@@ -82,13 +85,16 @@ export default function RootLayout({
         <link rel="icon" href="/3d3.png" type="image/png" sizes="128x128" />
         {/* Puedes añadir más cosas aquí */}
       </head>
-      <body className="min-h-screen flex flex-col antialiased bg-rose-100 bg-opacity-50 ">
-        <Navbar />
 
-        <main className="flex-grow ">{children}</main>
+      <SocketProvider>
+        <body className="min-h-screen flex flex-col antialiased bg-rose-100 bg-opacity-50 ">
+          <Navbar />
 
-        <Footer />
-      </body>
+          <main className="flex-grow ">{children}</main>
+
+          <Footer />
+        </body>
+      </SocketProvider>
     </html>
   );
 }

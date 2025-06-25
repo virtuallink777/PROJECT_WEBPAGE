@@ -36,6 +36,7 @@ import contactRoutes from "./routes/contactRoute"; // Importamos el router corre
 import pseRoutes from "./routes/pseRoutes"; // Importamos el router correctamente
 import identityValidationRouterFromFile from "./routes/identityValidationRoutes";
 import ImagesVideosUpload from "./routes/ImagesVideosUpload";
+import { isUserOnlineForChat } from "./sockets/index"; // Importamos la función para verificar si un usuario está conectado
 
 const app = express();
 
@@ -50,6 +51,20 @@ configureSockets(io);
 
 // Configurar WebSockets con la función importada
 configureSocketChat(io);
+
+// --- NUEVA RUTA DE API PARA ESTADO DE PRESENCIA ---
+app.get("/api/user-status/:userId", (req, res) => {
+  const { userId } = req.params;
+
+  if (!userId) {
+    return res.status(400).json({ error: "User ID es requerido" });
+  }
+
+  // Usa la función importada para chequear
+  const online = isUserOnlineForChat(userId);
+
+  res.status(200).json({ online });
+});
 
 // Middleware para parsear JSON
 app.use(express.json()); // Esto está bien para rutas POST/PUT

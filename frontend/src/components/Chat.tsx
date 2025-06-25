@@ -1,8 +1,9 @@
+import { useSocketContext } from "@/context/SocketContext";
 import React, { useEffect, useState } from "react";
-import io from "socket.io-client";
+//import io from "socket.io-client";
 
 // Inicializar el socket una sola vez
-const socket = io(process.env.NEXT_PUBLIC_BACKEND_URL);
+//const socket = io(process.env.NEXT_PUBLIC_SOCKET_UR);
 
 interface ChatProps {
   conversationId: string; // ID de la conversación
@@ -17,6 +18,9 @@ const Chat: React.FC<ChatProps> = ({
   ownerId,
   onClose,
 }) => {
+  // NUEVO -> Obtenemos el socket ÚNICO desde el contexto
+  const { socket } = useSocketContext();
+
   const [messages, setMessages] = useState<
     Array<{ senderId: string; content: string; timestamp: Date }>
   >([]);
@@ -32,6 +36,9 @@ const Chat: React.FC<ChatProps> = ({
 
   // Efecto para manejar la conexión y los mensajes
   useEffect(() => {
+    // NUEVO -> Condición de seguridad, no hacer nada si el socket no está listo
+    if (!socket) return;
+
     // Obtener la conversación guardada del sessionStorage
     const storedConversationId =
       sessionStorage.getItem("current_conversation") || conversationId;
@@ -82,12 +89,13 @@ const Chat: React.FC<ChatProps> = ({
       socket.off("newMessage", handleNewMessage);
       socket.off("userOffline", handleUserOffline);
     };
-  }, [conversationId, userId]);
+  }, [conversationId, userId, socket]);
 
   // Función para enviar un mensaje
   // Modificar la función de envío de mensajes para manejar notificaciones
   const sendMessage = (message: string) => {
-    if (!message.trim()) return;
+    // NUEVO -> Condición de seguridad
+    if (!socket || !message.trim()) return;
 
     let receiverId = ownerId;
 

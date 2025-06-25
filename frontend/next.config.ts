@@ -25,6 +25,15 @@ const nextConfig = {
     // Si usabas la propiedad 'domains' (ahora obsoleta pero podría estar en proyectos antiguos):
     // domains: ['res.cloudinary.com'], // Esta es la forma antigua, 'remotePatterns' es la recomendada
   },
+
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: "https://backend-2i85.onrender.com/:path*", // <-- Reemplaza esto
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;

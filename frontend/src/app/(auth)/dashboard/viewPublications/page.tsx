@@ -5,17 +5,19 @@ import { Card } from "@/components/ui/card";
 import api from "@/lib/api";
 import Image from "next/image";
 import Link from "next/link";
-import { io } from "socket.io-client";
-import useSocket from "@/hooks/useSocket";
+//import { io } from "socket.io-client";
+//import useSocket from "@/hooks/useSocket";
 import calculateRotationTime from "@/components/calculateRotationTime";
 import calculateEndDate from "@/components/calculateEndDate";
 import { Button } from "@/components/ui/button";
 import ChatReceptor from "@/components/ChatReceptor";
 import parseBackendDate from "@/lib/parseBackendDate";
 import { useRouter } from "next/navigation";
+import { useSocketContext } from "@/context/SocketContext"; // NUEVO -> Importamos nuestro hook del contexto
+import axios from "axios";
 
 // El socket para la comunicación en tiempo real no relacionada con 'api' de Axios// revisar primero
-const socket = io(process.env.NEXT_PUBLIC_BACKEND_URL); // Renombrado para evitar confusión con el hook useSocket
+//const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL); // Renombrado para evitar confusión con el hook useSocket
 
 type Publication = {
   _id: string;
@@ -70,15 +72,18 @@ async function guardarUserId() {
 }
 
 const ViewPublications = () => {
+  // NUEVO -> Obtenemos el socket ÚNICO desde el contexto
+  const { socket } = useSocketContext();
+
   const [publications, setPublications] = useState<Publication[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [dataPay, setDataPay] = useState<{ [key: string]: any }>({});
   const [canCreateMorePublications, setCanCreateMorePublications] =
     useState(true);
-  const socketPay = useSocket(
-    process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:4004"
-  );
+  //const socketPay = useSocket(
+  //process.env.NEXT_PUBLIC_SOCKET_URL ?? "http://localhost:4004"
+  //);
   const [clientId, setClientId] = useState<string | null>(null);
   const [ownerId, setOwnerId] = useState<string | null>(null);
 
@@ -102,6 +107,9 @@ const ViewPublications = () => {
 
   // 🔹efecto  Conectar al socket cuando el componente se monta
   useEffect(() => {
+    // NUEVO -> Condición de seguridad: no hacer nada hasta que el socket exista
+    if (!socket) return;
+
     // 🔹 Obtener userId del localStorage
     const storedUserId =
       typeof window !== "undefined" ? localStorage.getItem("userId") : null;
@@ -117,7 +125,11 @@ const ViewPublications = () => {
         )
       );
     });
-  }, []);
+    // NUEVO -> Limpieza de listeners para evitar fugas de memoria
+    return () => {
+      socket.off("actualizar-publicacion");
+    };
+  }, [socket]);
 
   const router = useRouter();
 
@@ -156,7 +168,7 @@ const ViewPublications = () => {
 
   // alimentar la informacion del pago y de la rotacion de las publicaciones
   useEffect(() => {
-    if (!socketPay) return;
+    if (!socket) return; // NUEVO -> Usamos el socket del contexto
     const handleDataPayPublication = (data) => {
       if (data.id) {
         console.log("dataPayPublication:", data);
@@ -168,16 +180,17 @@ const ViewPublications = () => {
     };
 
     // 🔹 Verifica si ya hay un listener antes de agregar uno nuevo
-    if (!socketPay.hasListeners("dataPayPublication")) {
-      socketPay.on("dataPayPublication", handleDataPayPublication);
+    if (!socket.hasListeners("dataPayPublication")) {
+      // NUEVO
+      socket.on("dataPayPublication", handleDataPayPublication);
     }
 
-    socketPay.emit("requestDataPayPublication");
+    socket.emit("requestDataPayPublication"); // NUEVO
 
     return () => {
-      socketPay.off("dataPayPublication", handleDataPayPublication);
+      socket.off("dataPayPublication", handleDataPayPublication); // NUEVO
     };
-  }, [socketPay]);
+  }, [socket]); // NUEVO -> Dependencia del socket
 
   // CONTAR PUBLICACIONES NOTOP AL BACKEND PARA QUE SEAN EVALUADAS Y RENDERIZADAS
   useEffect(() => {

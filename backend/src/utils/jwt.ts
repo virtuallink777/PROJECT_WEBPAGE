@@ -30,7 +30,7 @@ const verifyDefaults: VerifyOptions = {
 };
 
 export const accessTokenSignOptions: SignOptionsAndSecret = {
-  expiresIn: "1h",
+  expiresIn: "7h",
   secret: JWT_SECRET,
 };
 

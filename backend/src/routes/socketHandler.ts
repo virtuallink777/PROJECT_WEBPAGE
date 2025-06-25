@@ -141,7 +141,7 @@ export const configureSockets = (io: Server) => {
         `[Socket ${socket.id}] 📩 Evento 'identificar-usuario' recibido para userId: ${userId}`
       );
       socket.userId = userId; // Guardar userId en el objeto socket
-      connectedUsers[userId] = socket.id;
+      //connectedUsers[userId] = socket.id;
       // userSocketId = socket.id; // Esta variable global para un solo userSocketId es propensa a errores si tienes múltiples usuarios.
       // Es mejor confiar en el mapa 'connectedUsers'.
       console.log(
