@@ -157,23 +157,37 @@ export const configureSockets = (io: Server) => {
     // == OTRA LÓGICA DE EVENTOS (Se mantiene igual) ==
     // =======================================================
 
-    socket.on("actualizar-publicacion", ({ id, userId, estado, razon }) => {
+    // POR ESTE NUEVO BLOQUE:
+    socket.on("admin_tomo_decision", ({ id, userId, estado, razon }) => {
       console.log(
-        `[Socket ${socket.id}] 📩 Evento 'actualizar-publicacion' para usuario ${userId}`
+        `[Backend] 📩 Decisión del admin recibida para PubID ${id}. Usuario a notificar: ${userId}`
       );
+
+      // 1. Buscamos al usuario en nuestra lista de conectados.
       const targetSocketId = connectedUsersChat.get(userId);
+
+      // 2. Si el usuario está conectado, le enviamos la notificación en tiempo real.
       if (targetSocketId) {
-        io.to(targetSocketId).emit("actualizar-publicacion", {
+        // Usamos el evento 'actualizar-publicacion' que el frontend del usuario ya está escuchando.
+        io.to(userId).emit("actualizar-publicacion", {
           id,
           estado,
           razon,
         });
         console.log(
-          `[Socket ${socket.id}] 📤 Notificación de publicación enviada al usuario ${userId}`
+          `[Backend] 📤 Notificación 'actualizar-publicacion' ENVIADA al usuario ${userId}`
         );
-      } else {
+
+        // --- MICRÓFONO DEL BACKEND ---
         console.log(
-          `[Socket ${socket.id}] 🚫 Usuario ${userId} no encontrado para actualizar publicación.`
+          `VERIFICACIÓN BACKEND: Se acaba de emitir 'actualizar-publicacion' a la sala/socket: ${targetSocketId}`
+        );
+        // --- FIN DEL MICRÓFONO ---
+      } else {
+        // 3. Si no está conectado, no hacemos nada con el socket.
+        // La actualización ya se guardó en la base de datos, así que la verá cuando se loguee.
+        console.log(
+          `[Backend] 🚫 Usuario ${userId} no está conectado. No se envía notificación en tiempo real.`
         );
       }
     });

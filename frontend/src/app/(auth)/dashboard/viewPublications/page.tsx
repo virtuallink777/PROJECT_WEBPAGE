@@ -105,31 +105,63 @@ const ViewPublications = () => {
   console.log("clientId:", clientId);
   console.log("ownerId:", ownerId);
 
-  // 🔹efecto  Conectar al socket cuando el componente se monta
+  // --- EFECTO 1: SOLO PARA IDENTIFICARSE ---
+
+  // Este efecto se ejecuta una vez cuando el socket está listo.
   useEffect(() => {
-    // NUEVO -> Condición de seguridad: no hacer nada hasta que el socket exista
     if (!socket) return;
 
-    // 🔹 Obtener userId del localStorage
-    const storedUserId =
-      typeof window !== "undefined" ? localStorage.getItem("userId") : null;
-    socket.emit("identificar-usuario", storedUserId);
+    const storedUserId = localStorage.getItem("userId");
+    if (storedUserId) {
+      // Solo actualizamos el ESTADO aquí.
+      // Esto disparará el siguiente useEffect.
+      setUserId(storedUserId);
+      console.log(`Paso 1: Se ha encontrado el userId local: ${storedUserId}`);
+    }
+  }, [socket]); // Depende solo de que el socket exista.
 
-    setUserId(storedUserId);
+  // --- EFECTO 2: SOLO PARA IDENTIFICARSE EN EL SOCKET Y ESCUCHAR EVENTOS ---
+  // Este efecto AHORA DEPENDE de 'userId'. Solo se ejecuta cuando 'userId' tiene un valor.
+  useEffect(() => {
+    // Ahora la guarda es triple: necesitamos el socket, y el userId.
+    if (!socket || !userId) return;
 
-    // 🔹 Escuchar cambios en publicaciones DE LA APROBACION DEL ADMIN
-    socket.on("actualizar-publicacion", ({ id, estado, razon }) => {
-      setPublications((prevPublications) =>
-        prevPublications.map((pub) =>
+    // 1. Ahora que tenemos el userId, nos identificamos en el socket.
+    socket.emit("identificar-usuario", userId);
+    console.log(`Paso 2: Identificando usuario ${userId} con el socket.`);
+
+    // 2. El handler para la actualización
+    const handleUpdate = ({ id, estado, razon }) => {
+      // --- MICRÓFONO DEL FRONTEND ---
+      console.log(
+        "VERIFICACIÓN FRONTEND: ¡RECIBIDO! El evento 'actualizar-publicacion' ha llegado."
+      );
+      console.log("VERIFICACIÓN FRONTEND: Datos recibidos:", {
+        id,
+        estado,
+        razon,
+      });
+      // --- FIN DEL MICRÓFONO ---
+      console.log(
+        `Paso 3: EVENTO RECIBIDO 'actualizar-publicacion' para id ${id}.`
+      );
+      setPublications((currentPublications) =>
+        currentPublications.map((pub) =>
           pub._id === id ? { ...pub, estado, razon } : pub
         )
       );
-    });
-    // NUEVO -> Limpieza de listeners para evitar fugas de memoria
-    return () => {
-      socket.off("actualizar-publicacion");
     };
-  }, [socket]);
+
+    // 3. Registramos el listener. Ahora estamos seguros de que estamos identificados.
+    socket.on("actualizar-publicacion", handleUpdate);
+    console.log("Listener para 'actualizar-publicacion' registrado.");
+
+    // 4. La función de limpieza
+    return () => {
+      socket.off("actualizar-publicacion", handleUpdate);
+      console.log("Listener para 'actualizar-publicacion' limpiado.");
+    };
+  }, [socket, userId]); // <-- LA CLAVE: Ahora depende de 'socket' y 'userId'.
 
   const router = useRouter();
 

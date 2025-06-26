@@ -636,10 +636,11 @@ const AdminPanel = () => {
                           estado: "APROBADA",
                         }
                       );
-                      socket.emit("actualizar-publicacion", {
+                      socket?.emit("admin_tomo_decision", {
                         id: publicacion.id,
                         userId: publicacion.userId,
                         estado: "APROBADA",
+                        razon: "", // Envía una razón vacía para consistencia
                       });
                       // Eliminar la publicación de la pantalla y del localStorage
                       deleteValidatePublication(publicacion.id);
@@ -707,7 +708,7 @@ const AdminPanel = () => {
                           razon: razonSeleccionada,
                         }
                       );
-                      socket.emit("actualizar-publicacion", {
+                      socket?.emit("admin_tomo_decision", {
                         id: publicacion.id,
                         userId: publicacion.userId,
                         estado: "RECHAZADA",
