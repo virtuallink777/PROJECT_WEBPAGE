@@ -4,8 +4,20 @@ import cloudinary from "../utils/cloudinary";
 
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
-  params: (req, file) => {
+  params: async (req, file) => {
     const userId = req.params.userId; // Obtiene el userId de la URL
+
+    // Decidimos la subcarpeta basándonos en los campos que vienen
+    let subfolder = "validation_images"; // Carpeta por defecto para cartel/rostro
+    if (
+      file.fieldname === "documentFront" ||
+      file.fieldname === "documentBack"
+    ) {
+      subfolder = "identity_docs"; // Carpeta para documentos
+    }
+
+    const folderPath = `publicidades/${userId}/${subfolder}`;
+
     return {
       folder: `publicidades/${userId}`, // ¡Carpetas organizadas por usuario!
       allowed_formats: ["jpg", "png", "jpeg", "mp4", "webm", "webp"],

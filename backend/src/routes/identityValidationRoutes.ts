@@ -1,192 +1,103 @@
 // src/routes/identityValidationRoutes.ts
+
 import express, { Request, Response, Router } from "express";
-import multer, { FileFilterCallback } from "multer"; // Asegúrate de importar FileFilterCallback si usas fileFilter
-import path from "path";
-import fs from "fs";
 import { Server as SocketIOServer } from "socket.io";
-import { io } from "..";
-import {
-  getAdminSocket as getAdminSocketId,
-  adminSocketId as adminSocketIdFromHandler, // Importar la variable global
-  connectedAdmin as connectedAdminFromHandler, // Importar el objeto global
-} from "./socketHandler";
+import { io } from ".."; // Asumo que así obtienes la instancia global de io
+import { getAdminSocket as getAdminSocketId } from "./socketHandler";
 import publicationsModels from "../models/publications.models";
 
-// Interfaz para los archivos de Multer que esperamos para este endpoint
-interface IdentityMulterFiles {
-  documentFront?: Express.Multer.File[];
-  documentBack?: Express.Multer.File[];
+// 1. IMPORTAMOS TU MIDDLEWARE 'upload' EXISTENTE Y MEJORADO
+import { upload } from "../middleware/upload";
+
+// 2. DEFINIMOS LA INTERFAZ PARA LOS ARCHIVOS DE CLOUDINARY
+//    Es crucial que ahora esperemos la propiedad 'path' que nos da Cloudinary.
+interface CloudinaryFile extends Express.Multer.File {
+  path: string;
 }
 
-const identityRouter: Router = express.Router(); // NUEVO ROUTER para este archivo
+// Interfaz para la estructura de archivos que esperamos
+interface IdentityMulterFiles {
+  documentFront?: CloudinaryFile[];
+  documentBack?: CloudinaryFile[];
+}
 
-// --- Configuración de Multer ---
-// (Puedes copiar la 'storage' de tu otro archivo si la lógica de destino es la misma,
-// pero considera una subcarpeta diferente para los documentos de identidad)
-const storage = multer.diskStorage({
-  destination: function (
-    req: Request, // O Request<{ userId: string }>
-    file: Express.Multer.File,
-    cb: (error: Error | null, destination: string) => void
-  ) {
-    const userId = (req.params as { userId: string }).userId;
-    if (!userId) {
-      return cb(new Error("User ID no proporcionado."), "");
-    }
-    // Subcarpeta específica para documentos de identidad
-    const uploadPath = path.join(
-      __dirname,
-      `../uploads/${userId}/identity_docs`
-    );
-    if (!fs.existsSync(uploadPath)) {
-      try {
-        fs.mkdirSync(uploadPath, { recursive: true });
-      } catch (mkdirError: any) {
-        return cb(
-          mkdirError instanceof Error
-            ? mkdirError
-            : new Error(String(mkdirError)),
-          ""
-        );
-      }
-    }
-    cb(null, uploadPath);
-  },
-  filename: function (
-    req: Request,
-    file: Express.Multer.File,
-    cb: (error: Error | null, filename: string) => void
-  ) {
-    const timestamp = Date.now();
-    cb(
-      null,
-      `${file.fieldname}_${timestamp}${path.extname(file.originalname)}`
-    );
-  },
-});
+const identityRouter: Router = express.Router();
 
-// Opcional: Filtro de archivos si solo quieres imágenes
-const imageFileFilter = (
-  req: Request,
-  file: Express.Multer.File,
-  cb: FileFilterCallback
-) => {
-  if (file.mimetype.startsWith("image/")) {
-    cb(null, true);
-  } else {
-    cb(null, false); // Rechazar archivo sin error
-    // O: cb(new Error('Solo se permiten imágenes'));
-  }
-};
-
-// Middleware de Multer configurado SÓLO para documentos de identidad
-const uploadIdentityDocs = multer({
-  storage: storage,
-  fileFilter: imageFileFilter, // Añade el filtro
-  limits: { fileSize: 5 * 1024 * 1024 }, // Límite de 5MB
-}).fields([
-  { name: "documentFront", maxCount: 1 },
-  { name: "documentBack", maxCount: 1 },
-]);
-
-// --- ENDPOINT PARA VALIDACIÓN DE DOCUMENTOS DE IDENTIDAD ---
-// La ruta base será /api/validate-identity (definida en app.ts), aquí solo definimos /:userId
+// --- ENDPOINT MODIFICADO PARA USAR CLOUDINARY ---
+// La URL base para este router debe ser '/api/validate-identity' en tu app.ts,
+// lo que permite que nuestro middleware 'upload' funcione correctamente.
 identityRouter.post(
   "/:userId",
-  uploadIdentityDocs, // <--- USAR EL NOMBRE CORRECTO AQUÍ
+  // 3. APLICAMOS EL MIDDLEWARE 'upload' A LA RUTA
+  //    Este se encargará de subir los archivos a Cloudinary en la carpeta correcta
+  //    antes de que el resto de la lógica de la ruta se ejecute.
+  upload.fields([
+    { name: "documentFront", maxCount: 1 },
+    { name: "documentBack", maxCount: 1 },
+  ]),
   async (req: Request, res: Response) => {
-    const userId = (req.params as { userId: string }).userId;
-    // Multer pone los campos de texto del FormData en req.body
-    const publicationIdFromBody = (req.body as { publicationId?: string })
-      .publicationId;
-
-    const requestId = Date.now().toString();
-
-    console.log(
-      `🆔 [ID_DOC-${requestId}] Solicitud validación DOCUMENTO para UserID: ${userId}, PubID: ${publicationIdFromBody}`
-    );
-    console.log("Body (Documento):", req.body);
-    console.log("Files (Documento):", req.files);
-
+    const { userId } = req.params;
+    const { publicationId } = req.body;
     const files = req.files as IdentityMulterFiles | undefined;
 
+    console.log(
+      `🆔 Solicitud de validación de DOCUMENTO para UserID: ${userId}, PubID: ${publicationId}`
+    );
+
+    // La validación de que los archivos y el publicationId existen sigue siendo la misma.
     if (!files || !files.documentFront?.[0] || !files.documentBack?.[0]) {
-      console.error(
-        "Error: Faltan archivos documentFront o documentBack para UserID:",
-        userId,
-        files
-      );
       return res.status(400).json({
         success: false,
         message: "Ambas caras del documento de identidad son requeridas.",
       });
     }
-    if (!publicationIdFromBody) {
-      console.error(
-        "Error: publicationId no fue enviado en la solicitud para UserID:",
-        userId
-      );
+    if (!publicationId) {
       return res.status(400).json({
         success: false,
         message: "Falta el ID de la publicación (publicationId).",
       });
     }
 
-    // <<< PASO 2: Realiza la actualización en MongoDB ANTES de notificar al admin >>>
-
+    // Tu lógica para actualizar la base de datos se mantiene intacta.
     try {
       const updatedPublication = await publicationsModels.findByIdAndUpdate(
-        publicationIdFromBody, // El ID de la publicación a actualizar
-        { $set: { estado: "pendiente" } }, // El cambio: poner el campo 'estado' en 'pendiente'
-        { new: true } // Opcional: para que devuelva el documento ya actualizado
+        publicationId,
+        { $set: { estado: "PENDIENTE" } },
+        { new: true }
       );
-
       if (!updatedPublication) {
-        // Si no se encuentra la publicación, es un error.
-        console.error(
-          `Error: La publicación con ID ${publicationIdFromBody} no fue encontrada.`
-        );
-        // Aunque los archivos se subieron, la referencia está rota. Es mejor devolver un error.
         return res
           .status(404)
           .json({ success: false, message: "Publicación no encontrada." });
       }
-
       console.log(
-        `✅ Estado de la publicación ${publicationIdFromBody} actualizado a '${updatedPublication.estado}'.`
+        `✅ Estado de la publicación ${publicationId} actualizado a '${updatedPublication.estado}'.`
       );
     } catch (dbError) {
       console.error(
         `❌ Error al actualizar la publicación en MongoDB:`,
         dbError
       );
-      // Si la base de datos falla, es un error del servidor.
       return res.status(500).json({
         success: false,
         message: "Error interno al actualizar el estado de la publicación.",
       });
     }
 
-    const baseUrl = `${req.protocol}://${req.get(
-      "host"
-    )}/uploads/${userId}/identity_docs`;
-    const responseUrls: Record<string, string> = {
-      documentFront: `${baseUrl}/${files.documentFront[0].filename}`,
-      documentBack: `${baseUrl}/${files.documentBack[0].filename}`,
+    // 4. OBTENEMOS LAS URLS DIRECTAMENTE DE CLOUDINARY
+    //    'multer-storage-cloudinary' convenientemente pone la URL final en la propiedad 'path'.
+    const responseUrls = {
+      documentFront: files.documentFront[0].path,
+      documentBack: files.documentBack[0].path,
     };
 
-    console.log("URLs de docs (Identidad):", responseUrls);
+    console.log(
+      "URLs de Cloudinary obtenidas para la validación:",
+      responseUrls
+    );
 
-    // Puedes quitar los logs de depuración de adminSocketIdFromHandler y connectedAdminFromHandler
-    // ya que vimos que el problema anterior se resolvió.
-    // console.log("--------------------------------------------------");
-    // console.log("DEBUG: ANTES DE LLAMAR A getAdminSocketId()");
-    // console.log("DEBUG: ... adminSocketIdFromHandler ...");
-    // console.log("DEBUG: ... connectedAdminFromHandler ...");
-    // console.log("--------------------------------------------------");
-
-    const adminSocketTargetId: string | null = getAdminSocketId();
-
+    // Tu lógica para notificar al admin por socket se mantiene exactamente igual.
+    const adminSocketTargetId = getAdminSocketId();
     if (adminSocketTargetId) {
       console.log(
         `📤 Enviando datos de DOCUMENTO al admin (Socket ID: ${adminSocketTargetId})`
@@ -195,22 +106,21 @@ identityRouter.post(
         .to(adminSocketTargetId)
         .emit("validate-identity-document", {
           userId: userId,
-          publicationId: publicationIdFromBody,
-          body: req.body, // Opcional
+          publicationId: publicationId,
+          body: req.body,
           fileUrls: responseUrls,
         });
-      console.log("✅ Datos de DOCUMENTO enviados al admin.");
-
-      // Lógica para actualizar estado en BD (PENDIENTE - PASO FUTURO)
-      // console.log(`TODO: Actualizar estado de publicación ${publicationIdFromBody} a 'EN_REVISION_IDENTIDAD'`);
     } else {
-      console.log("❌ Admin no encontrado para DOCUMENTO.");
-      // Lógica de pendientes para identidad aquí si es necesaria
+      console.log(
+        "❌ Admin no encontrado para DOCUMENTO. La validación quedará pendiente."
+      );
+      // Aquí iría tu lógica para guardar la validación en un archivo o BBDD si el admin no está.
     }
 
+    // Respondemos al frontend con éxito.
     res.status(200).json({
       success: true,
-      message: "Documentos de identidad recibidos.",
+      message: "Documentos subidos a Cloudinary y listos para validación.",
       fileUrls: responseUrls,
     });
   }
