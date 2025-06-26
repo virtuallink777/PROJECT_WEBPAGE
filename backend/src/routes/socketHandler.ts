@@ -1,26 +1,26 @@
+// =======================================================================================
+// ARCHIVO ÚNICO DE CONFIGURACIÓN DE SOCKETS
+//
+// =======================================================================================
+
 import { Server, Socket } from "socket.io";
 import {
   clearPendingValidations,
   pendingValidations,
   PendingValidation,
   PendingIdentityValidation,
-  // PendingPublicationValidation, // Opcional si no la usas directamente para casteo aquí
-} from "./validatesAdmin"; // Asegúrate que la ruta './validatesAdmin' es correcta
+} from "./validatesAdmin"; // Asegúrate que la ruta sea correcta
 
-// Interfaz para añadir propiedades personalizadas a los sockets
+// --- INTERFACES (Se mantienen igual) ---
 interface CustomSocket extends Socket {
-  userId?: string; // Para identificar usuarios normales
-  isAdmin?: boolean; // Para marcar un socket como de administrador
-  adminAppId?: string; // Para guardar el adminId que el cliente envía
+  userId?: string;
+  isAdmin?: boolean;
+  adminAppId?: string;
 }
-
-// Interfaz para el payload que el admin envía al identificarse
 interface AdminIdentificationData {
   adminId: string;
   email: string;
 }
-
-// Interfaz para el payload de validación de identidad que se emite al admin
 interface IdentityValidationPayload {
   userId: string;
   publicationId: string;
@@ -31,18 +31,25 @@ interface IdentityValidationPayload {
   };
 }
 
-// Almacenamiento del estado de conexión
-export const connectedAdmin: Record<string, string> = {}; // adminId -> socket.id
-export const connectedUsers: Record<string, string> = {}; // userId -> socket.id
-export let adminSocketId: string | null = null; // El socket.id del admin actualmente activo
+// --- ALMACENAMIENTO CENTRALIZADO (Las únicas listas que usaremos) ---
+export const connectedAdmin: Record<string, string> = {};
+export const connectedUsersChat = new Map<string, string>(); // Mapa para: userId -> socket.id
+export let adminSocketId: string | null = null;
+const ADMIN_EMAIL = "luiscantorhitchclief@gmail.com";
 
-const ADMIN_EMAIL = "luiscantorhitchclief@gmail.com"; // Email del administrador autorizado
+// --- FUNCIÓN DE AYUDA (Para consultar estado desde fuera si lo necesitas) ---
+export function isUserOnlineForChat(userId: string): boolean {
+  return connectedUsersChat.has(userId);
+}
 
+// --- ¡LA ÚNICA FUNCIÓN DE CONFIGURACIÓN QUE NECESITAS! ---
 export const configureSockets = (io: Server) => {
   io.on("connection", (socket: CustomSocket) => {
-    // Usar CustomSocket
     console.log(`[Socket ${socket.id}] 🔗 Conexión establecida.`);
 
+    // =======================================================
+    // == LÓGICA DE IDENTIFICACIÓN (ADMIN) ==
+    // =======================================================
     socket.on("identificar-admin", (data: AdminIdentificationData) => {
       console.log(
         `[Socket ${socket.id}] 📩 Evento 'identificar-admin' recibido:`,
@@ -52,49 +59,24 @@ export const configureSockets = (io: Server) => {
 
       if (email !== ADMIN_EMAIL) {
         console.log(
-          `[Socket ${socket.id}] 🚫 Acceso denegado para 'identificar-admin': email no autorizado (${email}).`
+          `[Socket ${socket.id}] 🚫 Acceso denegado: email no autorizado.`
         );
         return;
       }
 
-      // Si ya hay un admin conectado con un socket DIFERENTE, podrías manejarlo (ej: desconectar el anterior)
-      // Por ahora, este nuevo socket se convierte en el admin principal.
-      const previousAdminSocketId = adminSocketId;
       adminSocketId = socket.id;
-      socket.isAdmin = true; // Marcar este socket como admin
+      socket.isAdmin = true;
       if (adminId) {
-        socket.adminAppId = adminId; // Guardar el adminId en el socket
-        connectedAdmin[adminId] = socket.id; // Actualizar el mapa
-        console.log(
-          `[Socket ${socket.id}] 👤 Admin ${adminId} identificado. Socket ID: ${
-            socket.id
-          }. Socket anterior del admin: ${previousAdminSocketId || "Ninguno"}.`
-        );
-      } else {
-        console.warn(
-          `[Socket ${
-            socket.id
-          }] 👤 Admin identificado (sin adminId proporcionado en data). Socket ID: ${
-            socket.id
-          }. Socket anterior del admin: ${previousAdminSocketId || "Ninguno"}.`
-        );
+        socket.adminAppId = adminId;
+        connectedAdmin[adminId] = socket.id;
+        console.log(`[Socket ${socket.id}] 👤 Admin ${adminId} identificado.`);
       }
 
       if (pendingValidations.length > 0) {
         console.log(
-          `[Socket ${socket.id}] 📤 Enviando ${pendingValidations.length} validaciones pendientes al admin...`
+          `[Socket ${socket.id}] 📤 Enviando ${pendingValidations.length} validaciones pendientes...`
         );
         pendingValidations.forEach((validation: PendingValidation) => {
-          console.log(
-            `[Socket ${socket.id}]   -> Procesando validación pendiente: tipo ${validation.type}`
-          );
-          // 👇 Añade estos logs de verificación
-          console.log("=== INICIO DE VALIDACIÓN PENDIENTE ===");
-          console.log("Tipo de validación:", validation.type);
-          console.log(
-            "Contenido completo de la validación:",
-            JSON.stringify(validation, null, 2)
-          );
           if (validation.type === "identity") {
             const identityValidation = validation as PendingIdentityValidation;
             const payloadForIdentity: IdentityValidationPayload = {
@@ -106,18 +88,8 @@ export const configureSockets = (io: Server) => {
                 documentBack: identityValidation.fileUrls.documentBack!,
               },
             };
-            console.log(
-              `[Socket ${socket.id}]     Emitiendo 'validate-identity-document' para publicationId: ${payloadForIdentity.publicationId}`
-            );
             socket.emit("validate-identity-document", payloadForIdentity);
           } else if (validation.type === "publication") {
-            console.log("📢 Emitiendo validate-publication");
-            console.log("Contenido de fileUrls:", validation.fileUrls);
-            console.log("Tipo de fileUrls:", typeof validation.fileUrls);
-
-            console.log(
-              `[Socket ${socket.id}]     Emitiendo 'validate-publication'`
-            );
             socket.emit(
               "validate-publication",
               validation.originalBody,
@@ -129,148 +101,146 @@ export const configureSockets = (io: Server) => {
         console.log(
           `[Socket ${socket.id}] ✅ Validaciones pendientes enviadas y limpiadas.`
         );
-      } else {
-        console.log(
-          `[Socket ${socket.id}] 👍 No hay validaciones pendientes para enviar al admin.`
-        );
       }
     });
 
+    // =======================================================
+    // == LÓGICA DE IDENTIFICACIÓN Y SALAS (USUARIOS Y CLIENTES) ==
+    // =======================================================
+
+    // Este evento es para cuando un DUEÑO se loguea.
     socket.on("identificar-usuario", (userId: string) => {
       console.log(
-        `[Socket ${socket.id}] 📩 Evento 'identificar-usuario' recibido para userId: ${userId}`
+        `[Socket ${socket.id}] 📩 Evento 'identificar-usuario' para userId: ${userId}`
       );
-      socket.userId = userId; // Guardar userId en el objeto socket
-      //connectedUsers[userId] = socket.id;
-      // userSocketId = socket.id; // Esta variable global para un solo userSocketId es propensa a errores si tienes múltiples usuarios.
-      // Es mejor confiar en el mapa 'connectedUsers'.
+      socket.userId = userId;
+      connectedUsersChat.set(userId, socket.id);
+      socket.join(userId); // Unimos al dueño a su sala personal
       console.log(
-        `[Socket ${socket.id}] 👤 Usuario ${userId} identificado y mapeado.`
+        `[Socket ${socket.id}] 👤 Dueño ${userId} identificado, mapeado y unido a su sala.`
       );
     });
 
+    // Este evento es para cuando un CLIENTE abre el chat.
+    socket.on("joinRoom", (userId: string) => {
+      socket.userId = userId; // También guardamos el ID para clientes
+      connectedUsersChat.set(userId, socket.id);
+      socket.join(userId);
+      console.log(`[Chat] Cliente ${userId} unido a su sala.`);
+    });
+
+    // =======================================================
+    // == LÓGICA DE CHAT ==
+    // =======================================================
+
+    socket.on("sendMessage", (message) => {
+      console.log("[Chat] Mensaje recibido:", message);
+      const receiverId = message.receiverId;
+
+      if (connectedUsersChat.has(receiverId)) {
+        io.to(receiverId).emit("newMessage", message);
+        console.log(
+          `[Chat] 📌 Mensaje reenviado a la sala del receiverId: ${receiverId}`
+        );
+      } else {
+        console.log(
+          `[Chat] 🚫 Receptor ${receiverId} no está conectado. Notificando al emisor.`
+        );
+        socket.emit("userOffline", {
+          receiverId: receiverId,
+          message: "El usuario no está conectado actualmente",
+        });
+      }
+    });
+
+    // =======================================================
+    // == OTRA LÓGICA DE EVENTOS (Se mantiene igual) ==
+    // =======================================================
+
     socket.on("actualizar-publicacion", ({ id, userId, estado, razon }) => {
       console.log(
-        `[Socket ${socket.id}] 📩 Evento 'actualizar-publicacion' recibido para usuario ${userId}, estado ${estado}`
+        `[Socket ${socket.id}] 📩 Evento 'actualizar-publicacion' para usuario ${userId}`
       );
-      const targetUserSocketId = connectedUsers[userId];
-      if (targetUserSocketId) {
-        io.to(targetUserSocketId).emit("actualizar-publicacion", {
+      const targetSocketId = connectedUsersChat.get(userId);
+      if (targetSocketId) {
+        io.to(targetSocketId).emit("actualizar-publicacion", {
           id,
           estado,
           razon,
         });
         console.log(
-          `[Socket ${socket.id}] 📤 Notificación 'actualizar-publicacion' enviada al usuario ${userId} (Socket: ${targetUserSocketId}).`
+          `[Socket ${socket.id}] 📤 Notificación de publicación enviada al usuario ${userId}`
         );
       } else {
         console.log(
-          `[Socket ${socket.id}] 🚫 Usuario ${userId} no encontrado en connectedUsers para 'actualizar-publicacion'.`
+          `[Socket ${socket.id}] 🚫 Usuario ${userId} no encontrado para actualizar publicación.`
         );
       }
     });
 
-    socket.on("admin-logout", (data: AdminIdentificationData) => {
-      console.log(
-        `[Socket ${socket.id}] 🛑 Evento 'admin-logout' recibido:`,
-        data
-      );
-      const { adminId } = data || {};
-
-      if (socket.isAdmin) {
-        // Solo actuar si el socket que emite es realmente un admin
-        if (adminId && connectedAdmin[adminId] === socket.id) {
-          console.log(
-            `[Socket ${socket.id}]   🧹 Limpiando admin ${adminId} de connectedAdmin (logout).`
-          );
-          delete connectedAdmin[adminId];
-        }
-        if (adminSocketId === socket.id) {
-          console.log(
-            `[Socket ${socket.id}]   🧹 Limpiando adminSocketId (logout).`
-          );
-          adminSocketId = null;
-        }
-        socket.isAdmin = false; // Desmarcar el socket como admin
-        socket.adminAppId = undefined;
-        console.log(
-          `[Socket ${socket.id}]   📤 Admin ${
-            adminId || "N/A"
-          } deslogueado (manualmente).`
-        );
-        // No es necesario llamar a socket.disconnect(true) aquí, el cliente maneja su desconexión.
-      } else {
-        console.warn(
-          `[Socket ${socket.id}]   ⚠️ Evento 'admin-logout' recibido de un socket no admin.`
-        );
+    socket.on("check_user_status", (userId, callback) => {
+      const isOnline = connectedUsersChat.has(userId);
+      if (typeof callback === "function") {
+        callback({ online: isOnline });
       }
     });
+
+    // =======================================================
+    // == LÓGICA DE DESCONEXIÓN (ÚNICA Y CENTRALIZADA) ==
+    // =======================================================
 
     socket.on("disconnect", (reason: string) => {
       console.log(`[Socket ${socket.id}] 🔴 Desconexión. Razón: ${reason}`);
 
-      // Limpiar si este socket era de un admin
+      // Limpiar si era admin
       if (socket.isAdmin) {
-        // Verificar la propiedad del socket
         if (
           socket.adminAppId &&
           connectedAdmin[socket.adminAppId] === socket.id
         ) {
-          console.log(
-            `[Socket ${socket.id}]   🧹 Limpiando admin ${socket.adminAppId} de connectedAdmin (disconnect).`
-          );
           delete connectedAdmin[socket.adminAppId];
         }
         if (adminSocketId === socket.id) {
-          console.log(
-            `[Socket ${socket.id}]   🧹 Limpiando adminSocketId global (disconnect).`
-          );
           adminSocketId = null;
         }
         console.log(`[Socket ${socket.id}]   🛡️ Admin desconectado.`);
       }
 
-      // Limpiar si este socket era de un usuario normal
-      if (socket.userId && connectedUsers[socket.userId] === socket.id) {
-        console.log(
-          `[Socket ${socket.id}]   🧹 Limpiando usuario ${socket.userId} de connectedUsers (disconnect).`
-        );
-        delete connectedUsers[socket.userId];
-        console.log(
-          `[Socket ${socket.id}]   👤 Usuario ${socket.userId} desconectado.`
-        );
+      // Limpiar si era un usuario/cliente
+      // La propiedad 'socket.userId' se guarda tanto en 'identificar-usuario' como en 'joinRoom'
+      if (socket.userId) {
+        // Solo borramos si el socket que se va es el que está registrado en el mapa,
+        // para evitar borrar una nueva conexión del mismo usuario por error.
+        if (connectedUsersChat.get(socket.userId) === socket.id) {
+          connectedUsersChat.delete(socket.userId);
+          console.log(
+            `[Socket ${socket.id}]   🧹 Usuario ${socket.userId} eliminado del mapa de chat.`
+          );
+        }
       }
-      // La variable global userSocketId la he quitado de la limpieza aquí porque su uso es problemático
-      // si tienes más de un usuario. Confía en `connectedUsers`.
     });
   });
 };
 
-// ESTA FUNCIÓN SOLO DEVUELVE EL ID ALMACENADO
+// =======================================================
+// OTRAS FUNCIONES DE AYUDA (Se mantienen por si las usas en otra parte)
+// =======================================================
+
 export const getAdminSocket = (): string | null => {
   return adminSocketId;
 };
 
-export const getUserSocket = (userId: string): string | undefined => {
-  return connectedUsers[userId];
-};
-
-// 'io' necesita ser accesible para getAdminSocket si quieres hacer la verificación io.sockets.sockets.get()
-// Esto implica que 'io' debe ser exportada desde tu archivo principal y luego importada aquí,
-// o pasada a getAdminSocket, lo cual es más complicado.
-// Por ahora, getAdminSocket solo devuelve el ID. La verificación de actividad se hace en validatesAdmin.ts.
-// Si quieres la verificación aquí, necesitarías acceso a la instancia 'io'.
-// Una forma es guardar la instancia 'io' en una variable global en este módulo:
+// Esta función ahora está obsoleta, ya que no usamos el mapa 'connectedUsers'
+// export const getUserSocket = (userId: string): string | undefined => {
+//   return connectedUsers[userId];
+// };
 
 let SIO_INSTANCE: Server | null = null;
 export const configureSocketsAndGetInstance = (io: Server) => {
   SIO_INSTANCE = io;
-  // Llama a tu configureSockets original
-  configureSockets(io); // Ahora configureSockets puede usar SIO_INSTANCE si es necesario
-  // o simplemente seguimos pasando 'io' como argumento.
+  configureSockets(io);
 };
 
-// Modificamos getAdminSocket para usar SIO_INSTANCE
 export const getActiveAdminSocket = (): string | null => {
   if (
     adminSocketId &&
@@ -280,9 +250,8 @@ export const getActiveAdminSocket = (): string | null => {
     return adminSocketId;
   }
   if (adminSocketId) {
-    // Si existía pero ya no está activo
     console.warn(
-      `[getActiveAdminSocket] adminSocketId (${adminSocketId}) encontrado pero el socket ya no existe en SIO_INSTANCE. Limpiando.`
+      `[getActiveAdminSocket] adminSocketId (${adminSocketId}) encontrado pero inactivo. Limpiando.`
     );
     const adminIdToRemove = Object.keys(connectedAdmin).find(
       (key) => connectedAdmin[key] === adminSocketId
@@ -292,9 +261,3 @@ export const getActiveAdminSocket = (): string | null => {
   }
   return null;
 };
-
-// DEBES CAMBIAR en validatesAdmin.ts para usar getActiveAdminSocket()
-// y pasarle la instancia 'io' a este módulo o usar la variable SIO_INSTANCE.
-// La forma más simple es que validatesAdmin.ts siga haciendo:
-// const adminSocketId = getAdminSocket(); // Obtiene el ID
-// const isAdminConnectedAndActive = adminSocketId && io.sockets.sockets.get(adminSocketId); // Verifica actividad usando la 'io' que tiene

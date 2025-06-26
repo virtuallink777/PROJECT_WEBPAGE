@@ -563,7 +563,7 @@ const ViewPublications = () => {
         <div className="container relative flex pt-10 flex-col items-center justify-center lg:px-0">
           <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
             <div className="text-center ">
-              <ChatReceptor userId={ownerId} clientId={clientId} />
+              {ownerId && <ChatReceptor userId={ownerId} clientId={clientId} />}
             </div>
 
             <div className="text-center"></div>

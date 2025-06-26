@@ -29,14 +29,14 @@ import { updatePublicationPayment } from "./routes/updatePublicationPayment";
 import getPublicationsTOP from "./routes/getPublicationTOP";
 import getPublicationsNOTOP from "./routes/getPublicationsNOTOP";
 import updatePublicationsEndTop from "./routes/updatePublicationsEndTop";
-import configureSocketChat from "./sockets/index";
+
 import metricsRoutes from "./routes/metrics"; // Importamos el router correctamente
 import metricsRoutesAdmin from "./routes/metricsRoutesAdmin"; // Importamos el router correctamente
 import contactRoutes from "./routes/contactRoute"; // Importamos el router correctamente
 import pseRoutes from "./routes/pseRoutes"; // Importamos el router correctamente
 import identityValidationRouterFromFile from "./routes/identityValidationRoutes";
 import ImagesVideosUpload from "./routes/ImagesVideosUpload";
-import { isUserOnlineForChat } from "./sockets/index"; // Importamos la función para verificar si un usuario está conectado
+import { isUserOnlineForChat } from "./routes/socketHandler"; // Importar la función para chequear estado de usuario
 
 const app = express();
 
@@ -48,9 +48,6 @@ export const io = new Server(server, {
 
 // Configurar WebSockets con la función importada
 configureSockets(io);
-
-// Configurar WebSockets con la función importada
-configureSocketChat(io);
 
 // --- NUEVA RUTA DE API PARA ESTADO DE PRESENCIA ---
 app.get("/api/user-status/:userId", (req, res) => {

@@ -19,6 +19,11 @@ interface Message {
 }
 
 const ChatReceptor: React.FC<ChatProps> = ({ userId }) => {
+  // --- AÑADE ESTE CONSOLE.LOG AQUÍ ---
+  console.log("--- CHAT RECEPTOR (DUEÑO) SE ESTÁ RENDERIZANDO ---");
+  console.log("He recibido este userId:", userId);
+  // --- FIN DEL AÑADIDO ---
+
   const [conversations, setConversations] = useState<{
     [conversationId: string]: Message[];
   }>({});
@@ -30,23 +35,41 @@ const ChatReceptor: React.FC<ChatProps> = ({ userId }) => {
   // Conectar al WebSocket y unirse a la sala del usuario
   useEffect(() => {
     if (!socket.connected) {
-      socket.connect(); // Conectar manualmente si no está conectado
+      console.log("Intentando conectar socket...");
+      socket.connect();
+    } else {
+      // Si ya estaba conectado, nos aseguramos de unirnos a la sala
+      console.log("Socket ya conectado. Asegurando unión a la sala.");
+      socket.emit("joinRoom", userId);
     }
 
-    socket.on("connect", () => {
-      console.log("✅ Conectado al WebSocket");
-      socket.emit("joinRoom", userId); // Unirse a la sala del usuario
-    });
-
-    socket.on("connect_error", (error) => {
-      console.error("🚨 Error de conexión al WebSocket:", error);
-    });
-
-    return () => {
-      socket.off("connect");
-      socket.off("connect_error");
+    const handleConnect = () => {
+      console.log("✅ Conectado al WebSocket con ID:", socket.id);
+      socket.emit("joinRoom", userId);
     };
-  }, [userId]);
+
+    const handleError = (error: Error) => {
+      console.error("🚨 Error de conexión al WebSocket:", error);
+    };
+
+    socket.on("connect", handleConnect);
+    socket.on("connect_error", handleError);
+
+    // --- ESTA ES LA PARTE MÁS IMPORTANTE ---
+    // La función de retorno de useEffect se ejecuta cuando el componente se desmonta.
+    // Es el lugar perfecto para limpiar.
+    return () => {
+      console.log(
+        "Desmontando ChatReceptor. Limpiando listeners y desconectando socket."
+      );
+      socket.off("connect", handleConnect);
+      socket.off("connect_error", handleError);
+
+      // Le decimos al socket que se desconecte activamente del servidor.
+      // Esto disparará el evento 'disconnect' en tu backend.
+      socket.disconnect();
+    };
+  }, [userId]); // El array de dependencias está bien
 
   // Escuchar mensajes entrantes
   useEffect(() => {
