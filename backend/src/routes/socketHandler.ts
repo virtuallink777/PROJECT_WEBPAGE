@@ -76,27 +76,35 @@ export const configureSockets = (io: Server) => {
         console.log(
           `[Socket ${socket.id}] 📤 Enviando ${pendingValidations.length} validaciones pendientes...`
         );
+
         pendingValidations.forEach((validation: PendingValidation) => {
+          // Verificamos el tipo de validación
           if (validation.type === "identity") {
+            // La lógica para 'identity' parece ser diferente y podría ya estar bien,
+            // la mantenemos por si acaso, pero aseguramos que el payload sea correcto.
             const identityValidation = validation as PendingIdentityValidation;
-            const payloadForIdentity: IdentityValidationPayload = {
-              userId: identityValidation.userId,
-              publicationId: identityValidation.publicationId,
-              body: identityValidation.originalBody,
-              fileUrls: {
-                documentFront: identityValidation.fileUrls.documentFront!,
-                documentBack: identityValidation.fileUrls.documentBack!,
-              },
-            };
-            socket.emit("validate-identity-document", payloadForIdentity);
-          } else if (validation.type === "publication") {
-            socket.emit(
-              "validate-publication",
-              validation.originalBody,
-              validation.fileUrls
+            console.log(
+              "Enviando validación de IDENTIDAD pendiente:",
+              identityValidation
             );
+            socket.emit(
+              "validate-identity-document",
+              identityValidation.originalBody
+            );
+          } else if (validation.type === "publication") {
+            // --- ESTA ES LA PARTE CORREGIDA ---
+            // El objeto 'validation.originalBody' ya es el 'payloadCompleto'
+            // que guardamos en el JSON, con la estructura correcta.
+            // Lo emitimos como UN SOLO argumento.
+            console.log(
+              "Enviando validación de PUBLICACIÓN pendiente:",
+              validation.originalBody
+            );
+            socket.emit("validate-publication", validation.originalBody);
           }
         });
+
+        // Limpiamos las validaciones DESPUÉS de haberlas enviado todas.
         clearPendingValidations();
         console.log(
           `[Socket ${socket.id}] ✅ Validaciones pendientes enviadas y limpiadas.`

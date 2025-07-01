@@ -50,13 +50,6 @@ api.interceptors.response.use(
   (error) => {
     // Si hay un error en la respuesta
     if (error.response) {
-      // La solicitud se hizo y el servidor respondió con un código de estado
-      // que cae fuera del rango de 2xx
-      console.error(
-        "[API Interceptor] Error en respuesta del servidor:",
-        error.response
-      );
-
       if (error.response.status === 401) {
         // Error 401: No autorizado o sesión expirada
         // Evitar múltiples redirecciones si ya se está manejando o si varias llamadas fallan a la vez

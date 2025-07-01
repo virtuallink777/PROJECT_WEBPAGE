@@ -5,7 +5,7 @@ import HandleFileChangeEditPhotosUpload from "@/components/UploadImagesVideosEdi
 import { Button } from "@/components/ui/button";
 import { useMediaCounts } from "@/hooks/useFetchMediaCounts";
 import VideoUploadComponentEdit from "@/components/UploadVideosEdit";
-
+import { useSocketContext } from "@/context/SocketContext"; // NUEVO -> Importamos nuestro hook del contexto
 import { useParams, useRouter } from "next/navigation";
 import DuplicateFilesPopup from "@/components/ShowImageVideoCreatePub";
 
@@ -71,8 +71,9 @@ const UploadImagesVideos = () => {
     videos: [],
   });
   const [isLoading, setIsLoading] = useState(false); // Estado para la carga
-  const router = useRouter();
+
   const { id } = useParams();
+  const router = useRouter();
 
   console.log("ID de la publicación:", id);
 
@@ -108,6 +109,7 @@ const UploadImagesVideos = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("--- e.preventDefault() HA SIDO LLAMADO ---"); // <-- AÑADE ESTO
     setIsLoading(true); // <--- Iniciar carga
     console.log("primer CONSOLE.LOG DE HANDLESUBMIT", formData);
 
@@ -224,19 +226,17 @@ const UploadImagesVideos = () => {
       formDataToSend.append("videoUrls", JSON.stringify(videoUrls));
       console.log("formDataToSend:", formDataToSend);
 
-      //enviar las imagenes al sessionStorage
-
+      //enviar las imagenes por medio de localstorage para ser utilizadas por la validacion
       const dataToStorage = {
-        userId: formData.userId,
-        images: imageUrls,
-        videos: videoUrls,
+        userId: localStorage.setItem("userId", formData.userId),
+        images: localStorage.setItem("imageUrls", JSON.stringify(imageUrls)),
+        _id: localStorage.setItem("publicationId", id.toString()),
+        videos: localStorage.setItem("videoUrls", JSON.stringify(videoUrls)),
       };
 
-      localStorage.setItem("dataToStorage", JSON.stringify(dataToStorage));
-      console.log(
-        "Imágenes guardadas en localStorage:",
-        JSON.parse(localStorage.getItem("dataToStorage") || "[]")
-      );
+      console.log("Datos guardados en localStorage:", {
+        dataToStorage,
+      });
 
       router.push(`/dashboard/validate/${formData.userId}/${id}`);
     } catch (error) {

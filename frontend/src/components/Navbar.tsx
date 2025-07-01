@@ -26,8 +26,8 @@ export const Navbar = async () => {
             <Image
               src="/3d3.png" // Asegúrate de usar la ruta real
               alt="Logo"
-              width={300}
-              height={300}
+              width={100} // estaba en 300 con labios..modificar nuevamente
+              height={100} // estaba en 300 con labios..modificar nuevamente
             />
           </Link>
         </div>

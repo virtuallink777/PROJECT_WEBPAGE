@@ -381,11 +381,9 @@ const EditPublication: React.FC = () => {
             {formData._id && ( // Solo muestra si hay un ID de publicación cargado
               <Link
                 href={`/dashboard/uploadImagesVideos/${formData._id}`}
-                legacyBehavior
+                className="w-full sm:w-auto text-lg px-8 py-2.5 text-center text-blue-600 hover:text-blue-700 border border-blue-600 hover:border-blue-700 rounded-md font-medium transition-colors duration-150"
               >
-                <a className="w-full sm:w-auto text-lg px-8 py-2.5 text-center text-blue-600 hover:text-blue-700 border border-blue-600 hover:border-blue-700 rounded-md font-medium transition-colors duration-150">
-                  Añadir fotos o videos
-                </a>
+                Añadir fotos o videos
               </Link>
             )}
           </div>

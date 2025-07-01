@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
@@ -10,15 +10,17 @@ export default function ValidarPublicidad() {
   const [fotoRostro, setFotoRostro] = useState<File | null>(null);
   const [mostrarAdvertencia, setMostrarAdvertencia] = useState(false);
   const [muestraRostro, setMuestraRostro] = useState<string | null>(null);
+  const [validationData, setValidationData] = useState<DataItems | null>(null);
 
   const router = useRouter();
 
   interface DataItems {
     userId: string;
+    publicationId: string;
     email: string;
-    id: string;
-    images: { url: string }[];
+    imageUrls: { url: string }[];
     shippingDateValidate: string;
+    videoUrls: string[];
   }
 
   const handleUploadCartel = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -50,82 +52,93 @@ export default function ValidarPublicidad() {
     }
   };
 
-  const storedData = JSON.parse(
-    sessionStorage.getItem("dataToStorage") || "{}"
-  );
+  // Recuperar los datos del sessionStorage
+  useEffect(() => {
+    const storedData = sessionStorage.getItem("dataForValidationPage");
+    if (storedData) {
+      const parsedData = JSON.parse(storedData);
+      setValidationData(parsedData);
+    }
+  }, []);
 
-  const userId = storedData.userId;
-  const email = storedData.email;
-  const _id = storedData._id;
-  const images: { url: string }[] = storedData.images || [];
-  const shippingDateValidate = new Date().toLocaleString("es-CO", {
-    timeZone: "America/Bogota",
-  });
-
-  const dataItems: DataItems = {
-    userId,
-    id: _id,
-    images,
-    email,
-    shippingDateValidate,
-  };
-
-  console.log("User ID:", userId);
-  console.log("Email:", email);
-  console.log("_id:", _id);
+  if (!validationData) {
+    return <div>Cargando...</div>;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // --- VALIDACIONES DE FORMULARIO (Sin cambios) ---
     if (!fotoConCartel) {
       alert("Debes subir la foto con cartel antes de enviar.");
       return;
     }
-
-    if (muestraRostro === null && !fotoRostro) {
-      alert("Debes Seleccionar Sí o No para continuar");
+    if (muestraRostro === null) {
+      // Simplificado
+      alert("Debes seleccionar 'Sí' o 'No' para continuar.");
       return;
     }
-
     if (muestraRostro === "No" && !fotoRostro) {
       alert(
-        "Debes subir una foto de las que subiste en tu publicidad mostrando el rostro. Esta foto NO SE VA A PUBLICAR, solo es para validación."
+        "Si tu rostro no se ve en el cartel, debes subir una foto de tu rostro."
       );
       return;
     }
 
-    const formData = new FormData();
-
-    // Agregar cada URL de imagen como un campo separado
-    images.forEach((image, index: number) => {
-      formData.append(`images[${index}]`, image.url);
-    });
-
-    // Verificar los datos antes de enviarlos
-    for (const pair of formData.entries()) {
-      console.log(pair[0], pair[1]);
+    // --- GUARDIA DE SEGURIDAD PARA DATOS ---
+    // Nos aseguramos de que los datos de la publicación se hayan cargado.
+    // Tu `if (!validationData)` en el return ya debería prevenir esto, pero es una buena práctica.
+    if (!validationData) {
+      alert(
+        "Error: No se han cargado los datos de la publicación. Refresca la página."
+      );
+      return;
     }
 
-    formData.append("fotoCartel", fotoConCartel);
+    // --- CONSTRUCCIÓN DEL FORMDATA (La parte corregida) ---
+    const formData = new FormData();
 
-    if (muestraRostro === "No" && fotoRostro) {
+    // 1. Añadimos los archivos de validación (los que el usuario sube en ESTA página)
+    formData.append("fotoCartel", fotoConCartel);
+    if (fotoRostro) {
       formData.append("fotoRostro", fotoRostro);
     }
 
-    formData.append("dataItems for sessionStorage", JSON.stringify(dataItems));
-    console.log("Contenido de dataItems para validar:", dataItems);
+    // 2. Añadimos el resto de la información necesaria como strings.
+    //    Tomamos los datos directamente del estado 'validationData'.
+    formData.append("publicationId", validationData.publicationId);
+    formData.append("userId", validationData.userId);
+    formData.append("email", validationData.email);
 
-    formData.append("muestraRostro", muestraRostro || "");
+    // Convertimos los arrays de URLs a un string JSON para enviarlos
+    formData.append(
+      "originalImageUrls",
+      JSON.stringify(validationData.imageUrls)
+    );
+    formData.append(
+      "originalVideoUrls",
+      JSON.stringify(validationData.videoUrls)
+    );
 
-    formData.append("shippingDateValidate", shippingDateValidate);
+    // Puedes añadir otros campos que el backend necesite
+    formData.append("muestraRostro", muestraRostro);
+    formData.append(
+      "shippingDateValidate",
+      new Date().toLocaleString("es-CO", { timeZone: "America/Bogota" })
+    );
 
-    // Verificar qué datos se están enviando
+    // --- LOG DE VERIFICACIÓN (Para depurar) ---
+    console.log("--- FormData que se enviará al backend ---");
     for (const pair of formData.entries()) {
-      console.log(pair[0], pair[1]);
+      console.log(`${pair[0]}: ${pair[1]}`);
     }
+    console.log("-----------------------------------------");
+
     try {
+      // 3. ENVIAMOS LA PETICIÓN AL BACKEND
+      // La URL de la API ahora usa el userId del estado 'validationData'
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/validate/${userId}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/validate/${validationData.userId}`,
         {
           method: "POST",
           body: formData,
@@ -133,15 +146,28 @@ export default function ValidarPublicidad() {
       );
 
       if (!response.ok) {
-        throw new Error("Error al subir la publicidad");
+        // Manejo de errores mejorado
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Error al enviar la validación");
       }
 
+      // 4. LIMPIEZA Y REDIRECCIÓN
+      // Limpiamos el sessionStorage para que no quede basura
+      sessionStorage.removeItem("dataForValidationPage");
+
       alert(
-        "Publicidad en proceso de validación, en unos minutos tendrás respuesta."
+        "Tu publicación ha sido enviada a validación. Recibirás una respuesta en breve."
       );
       router.push("/dashboard/viewPublications");
     } catch (error) {
-      console.log("Error al subir la publicidad para la validacion:", error);
+      console.error("Error al enviar la validación:", error);
+      alert(
+        `Error: ${
+          error instanceof Error
+            ? error.message
+            : "Ocurrió un error desconocido."
+        }`
+      );
     }
   };
 

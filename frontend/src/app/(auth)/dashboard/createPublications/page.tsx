@@ -380,21 +380,41 @@ const CreatePublications: React.FC = () => {
       alert("¡Publicación creada con éxito!, pasa ahora a validarla.");
 
       // --- Manejo de sessionStorage y redirección (sin cambios) ---
-      const dataToStorage = {
+      const dataForValidationPage = {
+        // Usamos 'publicationId' para ser consistentes.
+        publicationId: response.data.publicacion._id,
         userId: response.data.publicacion.userId,
-        images: response.data.publicacion.images, // Esto ahora debería tener originalFilename si el backend lo guardó
-        _id: response.data.publicacion._id,
         email: response.data.publicacion.email,
-        updatedAt: response.data.publicacion.updatedAt,
+
+        // Extraemos SOLO las URLs, que es lo que necesitamos transportar.
+        imageUrls: response.data.publicacion.images.map(
+          (img: { url: string }) => img.url
+        ),
+        videoUrls: response.data.publicacion.videos.map(
+          (vid: { url: string }) => vid.url
+        ),
+
+        // Añadimos la fecha para que la página de validación la tenga.
+        shippingDateValidate: new Date().toLocaleString("es-ES"),
       };
+
+      // 2. Guardamos este objeto limpio en sessionStorage.
+      sessionStorage.setItem(
+        "dataForValidationPage",
+        JSON.stringify(dataForValidationPage)
+      );
+
       console.log(
-        "dataToStorage (después de crear publicación):",
-        dataToStorage
+        "Datos guardados en sessionStorage para la página de validación:",
+        dataForValidationPage
       );
-      sessionStorage.setItem("dataToStorage", JSON.stringify(dataToStorage));
-      router.push(
-        `/dashboard/validate/${formData.userId}/${response.data.publicacion._id}`
-      );
+
+      // 3. Redirigimos al usuario. La redirección ya es correcta.
+      setTimeout(() => {
+        router.push(
+          `/dashboard/validate/${dataForValidationPage.userId}/${dataForValidationPage.publicationId}`
+        );
+      }, 100);
     } catch (error) {
       console.error("Error al crear la publicación:", error);
       // Podrías querer ser más específico con el mensaje de error

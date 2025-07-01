@@ -91,11 +91,9 @@ export const clearPendingValidations = () => {
   }
 };
 
-// --- RUTA POST ÚNICA PARA TODAS LAS VALIDACIONES ---
+// --- RUTA POST ÚNICA PARA TODAS LAS VALIDACIONES (CON LÓGICA CORREGIDA) ---
 validateAdmin.post(
   "/:userId",
-  // Usamos el middleware 'upload' de Cloudinary.
-  // Este se encargará de subir todos los archivos posibles y poner las URLs en req.files
   upload.fields([
     { name: "fotoCartel", maxCount: 1 },
     { name: "fotoRostro", maxCount: 1 },
@@ -104,110 +102,136 @@ validateAdmin.post(
   ]),
   (req: Request, res: Response) => {
     const userIdFromParams = req.params.userId;
-    const publicationIdFromBody = req.body.publicationId;
     const files = req.files as MulterFiles;
     const requestId = Date.now();
 
     console.log(
-      `\n[VALIDATES_ADMIN][${requestId}] --- Inicio de Solicitud de Validación (Cloudinary) ---`
-    );
-    console.log(
-      `[VALIDATES_ADMIN][${requestId}] Para userId: ${userIdFromParams}`
+      `\n[VALIDATES_ADMIN][${requestId}] --- Inicio de Solicitud de Validación ---`
     );
 
-    // Construimos el objeto de URLs a partir de la propiedad 'path' que nos da Cloudinary
-    const responseUrls: Record<string, string> = {};
+    // 1. OBTENEMOS LAS URLs DE LOS ARCHIVOS DE VALIDACIÓN RECIÉN SUBIDOS
+    const validationFileUrls: Record<string, string> = {};
     if (files.fotoCartel?.[0])
-      responseUrls.fotoCartel = files.fotoCartel[0].path;
+      validationFileUrls.fotoCartel = files.fotoCartel[0].path;
     if (files.fotoRostro?.[0])
-      responseUrls.fotoRostro = files.fotoRostro[0].path;
+      validationFileUrls.fotoRostro = files.fotoRostro[0].path;
     if (files.documentFront?.[0])
-      responseUrls.documentFront = files.documentFront[0].path;
+      validationFileUrls.documentFront = files.documentFront[0].path;
     if (files.documentBack?.[0])
-      responseUrls.documentBack = files.documentBack[0].path;
-
-    console.log(
-      `[VALIDATES_ADMIN][${requestId}] URLs de Cloudinary construidas:`,
-      responseUrls
-    );
+      validationFileUrls.documentBack = files.documentBack[0].path;
 
     // Respondemos al cliente inmediatamente para que no espere
     res.status(200).json({
-      message: "Datos de validación recibidos y subidos a Cloudinary.",
-      fileUrls: responseUrls,
+      message: "Datos de validación recibidos y en proceso.",
+      fileUrls: validationFileUrls,
     });
 
-    // --- Lógica para Emitir al Admin o Guardar como Pendiente (SIN CAMBIOS, SOLO USANDO LAS NUEVAS URLs) ---
+    // 2. PARSEAMOS TODA LA INFORMACIÓN QUE VIENE EN EL BODY
+    // Usamos 'try-catch' para evitar que el servidor crashee si el JSON es inválido.
+    let dataItems: any = {};
+    try {
+      dataItems = JSON.parse(req.body.dataItems || "{}");
+    } catch (e) {
+      console.error("Error parseando dataItems:", e);
+    }
+
+    let originalImageUrls: string[] = [];
+    try {
+      originalImageUrls = JSON.parse(req.body.originalImageUrls || "[]");
+    } catch (e) {
+      console.error("Error parseando originalImageUrls:", e);
+    }
+
+    let originalVideoUrls: string[] = [];
+    try {
+      originalVideoUrls = JSON.parse(req.body.originalVideoUrls || "[]");
+    } catch (e) {
+      console.error("Error parseando originalVideoUrls:", e);
+    }
+
+    const publicationId =
+      req.body.publicationId || dataItems.publicationId || dataItems._id;
+
+    // --- AÑADE ESTOS LOGS DE DIAGNÓSTICO ---
+    console.log("DIAGNÓSTICO: Contenido de req.body:", req.body);
+    console.log("DIAGNÓSTICO: Contenido de dataItems parseado:", dataItems);
+    console.log(
+      "DIAGNÓSTICO: Valor final de 'publicationId' que se usará:",
+      publicationId
+    );
+    // --- FIN DE LOS LOGS ---
+
+    // 3. CONSTRUIMOS EL PAQUETE DE DATOS COMPLETO
+    const payloadCompleto = {
+      userId: userIdFromParams,
+      publicationId: publicationId,
+      email: dataItems.email,
+      images: originalImageUrls.map((url) => ({ url })), // Convertimos a la estructura que el AdminPanel espera
+      videos: originalVideoUrls.map((url) => ({ url })),
+      shippingDateValidate: req.body.shippingDateValidate,
+      responseUrls: validationFileUrls, // Las URLs de fotoCartel, fotoRostro, etc.
+    };
+
+    // 4. LÓGICA PARA EMITIR O GUARDAR
     const adminSocketId = getAdminSocket();
     const isAdminConnectedAndActive =
       adminSocketId && io.sockets.sockets.get(adminSocketId);
 
     if (isAdminConnectedAndActive) {
       console.log(
-        `[VALIDATES_ADMIN][${requestId}] ✅ Admin CONECTADO (${adminSocketId}). Emitiendo en tiempo real...`
+        `[VALIDATES_ADMIN][${requestId}] ✅ Admin CONECTADO. Emitiendo...`
       );
 
-      if (files.documentFront && files.documentBack && publicationIdFromBody) {
+      if (files.documentFront && files.documentBack) {
         console.log(
           `[VALIDATES_ADMIN][${requestId}] Tipo: VALIDACIÓN DE DOCUMENTO`
         );
+        // El evento de identidad puede necesitar una estructura específica
         const payloadForIdentity: IdentityValidationPayload = {
           userId: userIdFromParams,
-          publicationId: publicationIdFromBody,
-          body: req.body,
+          publicationId: publicationId,
+          body: req.body, // Mantenemos el body original por si se usa
           fileUrls: {
-            documentFront: responseUrls.documentFront!,
-            documentBack: responseUrls.documentBack!,
+            documentFront: validationFileUrls.documentFront!,
+            documentBack: validationFileUrls.documentBack!,
           },
         };
         io.to(adminSocketId).emit(
           "validate-identity-document",
           payloadForIdentity
         );
-        console.log(
-          `[VALIDATES_ADMIN][${requestId}] 🚀 Evento 'validate-identity-document' emitido.`
-        );
       } else if (files.fotoCartel || files.fotoRostro) {
         console.log(
           `[VALIDATES_ADMIN][${requestId}] Tipo: VALIDACIÓN DE PUBLICACIÓN`
         );
-        io.to(adminSocketId).emit(
-          "validate-publication",
-          req.body,
-          responseUrls
-        );
-        console.log(
-          `[VALIDATES_ADMIN][${requestId}] 🚀 Evento 'validate-publication' emitido.`
-        );
-      } else {
-        console.warn(
-          `[VALIDATES_ADMIN][${requestId}] ⚠️ No se identificó un tipo de validación claro para emitir.`
-        );
+        // Emitimos el payload completo que construimos
+        io.to(adminSocketId).emit("validate-publication", payloadCompleto);
       }
     } else {
       console.log(
-        `[VALIDATES_ADMIN][${requestId}] ❌ Admin NO CONECTADO. Guardando validación pendiente.`
+        `[VALIDATES_ADMIN][${requestId}] ❌ Admin NO CONECTADO. Guardando pendiente.`
       );
 
       let validationToPush: PendingValidation | null = null;
 
-      if (files.documentFront && files.documentBack && publicationIdFromBody) {
+      if (files.documentFront && files.documentBack) {
         validationToPush = {
           type: "identity",
           userId: userIdFromParams,
-          publicationId: publicationIdFromBody,
-          originalBody: req.body,
+          publicationId: publicationId,
+          originalBody: req.body, // Guardamos el body original para consistencia
           fileUrls: {
-            documentFront: responseUrls.documentFront!,
-            documentBack: responseUrls.documentBack!,
+            documentFront: validationFileUrls.documentFront!,
+            documentBack: validationFileUrls.documentBack!,
           },
         };
       } else if (files.fotoCartel || files.fotoRostro) {
+        // Usamos el payload completo también para guardar
         validationToPush = {
           type: "publication",
           userId: userIdFromParams,
-          originalBody: req.body,
-          fileUrls: responseUrls,
+          originalBody: payloadCompleto, // Guardamos el objeto completo y bien estructurado
+          fileUrls: validationFileUrls,
         };
       }
 
@@ -215,11 +239,7 @@ validateAdmin.post(
         pendingValidations.push(validationToPush);
         savePendingValidations();
         console.log(
-          `[VALIDATES_ADMIN][${requestId}] 💾 Validación pendiente guardada. Total: ${pendingValidations.length}`
-        );
-      } else {
-        console.warn(
-          `[VALIDATES_ADMIN][${requestId}] ⚠️ No se pudo determinar el tipo de validación para guardar.`
+          `[VALIDATES_ADMIN][${requestId}] 💾 Validación pendiente guardada.`
         );
       }
     }

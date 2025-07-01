@@ -21,6 +21,7 @@ interface PublicationForValidation {
   userId: string;
   id: string; // Este es el ID de la publicación
   images: { url: string }[]; // Imágenes originales de la publicidad
+  videos?: { url: string }[]; // Opcional: si tienes videos, los añadimos aquí
   email: string;
   shippingDateValidate: string;
   responseUrls: Record<string, string>; // Fotos de cartel/rostro subidas para validación
@@ -179,58 +180,62 @@ const AdminPanel = () => {
   };
 
   useEffect(() => {
-    // NUEVO -> Condición de seguridad
+    // Condición de seguridad, no hacer nada si el socket no está listo.
     if (!socket) return;
 
-    const handleValidatePublication = (body, responseUrls) => {
-      // ... (toda tu lógica interna de este handler permanece igual)
-      if (!body || !responseUrls) {
-        console.error("Datos de publicación a validar no recibidos");
+    // 1. Definimos el handler con la firma correcta: recibe UN solo argumento.
+    const handleValidatePublication = (payload: any) => {
+      console.log(
+        "ADMIN_FRONTEND: RECIBIDO 'validate-publication' con payload:",
+        payload
+      );
+
+      // Verificación de seguridad para asegurar que el payload es válido.
+      if (!payload || !payload.publicationId) {
+        console.error("Payload de validación inválido recibido del backend.");
         return;
       }
 
-      console.log("Datos de publicación a validar:", body);
-      console.log("URLs de respuesta recibidas:", responseUrls);
+      // 2. Construimos el nuevo objeto para el estado.
+      //    Mapeamos directamente las propiedades del 'payload' que nos envía el backend
+      //    a la estructura que tu interfaz 'PublicationForValidation' espera.
+      const nuevaPublicacion: PublicationForValidation = {
+        userId: payload.userId,
+        id: payload.publicationId,
+        images: payload.images || [], // Las imágenes originales de la publicación
+        videos: payload.videos || [], // Si tienes videos, los añadimos aquí
+        email: payload.email || "No especificado",
+        shippingDateValidate:
+          payload.shippingDateValidate || new Date().toISOString(),
 
-      let extractedData = {};
+        // La propiedad 'responseUrls' de tu estado se llena con 'validationImages' del payload.
+        responseUrls: payload.responseUrls || {},
 
-      try {
-        if (body["dataItems for sessionStorage"]) {
-          console.log(
-            "JSON recibido antes de parsear:",
-            body["dataItems for sessionStorage"]
-          );
-          extractedData = JSON.parse(body["dataItems for sessionStorage"]);
-        }
-      } catch (error) {
-        console.error("Error al parsear dataItems for sessionStorage:", error);
-        return;
-      }
-
-      const { userId, id, images, email, shippingDateValidate } = extractedData;
-
-      const formattedImages = Array.isArray(images)
-        ? images.map((img) => (typeof img === "string" ? { url: img } : img))
-        : [];
-
-      const nuevaPublicacion = {
-        userId,
-        id,
-        images: formattedImages,
-        email,
-
-        shippingDateValidate,
-        responseUrls,
+        // Puedes añadir valores por defecto para otras propiedades si es necesario
+        estadoActual: "PENDIENTE_VALIDACION",
       };
 
-      console.log("Nueva publicación recibida:", nuevaPublicacion);
+      console.log(
+        "Nueva publicación formateada para añadir al estado:",
+        nuevaPublicacion
+      );
 
+      // 3. Actualizamos el estado de 'publicaciones'.
       setPublicaciones((prevPublicaciones) => {
+        // Evitamos añadir duplicados si el evento llega varias veces.
+        const yaExiste = prevPublicaciones.some(
+          (p) => p.id === nuevaPublicacion.id
+        );
+        if (yaExiste) {
+          console.log(
+            `La publicación ${nuevaPublicacion.id} ya existe en la lista. No se añadirá de nuevo.`
+          );
+          return prevPublicaciones;
+        }
+
         const nuevasPublicaciones = [...prevPublicaciones, nuevaPublicacion];
 
-        console.log("Nuevas publicaciones:", nuevasPublicaciones);
-
-        // Guardar en localStorage
+        // Actualizamos el localStorage para persistencia.
         localStorage.setItem(
           "publicaciones",
           JSON.stringify(nuevasPublicaciones)
@@ -240,12 +245,16 @@ const AdminPanel = () => {
       });
     };
 
+    // 4. Registramos el listener en el socket.
     socket.on("validate-publication", handleValidatePublication);
+    console.log("Listener para 'validate-publication' registrado.");
 
+    // 5. Devolvemos la función de limpieza para evitar fugas de memoria.
     return () => {
       socket.off("validate-publication", handleValidatePublication);
+      console.log("Listener para 'validate-publication' limpiado.");
     };
-  }, [socket]); // NUEVO -> Dependencia del socket
+  }, [socket]); // El efecto depende del socket para registrarse.
 
   // 🔹 Obtener publicaciones guardadas en localStorage
   useEffect(() => {

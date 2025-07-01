@@ -24,14 +24,15 @@ import {
   signToken,
   verifyToken,
 } from "../utils/jwt";
-
 import { APP_ORIGIN } from "../constans/env";
 import {
   getPasswordResetTemplate,
   getVerifyEmailTemplate,
 } from "../utils/emailsTemplates";
-import { transport } from "../config/nodemailer";
+
 import { hashValue } from "../utils/bcrypt";
+
+import { sendEmail } from "../services/email.service";
 
 export type createAccountParams = {
   email: string;
@@ -71,13 +72,26 @@ export const createAccount = async (data: createAccountParams) => {
 
   const emailTemplate = getVerifyEmailTemplate(url);
 
-  await transport.sendMail({
-    from: "'WEBPAGE'  <negocios.caps@gmail.com>",
-    to: user.email,
-    subject: emailTemplate.subject,
-    html: emailTemplate.html,
-    text: emailTemplate.text,
-  });
+  // --- BLOQUE MODIFICADO ---
+  try {
+    await sendEmail({
+      to: user.email,
+      subject: emailTemplate.subject,
+      html: emailTemplate.html,
+    });
+    console.log(
+      `Correo de verificación enviado a ${user.email} usando Resend.`
+    );
+  } catch (error) {
+    console.error(
+      "Fallo al enviar el correo de verificación. El usuario ha sido creado, pero el correo no se envió.",
+      error
+    );
+    // Aquí decides qué hacer. Por ahora, solo lo registramos.
+    // Podrías lanzar un error para que el handler lo capture, pero eso podría revertir la creación del usuario.
+    // Por ahora, es mejor solo registrar el fallo y continuar.
+  }
+  // --- FIN DEL BLOQUE MODIFICADO ---
 
   // create session
   const session = await SessionModel.create({
@@ -279,16 +293,13 @@ export const sendPasswordResetEmail = async (email: string) => {
     const emailTemplate = getPasswordResetTemplate(url);
 
     try {
-      // send verification email
-      await transport.sendMail({
-        from: '"Tu Aplicación" <negocios.caps@gmail.com>',
+      await sendEmail({
         to: user.email,
         subject: emailTemplate.subject,
         html: emailTemplate.html,
-        text: emailTemplate.text,
       });
       console.log(
-        `[Password Reset] Email enviado exitosamente a: ${user.email}`
+        `Correo de verificación enviado a ${user.email} usando Resend.`
       );
 
       // Limpiar códigos antiguos

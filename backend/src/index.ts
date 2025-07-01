@@ -29,10 +29,10 @@ import { updatePublicationPayment } from "./routes/updatePublicationPayment";
 import getPublicationsTOP from "./routes/getPublicationTOP";
 import getPublicationsNOTOP from "./routes/getPublicationsNOTOP";
 import updatePublicationsEndTop from "./routes/updatePublicationsEndTop";
-
+import contactRoutes from "./routes/contact.route"; // Importamos el router correctamente
 import metricsRoutes from "./routes/metrics"; // Importamos el router correctamente
 import metricsRoutesAdmin from "./routes/metricsRoutesAdmin"; // Importamos el router correctamente
-import contactRoutes from "./routes/contactRoute"; // Importamos el router correctamente
+
 import pseRoutes from "./routes/pseRoutes"; // Importamos el router correctamente
 import identityValidationRouterFromFile from "./routes/identityValidationRoutes";
 import ImagesVideosUpload from "./routes/ImagesVideosUpload";

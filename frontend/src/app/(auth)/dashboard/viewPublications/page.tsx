@@ -180,7 +180,10 @@ const ViewPublications = () => {
 
         setPublications(response.data);
       } catch (error: any) {
-        console.error("Error al cargar publicaciones:", error);
+        if (error.response?.status === 404) {
+          console.warn("No se encontraron publicaciones para este usuario.");
+          setPublications([]); // opcional
+        }
 
         // Si el error es por autenticación, redirigir
         if (error.response?.status === 401) {

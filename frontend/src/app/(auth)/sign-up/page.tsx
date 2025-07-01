@@ -99,7 +99,7 @@ const SignUp = () => {
         <div className="grid gap-6">
           {serverError && (
             <div className="flex items-center justify-center">
-              <p className="text-sm text-red-500">{serverError}</p>
+              <div className="text-sm text-red-500">{serverError}</div>
             </div>
           )}
 
