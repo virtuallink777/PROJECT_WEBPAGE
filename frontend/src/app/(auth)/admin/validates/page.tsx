@@ -284,8 +284,6 @@ const AdminPanel = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // ✅ Solo ejecuta esto al montar el componente
 
-  ///   ****************  REVISAR ESTE USEEFFECT ***************** ///
-
   useEffect(() => {
     // NUEVO -> Condición de seguridad
     if (!socket) return;
@@ -503,7 +501,7 @@ const AdminPanel = () => {
                     <div
                       key={index}
                       className="text-center group relative"
-                      onClick={() => handleImageClick(imageUrl)}
+                      //={() => handleImageClick(imageUrl)}
                     >
                       <div className="mx-auto rounded-lg min-w-0 min-h-0">
                         <Image
@@ -533,7 +531,7 @@ const AdminPanel = () => {
                     <div
                       key={key}
                       className="text-center group relative"
-                      onClick={() => handleImageClick(url)} // Manejar clic en la imagen
+                      //onClick={() => handleImageClick(url)} // Manejar clic en la imagen
                     >
                       <p className="font-medium capitalize">{key}</p>
                       <div className="mx-auto rounded-lg min-w-0 min-h-0">
@@ -563,11 +561,11 @@ const AdminPanel = () => {
                       <div
                         key={`${publicacion.id}-docFront`} // Clave única
                         className="text-center group relative"
-                        onClick={() =>
-                          handleImageClick(
-                            publicacion.identityDocumentUrls!.documentFront
-                          )
-                        }
+                        //onClick={() =>
+                        //handleImageClick(
+                        //publicacion.identityDocumentUrls!.documentFront
+                        //)
+                        //}
                       >
                         <p className="font-medium capitalize">
                           Documento Frontal
@@ -594,11 +592,11 @@ const AdminPanel = () => {
                       <div
                         key={`${publicacion.id}-docBack`} // Clave única
                         className="text-center group relative"
-                        onClick={() =>
-                          handleImageClick(
-                            publicacion.identityDocumentUrls!.documentBack
-                          )
-                        }
+                        // onClick={() =>
+                        //   handleImageClick(
+                        //     publicacion.identityDocumentUrls!.documentBack
+                        //   )
+                        // }
                       >
                         <p className="font-medium capitalize">
                           Documento Trasero
@@ -625,6 +623,7 @@ const AdminPanel = () => {
                 )}
                 {/* FIN DEL NUEVO BLOQUE */}
               </div>
+
               <div className="flex justify-end mb-4">
                 <Button
                   className="text-xl"
@@ -738,26 +737,29 @@ const AdminPanel = () => {
         ) : (
           <p>No hay publicaciones pendientes por validar.</p>
         )}
+      </div>
 
-        {/* Renderizar imágenes agrandadas */}
-        {activeImages.map((url) => (
-          <div key={url} className="fixed z-50 cursor-grab" style={{}}>
-            <div
-              style={{
-                pointerEvents: "none", // Evitar que la imagen interfiera con los eventos de arrastre
-              }}
-            >
-              <Image
-                src={url}
-                alt="Imagen agrandada"
-                className="rounded-lg"
-                width={400}
-                height={400}
-                style={{ objectFit: "contain" }}
-              />
-            </div>
+      <div>
+        {/* Renderizar VIDEOS Y QUE SE PUEDAN REPRODUCIR */}
+
+        {publicaciones.length > 0 && (
+          <div className="mt-8">
+            <h3 className="text-lg font-semibold mb-4">Videos:</h3>
+
+            {publicaciones[0].videos?.map((video, index) => (
+              <div
+                key={index}
+                className="relative w-full max-w-[500px] h-120 aspect-video border rounded-lg overflow-hidden bg-gray-200 shadow-sm"
+              >
+                <video
+                  src={video.url}
+                  controls
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ))}
           </div>
-        ))}
+        )}
       </div>
     </>
   );

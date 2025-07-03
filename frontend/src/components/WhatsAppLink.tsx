@@ -1,51 +1,62 @@
+// src/components/WhatsAppLink.tsx (Versión Corregida)
+
 import React from "react";
 import { FaWhatsapp } from "react-icons/fa";
 
 type WhatsAppLinkProps = {
   telefono: string;
-  postId: string;
+  postId: string; // Asumo que podrías querer usarlo en el mensaje
   onWhatsAppClick: (postId: string, eventType: "whatsappClicks") => void;
+  // Opcional: añadimos una prop para el título de la publicación
+  tituloPublicacion?: string;
 };
 
 const WhatsAppLink = ({
   telefono,
   postId,
   onWhatsAppClick,
+  tituloPublicacion, // Recibimos la nueva prop
 }: WhatsAppLinkProps) => {
-  // Asegúrate de que el teléfono tenga el formato correcto (sin espacios ni caracteres especiales)
-  const formattedTelefono = telefono.replace(/\D/g, ""); // Elimina todo lo que no sea un dígito
+  // 1. Limpiamos el número de teléfono, como ya lo hacías.
+  const formattedTelefono = telefono.replace(/\D/g, "");
 
-  // Crear el enlace de WhatsApp
-  const whatsappLink = `https://wa.me/${formattedTelefono}`;
+  // 2. --- CAMBIO CLAVE: Construimos el mensaje y lo codificamos ---
+  //    Definimos un mensaje base. Usamos el título si está disponible.
+  const mensajeBase = `¡Hola! Te vi en Lujuria y me interesa tu publicación${
+    tituloPublicacion ? `: "${tituloPublicacion}"` : ""
+  }.`;
 
-  // Función para manejar el click en el enlace
-  const handleWhatsAppClick = (e) => {
-    e.preventDefault(); // Previene la navegación inmediata
+  //    Codificamos el mensaje para que sea seguro en una URL.
+  const mensajeCodificado = encodeURIComponent(mensajeBase);
 
-    console.log("✅ handleWhatsAppClick ejecutado con postId:", postId);
+  // 3. --- CAMBIO CLAVE: Creamos la URL completa de WhatsApp con el mensaje ---
+  const whatsappLink = `https://wa.me/${formattedTelefono}?text=${mensajeCodificado}`;
 
+  // La función handleWhatsAppClick se mantiene prácticamente igual.
+  const handleWhatsAppClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+
+    // Registramos la métrica
     if (onWhatsAppClick && postId) {
       onWhatsAppClick(postId, "whatsappClicks");
     }
 
-    // Permitir que el enlace funcione después de un pequeño retraso
-    setTimeout(() => {
-      window.open(whatsappLink, "_blank");
-    }, 100);
+    // Abrimos el enlace de WhatsApp en una nueva pestaña.
+    // El setTimeout no es estrictamente necesario aquí, pero no hace daño.
+    window.open(whatsappLink, "_blank");
   };
 
   return (
     <div className="flex justify-between items-center">
-      {/* Ícono de WhatsApp */}
       <FaWhatsapp className="text-green-500 text-xl mr-2" />
-      {/* Enlace de WhatsApp */}
       <a
         href={whatsappLink}
         target="_blank"
         rel="noopener noreferrer"
         className="font-medium text-blue-700 hover:underline"
-        onClick={handleWhatsAppClick} // Añadido el manejador de eventos
+        onClick={handleWhatsAppClick}
       >
+        {/* Mantenemos el número de teléfono como texto visible del enlace */}
         {telefono}
       </a>
     </div>

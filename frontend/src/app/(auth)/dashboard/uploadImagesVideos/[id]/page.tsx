@@ -23,7 +23,7 @@ async function obtenerIdCliente() {
     const data = await response.json();
     console.log("Full response data:", data);
     console.log("ID del usuario obtenido:", data.userId); // Este console.log debería aparecer en la consola
-    return data.userId; // Esto devuelve directamente el ID alfanumérico
+    return data; // Esto devuelve directamente el ID alfanumérico
   } catch (error) {
     console.error("Error al obtener el ID del usuario:", error);
     return null;
@@ -56,6 +56,7 @@ export const CountImagesVideos: React.FC = () => {
 
 interface FormData {
   userId: string;
+  email?: string; // Asumiendo que el email puede ser parte del formData
   id: string;
   images: File[];
   videos: File[];
@@ -83,16 +84,17 @@ const UploadImagesVideos = () => {
 
   // Agrega este useEffect para llamar a obtenerIdCliente cuando el componente se monte
   useEffect(() => {
-    const fetchUserId = async () => {
-      const userId = await obtenerIdCliente();
-      if (userId) {
+    const fetchUserData = async () => {
+      const userData = await obtenerIdCliente();
+      if (userData) {
         setFormData((prev) => ({
           ...prev,
-          userId: userId,
+          userId: userData.userId,
+          email: userData.email, // <-- Añadimos el email al estado
         }));
       }
     };
-    fetchUserId();
+    fetchUserData();
   }, []); // El array vacío significa que esto se ejecutará solo una vez al montar el componente
 
   const handleVideosChange = (videos: File[]) => {
@@ -226,19 +228,32 @@ const UploadImagesVideos = () => {
       formDataToSend.append("videoUrls", JSON.stringify(videoUrls));
       console.log("formDataToSend:", formDataToSend);
 
-      //enviar las imagenes por medio de localstorage para ser utilizadas por la validacion
-      const dataToStorage = {
-        userId: localStorage.setItem("userId", formData.userId),
-        images: localStorage.setItem("imageUrls", JSON.stringify(imageUrls)),
-        _id: localStorage.setItem("publicationId", id.toString()),
-        videos: localStorage.setItem("videoUrls", JSON.stringify(videoUrls)),
+      // 1. Construimos un único objeto con TODOS los datos necesarios para la siguiente página.
+      const dataForValidationPage = {
+        userId: formData.userId,
+        publicationId: Array.isArray(id) ? id[0] : id, // Nos aseguramos que 'id' sea un string
+        email: formData.email, // Asumiendo que 'email' está en tu estado formData
+        imageUrls: imageUrls, // El array de URLs de imágenes de Cloudinary
+        videoUrls: videoUrls, // El array de URLs de videos de Cloudinary
       };
 
-      console.log("Datos guardados en localStorage:", {
-        dataToStorage,
-      });
+      // 2. Guardamos ESE ÚNICO objeto en sessionStorage bajo UNA SOLA clave.
+      sessionStorage.setItem(
+        "dataForValidationPage",
+        JSON.stringify(dataForValidationPage)
+      );
 
-      router.push(`/dashboard/validate/${formData.userId}/${id}`);
+      console.log(
+        "Datos guardados en sessionStorage para la página de validación:",
+        dataForValidationPage
+      );
+
+      // 3. Redirigimos al usuario. Usamos un pequeño delay para asegurar la escritura.
+      setTimeout(() => {
+        router.push(
+          `/dashboard/validate/${dataForValidationPage.userId}/${dataForValidationPage.publicationId}`
+        );
+      }, 100);
     } catch (error) {
       console.error("Error al crear la publicación:", error);
       alert("Error al crear la publicación. Por favor, intenta de nuevo.");
