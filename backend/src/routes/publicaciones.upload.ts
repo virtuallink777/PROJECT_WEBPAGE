@@ -240,8 +240,8 @@ const publicacionesUpload = router.post(
               const resource_type = fileToClean.mimetype.startsWith("video/")
                 ? "video"
                 : fileToClean.mimetype.startsWith("image/")
-                ? "image"
-                : "raw";
+                  ? "image"
+                  : "raw";
               await cloudinary.uploader.destroy(fileToClean.filename, {
                 resource_type,
               });

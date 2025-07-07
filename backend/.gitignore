@@ -6,4 +6,3 @@ dist/
 build/
 *.log
 .vscode/
-src/uploads/

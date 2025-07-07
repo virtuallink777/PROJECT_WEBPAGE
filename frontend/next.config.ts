@@ -8,6 +8,12 @@ const nextConfig = {
   images: {
     remotePatterns: [
       {
+        protocol: "https", // O 'https' si tu backend en Render usa HTTPS
+        hostname: "backend-2i85.onrender.com",
+        port: "", // Déjalo vacío si no usas un puerto específico en la URL
+        pathname: "**", //
+      },
+      {
         protocol: "https",
         hostname: "res.cloudinary.com",
         port: "", // Dejar vacío si no hay puerto específico (Cloudinary usa el estándar 443 para https)
@@ -19,7 +25,6 @@ const nextConfig = {
         protocol: "http", // OJO: es http para localhost
         hostname: "localhost",
         port: "4004", // El puerto de tu backend
-        pathname: "/uploads/**", // O la ruta específica donde sirves archivos
       },
       {
         // El protocolo puede ser http o https, dependiendo de cómo sirvas los archivos
@@ -27,7 +32,6 @@ const nextConfig = {
         protocol: "https", // <-- Si tu backend en Render usa HTTPS, pon "https". Si no, "http".
         hostname: "backend-2i85.onrender.com", // <-- El dominio que te da el error
         port: "", // Déjalo vacío si usas el puerto estándar (80 para http, 443 para https)
-        pathname: "/uploads/**", // Permite cualquier imagen dentro de la carpeta /uploads
       },
     ],
     // Si usabas la propiedad 'domains' (ahora obsoleta pero podría estar en proyectos antiguos):

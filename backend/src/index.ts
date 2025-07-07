@@ -66,9 +66,6 @@ app.get("/api/user-status/:userId", (req, res) => {
 // Middleware para parsear JSON
 app.use(express.json()); // Esto está bien para rutas POST/PUT
 
-// Servir la carpeta "uploads"
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(
@@ -102,7 +99,9 @@ app.use("/dashboard", authenticate, dashboardRoutes);
 
 // ruta para subir las imagenes NUEVAS DE CREATE PUB A cloudinary  con creacion y verificacion de hashes
 app.use("/api/publicacionesImage", publicacionesUpload);
-console.log("Ruta de uploads por primera ok registrada correctamente");
+console.log(
+  "Ruta de upload de cloudinary por primera ok registrada correctamente"
+);
 
 // ruta para subir la publicacion nuevas a mongodb
 app.use("/api/publications", authenticate, publicationsRouter);
