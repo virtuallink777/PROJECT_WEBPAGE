@@ -3,15 +3,15 @@
 import { Input } from "@/components/ui/input";
 import React, { useEffect, useState } from "react";
 import { useCategoriesData } from "../../../../categoriesData/categoriesdata";
-
 import { Button } from "@/components/ui/button";
 import VideoUploadComponent from "@/components/DownloadVideo";
 import HandleFileChange from "@/components/DownloadPhoto";
 import api from "@/lib/api";
-
 import DuplicateFilesPopup from "@/components/ShowImageVideoCreatePub";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
 
 const SimpleSpinner: React.FC = () => (
   <div className="flex flex-col items-center justify-center">
@@ -550,17 +550,16 @@ const CreatePublications: React.FC = () => {
                   >
                     Teléfono:
                   </label>
-                  <Input
+                  <PhoneInput
                     id="telefono"
                     name="telefono"
-                    type="tel"
                     placeholder="Ingrese su teléfono"
                     value={formData.telefono}
-                    onChange={handleInputChange}
-                    required
-                    pattern="[0-9]{10}"
-                    title="Ingrese un número de teléfono válido de 10 dígitos"
-                    className="w-full bg-white"
+                    onChange={(value) =>
+                      setFormData({ ...formData, telefono: value || "" })
+                    }
+                    defaultCountry="AR" // Opcional: Elige el país que aparecerá por defecto (ej: "AR" para Argentina, "CO" para Colombia, "ES" para España)
+                    className="w-full bg-white" // Puedes aplicar tus clases aquí para que se vea similar al resto
                   />
                 </div>
               </div>

@@ -9,6 +9,7 @@ import ImageCarousel from "@/components/ImageCarrusel";
 import PhoneNumberWithFlag from "@/components/PhoneNumberWithFlag";
 import WhatsAppLink from "@/components/WhatsAppLink";
 import Chat from "@/components/Chat";
+import { formatPhoneNumberIntl } from "react-phone-number-input";
 
 // Define una interfaz para un objeto de imagen individual (basado en tus datos reales)
 interface SingleImage {
@@ -183,7 +184,11 @@ const PublicacionDetalle = () => {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-gray-500">Nombre:</span>
-                <span className="font-medium">{publicacion?.nombre}</span>
+                <span className="font-medium">
+                  {publicacion?.nombre && publicacion.nombre.length > 40
+                    ? `${publicacion.nombre.slice(0, 40)}...`
+                    : publicacion?.nombre}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Edad:</span>
@@ -198,10 +203,9 @@ const PublicacionDetalle = () => {
                 <div className="flex items-center bg-blue-100 px-3 py-1 rounded-full">
                   <Phone className="w-4 h-4 mr-1 text-blue-600" />
                   <span className="font-medium text-blue-700">
-                    <PhoneNumberWithFlag
-                      pais={publicacion?.Pais}
-                      telefono={publicacion?.telefono}
-                    />
+                    {publicacion?.telefono && (
+                      <span>{formatPhoneNumberIntl(publicacion.telefono)}</span>
+                    )}
                   </span>
                 </div>
               </div>
