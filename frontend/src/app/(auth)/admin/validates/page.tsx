@@ -36,11 +36,26 @@ interface PublicationForValidation {
   // validationType?: "PUBLICITY" | "IDENTITY_DOCUMENT";
 }
 
+interface Payload {
+  userId: string;
+  publicationId: string; // ID de la publicación a la que pertenecen estos documentos
+  fileUrls: {
+    // URLs de documentFront y documentBack
+    documentFront: string;
+    documentBack: string;
+  };
+  images?: { url: string }[]; // Imágenes originales de la publicación
+  videos?: { url: string }[]; // Si tienes videos, los añadimos aquí
+  email?: string; // Email del usuario, opcional
+  shippingDateValidate?: string; // Fecha de envío para validar, opcional
+  responseUrls?: Record<string, string>; // Fotos de cartel/rostro subidas para validación
+}
+
 // Interfaz para los datos que llegan del evento "validate-identity-document"
 interface IdentityValidationPayload {
   userId: string;
   publicationId: string; // ID de la publicación a la que pertenecen estos documentos
-  body: any;
+  //body: any;
   fileUrls: {
     // URLs de documentFront y documentBack
     documentFront: string;
@@ -86,7 +101,7 @@ const AdminPanel = () => {
   const [publicaciones, setPublicaciones] = useState<
     PublicationForValidation[]
   >([]);
-  const [userId, setUserId] = useState<string | null>(null);
+  //const [userId, setUserId] = useState<string | null>(null);
 
   // Estado para almacenar las URLs de las imágenes agrandadas
   const [activeImages, setActiveImages] = useState<string[]>([]);
@@ -108,7 +123,7 @@ const AdminPanel = () => {
         storedUserId
       );
       if (storedUserId) {
-        setUserId(storedUserId); // Actualizar estado local si es necesario
+        //setUserId(storedUserId); // Actualizar estado local si es necesario
 
         const adminData = {
           adminId: storedUserId,
@@ -141,17 +156,17 @@ const AdminPanel = () => {
     };
   }, [socket]); // NUEVO -> El efecto depende del socket
 
-  // Función para manejar el clic en una imagen
-  const handleImageClick = (url: string) => {
-    if (activeImages.includes(url)) {
-      // Si la imagen ya está activa, la quitamos del estado
-      setActiveImages(activeImages.filter((activeUrl) => activeUrl !== url));
-    } else {
-      // Si la imagen no está activa, la agregamos al estado
-      setActiveImages([...activeImages, url]);
-      // Inicializar la posición de la imagen agrandada
-    }
-  };
+  // // Función para manejar el clic en una imagen
+  // const handleImageClick = (url: string) => {
+  //   if (activeImages.includes(url)) {
+  //     // Si la imagen ya está activa, la quitamos del estado
+  //     setActiveImages(activeImages.filter((activeUrl) => activeUrl !== url));
+  //   } else {
+  //     // Si la imagen no está activa, la agregamos al estado
+  //     setActiveImages([...activeImages, url]);
+  //     // Inicializar la posición de la imagen agrandada
+  //   }
+  // };
 
   const UpdateStatePublication = async (data: UpdateStatePublication) => {
     const { id, estado, razon } = data;
@@ -184,7 +199,7 @@ const AdminPanel = () => {
     if (!socket) return;
 
     // 1. Definimos el handler con la firma correcta: recibe UN solo argumento.
-    const handleValidatePublication = (payload: any) => {
+    const handleValidatePublication = (payload: Payload) => {
       console.log(
         "ADMIN_FRONTEND: RECIBIDO 'validate-publication' con payload:",
         payload
@@ -269,7 +284,7 @@ const AdminPanel = () => {
             ? parsedData.map((pub) => ({
                 ...pub,
                 images: Array.isArray(pub.images)
-                  ? pub.images.map((img) =>
+                  ? pub.images.map((img: string) =>
                       typeof img === "string" ? { url: img } : img
                     )
                   : [],
