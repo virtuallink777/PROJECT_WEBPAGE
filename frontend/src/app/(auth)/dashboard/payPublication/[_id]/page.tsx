@@ -7,7 +7,6 @@ import api from "@/lib/api";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { AxiosError } from "axios";
 
 const PayPublication = () => {
   // state for select cell
@@ -18,8 +17,6 @@ const PayPublication = () => {
   } | null>(null);
   // state for select time
   const [selectedTime, setSelectedTime] = useState(""); // Estado para la hora seleccionada
-
-  const [Publicacion, setPublicacion] = useState<any>(null); // Estado para almacenar la publicación
 
   const _idParams = useParams();
   const id = _idParams._id as string; // Obtener el ID de la URL
@@ -36,57 +33,46 @@ const PayPublication = () => {
 
       // Verificar si la respuesta es exitosa
       console.log("Datos de la publicación obtenida:", response.data);
-      setPublicacion(response.data); // Guardar la publicación en el estado
-    } catch (error: any) {
+    } catch (error) {
       console.error(
         "[addPublication] Error capturado en el componente:",
         error
       );
 
-      let isErrorFromInterceptor401 = false;
+      // PASO 2: Verificamos primero si es un error de Axios
+      if (axios.isAxiosError(error)) {
+        // Si entramos aquí, TypeScript sabe que 'error' es un AxiosError.
 
-      // El error que llega aquí es el 'new Error(...)' que creaste en el interceptor para el 401.
-      // Este nuevo error NO es un AxiosError y no tiene 'error.response'.
-      // Verificamos por el mensaje que le pusimos en el interceptor.
-      if (error instanceof Error) {
-        // Primero, asegurarnos que es un objeto Error
-        const errorMessageString = error.message.toLowerCase(); // Convertir a minúsculas para ser flexible
-        if (
-          errorMessageString.includes("401") ||
-          errorMessageString.includes("autenticación") ||
-          errorMessageString.includes("session expired")
-        ) {
-          // Estas palabras clave indican que es probable que el interceptor haya manejado un 401.
-          isErrorFromInterceptor401 = true;
+        // Tu lógica original para diferenciar 401 de otros errores de Axios:
+        if (error.response?.status === 401) {
           console.log(
-            "[addPublication Component Catch] Error parece ser un 401 manejado por el interceptor (basado en mensaje). No se mostrará alert adicional."
+            "[addPublication Component Catch] Error 401 manejado por el interceptor. No se mostrará alert adicional."
           );
+          // No hacemos nada, el interceptor ya redirigió.
+        } else {
+          // Es otro error de Axios (404, 500, etc.)
+          console.log(
+            "[addPublication Component Catch] Error de Axios (no 401), mostrando alert."
+          );
+          const displayMessage =
+            error.response?.data?.message ||
+            error.message ||
+            `Error del servidor: ${error.response?.status}`;
+          alert(displayMessage);
         }
-      }
-
-      if (!isErrorFromInterceptor401) {
-        // Si no fue un 401 manejado por el interceptor (o no pudimos identificarlo por el mensaje),
-        // entonces es otro tipo de error (ej. 404, 500, error de red que el interceptor no redirigió).
+      } else if (error instanceof Error) {
+        // PASO 3: Si no fue de Axios, verificamos si es un error estándar de JS.
+        // Esto podría ser el error que lanzas desde tu interceptor.
         console.log(
-          "[addPublication Component Catch] Error NO es un 401 del interceptor, mostrando alert."
+          "[addPublication Component Catch] Error genérico (no de Axios), mostrando alert."
         );
-        let displayMessage =
-          "Ocurrió un error al obtener los detalles de la publicación.";
-
-        if (axios.isAxiosError(error)) {
-          // Aunque el 401 se envuelve, otros errores de Axios podrían llegar aquí directamente
-          const axiosError = error as AxiosError<any>; // Cast seguro aquí porque ya verificamos
-          displayMessage =
-            axiosError.response?.data?.message ||
-            axiosError.message ||
-            `Error del servidor: ${axiosError.response?.status}`;
-        } else if (error instanceof Error) {
-          // Error genérico
-          displayMessage = error.message;
-        }
-        alert(displayMessage);
-        // setPublicacion(null);
-        // setErrorState(displayMessage);
+        alert(error.message);
+      } else {
+        // PASO 4: Si no es ni de Axios ni un Error, es algo inesperado.
+        console.log(
+          "[addPublication Component Catch] Error de tipo desconocido, mostrando alert genérico."
+        );
+        alert("Ocurrió un error inesperado al obtener los detalles.");
       }
     } finally {
       // setLoading(false);
@@ -118,7 +104,7 @@ const PayPublication = () => {
 
     try {
       // Generar datos de transacción
-      const newTransactionId = Math.random().toString(36).substring(7);
+
       const now = new Date();
       const transactionDate = now.toLocaleDateString();
       const transactionTime = now.toLocaleTimeString();

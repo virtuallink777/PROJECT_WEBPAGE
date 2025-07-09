@@ -43,6 +43,8 @@ const PaymentSuccessPage = () => {
     }
   }, [searchParams]);
 
+  console.log("ID de transacción guardado en estado:", transactionId);
+
   useEffect(() => {
     const transactionId = searchParams.get("id"); // ID que te da OpenPay
 
@@ -73,6 +75,7 @@ const PaymentSuccessPage = () => {
           console.error("Error actualizando MongoDB:", error);
         });
     }
+    // eslint-disable-next-line
   }, []);
 
   if (status === "loading") {

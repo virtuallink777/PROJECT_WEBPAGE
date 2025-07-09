@@ -1,5 +1,3 @@
-import { Video } from "lucide-react";
-
 interface VideosData {
   url: string;
   filename: string;

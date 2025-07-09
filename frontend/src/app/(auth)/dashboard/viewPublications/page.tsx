@@ -78,7 +78,7 @@ const ViewPublications = () => {
   const [publications, setPublications] = useState<Publication[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
-  const [dataPay, setDataPay] = useState<{ [key: string]: any }>({});
+  const [dataPay, setDataPay] = useState<{ [key: string]: unknown }>({});
   const [canCreateMorePublications, setCanCreateMorePublications] =
     useState(true);
   //const socketPay = useSocket(
@@ -179,15 +179,28 @@ const ViewPublications = () => {
         const response = await api.get(`/api/publicationsThumbnails/${_id}`);
 
         setPublications(response.data);
-      } catch (error: any) {
-        if (error.response?.status === 404) {
-          console.warn("No se encontraron publicaciones para este usuario.");
-          setPublications([]); // opcional
-        }
+      } catch (error) {
+        // PASO 2: Usamos el type guard de Axios
+        if (axios.isAxiosError(error)) {
+          // Dentro de este bloque, TypeScript sabe que 'error' es un AxiosError.
 
-        // Si el error es por autenticación, redirigir
-        if (error.response?.status === 401) {
-          router.push("/sign-in"); // o la ruta que corresponda
+          // Tu lógica original, ahora segura:
+          if (error.response?.status === 404) {
+            console.warn(
+              "No se encontraron publicaciones para este usuario (error 404)."
+            );
+            setPublications([]); // Establece un array vacío para que la UI no muestre "cargando" indefinidamente.
+          } else if (error.response?.status === 401) {
+            // Usamos 'else if' porque un error no puede ser 404 y 401 a la vez.
+            console.error("Error 401: No autorizado. Redirigiendo a login.");
+            router.push("/sign-in");
+          } else {
+            // Opcional pero recomendado: Registrar cualquier otro error de API.
+            console.error("Error de API no manejado:", error.message);
+          }
+        } else {
+          // Si no es un error de Axios, es algo más (problema de red, error de JS, etc.)
+          console.error("Error inesperado al cargar publicaciones:", error);
         }
       } finally {
         setLoading(false);
@@ -330,6 +343,7 @@ const ViewPublications = () => {
       // Solo ejecutar si hay publicaciones
       endTopPublication();
     }
+    // eslint-disable-next-line
   }, []);
 
   // delete publication

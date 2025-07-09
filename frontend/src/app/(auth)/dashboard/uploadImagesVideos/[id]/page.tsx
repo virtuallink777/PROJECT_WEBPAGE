@@ -5,7 +5,6 @@ import HandleFileChangeEditPhotosUpload from "@/components/UploadImagesVideosEdi
 import { Button } from "@/components/ui/button";
 import { useMediaCounts } from "@/hooks/useFetchMediaCounts";
 import VideoUploadComponentEdit from "@/components/UploadVideosEdit";
-import { useSocketContext } from "@/context/SocketContext"; // NUEVO -> Importamos nuestro hook del contexto
 import { useParams, useRouter } from "next/navigation";
 import DuplicateFilesPopup from "@/components/ShowImageVideoCreatePub";
 

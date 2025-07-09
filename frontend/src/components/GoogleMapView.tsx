@@ -3,7 +3,6 @@
 "use client";
 import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api";
 import { useState, useCallback, useEffect } from "react";
-import MaxWidthWrapper from "./MaxWidthWrapper";
 
 interface GoogleMapViewProps {
   pais: string;

@@ -2,8 +2,23 @@
 
 import { useEffect, useState } from "react";
 
+// Interfaz para un conjunto de métricas (diarias, semanales, etc.)
+interface MetricSet {
+  clicks: number;
+  whatsappClicks: number;
+  liveChatClicks: number;
+}
+
+// Interfaz para el objeto de estado 'stats' completo
+interface PostStats {
+  daily: MetricSet;
+  weekly: MetricSet;
+  monthly: MetricSet;
+  yearly: MetricSet;
+}
+
 const PostMetrics = ({ postId }: { postId?: string }) => {
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<PostStats | null>(null);
 
   useEffect(() => {
     if (!postId) return; // Si postId es undefined, no hacemos la petición

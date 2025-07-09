@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
 
 // Definimos el tipo para el estado de los filtros
 interface FilterState {

@@ -6,6 +6,7 @@ import api from "@/lib/api";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import axios from "axios";
 
 type Publication = {
   _id: string;
@@ -50,10 +51,25 @@ const PostStats = () => {
 
         const response = await api.get(`/api/publicationsThumbnails/${userId}`);
         setPublications(response.data);
-      } catch (error: any) {
+      } catch (error) {
         console.error("Error al cargar publicaciones:", error);
-        if (error.response?.status === 401) {
-          router.push("/sign-in");
+        // Verificamos si el error es un error de Axios
+        if (axios.isAxiosError(error)) {
+          // Si es un error de Axios, ahora podemos acceder a 'response' de forma segura
+          if (error.response?.status === 401) {
+            console.log("Error 401 detectado, redirigiendo a sign-in...");
+            router.push("/sign-in");
+          } else {
+            // Opcional: Manejar otros errores de Axios (ej. 404, 500)
+            console.error(
+              `Error de Axios no manejado: ${error.response?.status}`,
+              error.message
+            );
+          }
+        } else {
+          // Si no es un error de Axios, es otro tipo de error (ej. de red, o de JS)
+          // No intentamos redirigir, solo lo registramos para no crear bucles inesperados.
+          console.error("Error no-Axios al cargar publicaciones:", error);
         }
       } finally {
         setLoading(false);
@@ -61,6 +77,7 @@ const PostStats = () => {
     };
 
     fetchPublications();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // 👈 Ahora solo se ejecuta al montar el componente
 
   console.log("Publicaciones:", publications);
@@ -81,7 +98,7 @@ const PostStats = () => {
               <Image
                 src={
                   pub.images[0]?.url
-                    ? `${process.env.NEXT_PUBLIC_BACKEND_URL}${pub.images[0].url}`
+                    ? `${pub.images[0].url}`
                     : "/default-image.png"
                 }
                 width={300}

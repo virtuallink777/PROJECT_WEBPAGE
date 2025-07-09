@@ -57,7 +57,8 @@ const ContactForm: React.FC = () => {
         setMessage(data.error || "Error al enviar el mensaje.");
       }
     } catch (error) {
-      setMessage("Error de red.");
+      console.error("Ocurrió un error en el fetch de contacto:", error);
+      setMessage("Error al enviar el mensaje. Por favor, intenta nuevamente.");
     } finally {
       setLoading(false);
     }

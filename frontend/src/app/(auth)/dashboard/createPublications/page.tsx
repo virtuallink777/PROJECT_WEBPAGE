@@ -79,7 +79,7 @@ const CreatePublications: React.FC = () => {
     videos: [],
     esMayorDeEdad: false,
   });
-  const [error, setError] = useState<string>("");
+
   const [duplicateFiles, setDuplicateFiles] = useState<
     { filename: string; filePath: string }[]
   >([]);
@@ -102,6 +102,8 @@ const CreatePublications: React.FC = () => {
           console.error("No autorizado, redirigiendo a /sign-in");
           // Si la respuesta es 401, redirige al usuario a la página de inicio de sesión
           router.push("/sign-in");
+          // Es importante retornar aquí para no seguir ejecutando el código
+          return;
         }
 
         if (!idResponse.ok) {
@@ -134,6 +136,11 @@ const CreatePublications: React.FC = () => {
     }
 
     fetchInitialUserData();
+
+    // Desactivamos la regla de ESLint porque queremos que este efecto
+    // se ejecute UNA SOLA VEZ al montar el componente para verificar la sesión.
+    // Añadir 'router' causaría un loop infinito.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // El array vacío asegura que se ejecute solo una vez al montar
 
   const categoriesData = useCategoriesData();
@@ -171,7 +178,6 @@ const CreatePublications: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
 
     if (!formData.esMayorDeEdad) {
       alert("Debes ser mayor de edad para publicar.");
@@ -367,7 +373,7 @@ const CreatePublications: React.FC = () => {
       // Para inspeccionar FormData, no puedes hacer console.log(formDataToSend) directamente.
       // Tendrías que iterar: for (let [key, value] of formDataToSend.entries()) { console.log(key, value); }
 
-      for (let [key, value] of formDataToSend.entries()) {
+      for (const [key, value] of formDataToSend.entries()) {
         console.log(`FormData para /publications: ${key} =`, value);
       }
 

@@ -1,5 +1,6 @@
 import React from "react";
 import countries from "country-telephone-data";
+import Image from "next/image";
 
 const PhoneNumberWithFlag = ({ pais, telefono }) => {
   // Validar que pais y telefono estén definidos
@@ -30,7 +31,7 @@ const PhoneNumberWithFlag = ({ pais, telefono }) => {
   return (
     <div style={{ display: "flex", alignItems: "center" }}>
       {/* Mostrar la bandera */}
-      <img
+      <Image
         src={`https://flagcdn.com/${flag}.svg`} // Usar FlagCDN para las banderas
         alt={`Bandera de ${pais}`}
         style={{ width: "20px", marginRight: "8px" }}

@@ -34,7 +34,7 @@ const calculateEndDate = (
     throw new Error("Formato de hora inválido. Debe ser como '3 PM'.");
   }
 
-  let [hourStr, period] = timeParts;
+  const [hourStr, period] = timeParts;
   let hour = parseInt(hourStr);
 
   if (isNaN(hour)) {

@@ -6,9 +6,7 @@ import { Label } from "@/components/ui/label";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
-import { parse } from "path";
 import { useEffect, useState } from "react";
-import { set } from "zod";
 
 const ResetPassword = () => {
   const router = useRouter();

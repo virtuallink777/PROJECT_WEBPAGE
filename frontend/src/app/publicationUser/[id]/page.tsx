@@ -6,7 +6,6 @@ import { useParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
 import Image from "next/image";
 import ImageCarousel from "@/components/ImageCarrusel";
-import PhoneNumberWithFlag from "@/components/PhoneNumberWithFlag";
 import WhatsAppLink from "@/components/WhatsAppLink";
 import Chat from "@/components/Chat";
 import { formatPhoneNumberIntl } from "react-phone-number-input";

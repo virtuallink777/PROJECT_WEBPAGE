@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useEffect, FormEvent, use } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 
 // Tipos para los parámetros de la URL DEBEN COINCIDIR CON LOS NOMBRES DE LAS CARPETAS
 interface PageParams {
   id: string; // Corresponde a la carpeta [id]
   _id: string; // Corresponde a la carpeta [_id]
+  [key: string]: string | string[] | undefined;
 }
 
 export default function ValidateIdentityDocumentPage() {
@@ -26,7 +28,7 @@ export default function ValidateIdentityDocumentPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [publication, setPublication] = useState<any>(null); // Cambia 'any' por el tipo adecuado si lo tienes
+  const [publication, setPublication] = useState(null); // Cambia 'any' por el tipo adecuado si lo tienes
 
   useEffect(() => {
     // Puedes añadir un log para verificar los parámetros recibidos
@@ -237,7 +239,7 @@ export default function ValidateIdentityDocumentPage() {
               <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
                 <div className="space-y-1 text-center">
                   {previewFront ? (
-                    <img
+                    <Image
                       src={previewFront}
                       alt="Vista previa frontal"
                       className="mx-auto h-48 w-auto object-contain mb-2"
@@ -299,7 +301,7 @@ export default function ValidateIdentityDocumentPage() {
               <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
                 <div className="space-y-1 text-center">
                   {previewBack ? (
-                    <img
+                    <Image
                       src={previewBack}
                       alt="Vista previa trasera"
                       className="mx-auto h-48 w-auto object-contain mb-2"

@@ -9,12 +9,18 @@ import { Playfair_Display } from "next/font/google";
 
 const playfair = Playfair_Display({ subsets: ["latin"], weight: "700" });
 
+const SimpleSpinner: React.FC = () => (
+  <div className="flex flex-col items-center justify-center">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+  </div>
+);
+
 export default function Home() {
   const [topPublications, setTopPublications] = useState<IPublication[]>([]);
   const [nonTopPublications, setNonTopPublications] = useState<IPublication[]>(
     []
   );
-  const [forceUpdate, setForceUpdate] = useState(false);
+  //const [forceUpdate, setForceUpdate] = useState(false);
   const [loading, setLoading] = useState(true);
   const { selections, searchText } = useFilterStore(); // Estado global de filtros
 
@@ -95,7 +101,7 @@ export default function Home() {
       };
 
       const startHourValue = startHour(pub.selectedTime);
-      let startDate = new Date(year, month - 1, day, startHourValue, 0, 0);
+      const startDate = new Date(year, month - 1, day, startHourValue, 0, 0);
 
       // Crear correctamente el objeto Date para la transacción
       let transactionHour = 0;
@@ -340,7 +346,7 @@ export default function Home() {
     const interval = setInterval(() => {
       setTopPublications((prevIds) => {
         if (prevIds.length > 1) {
-          setForceUpdate((prev) => !prev); // Forzar re-render
+          //setForceUpdate((prev) => !prev); // Forzar re-render
           return [...prevIds.slice(1), prevIds[0]];
         }
         return prevIds;
@@ -372,6 +378,17 @@ export default function Home() {
       `Evento ${eventType} registrado para publicación con ID: ${postId}`
     );
   };
+
+  if (loading) {
+    return (
+      <MaxWidthWrapper>
+        <div className="py-20 mx-auto text-center flex flex-col items-center">
+          <p className="text-xl text-gray-500">Cargando publicaciones...</p>
+          <SimpleSpinner />
+        </div>
+      </MaxWidthWrapper>
+    );
+  }
 
   return (
     <MaxWidthWrapper>

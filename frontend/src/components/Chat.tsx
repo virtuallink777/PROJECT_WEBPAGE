@@ -12,6 +12,15 @@ interface ChatProps {
   onClose: () => void; // Función para cerrar el chat
 }
 
+interface Message {
+  conversationId: string;
+  senderId: string;
+  receiverId: string; // <-- Importante, este campo no lo habíamos adivinado
+  content: string; // <-- Se llama 'content', no 'text'
+  timestamp: string; // <-- Se llama 'timestamp', no 'createdAt'
+  // No hay un campo '_id' en el mensaje que llega por socket
+}
+
 const Chat: React.FC<ChatProps> = ({
   conversationId,
   userId,
@@ -21,9 +30,8 @@ const Chat: React.FC<ChatProps> = ({
   // NUEVO -> Obtenemos el socket ÚNICO desde el contexto
   const { socket } = useSocketContext();
 
-  const [messages, setMessages] = useState<
-    Array<{ senderId: string; content: string; timestamp: Date }>
-  >([]);
+  // 👇 TIPA EL ESTADO AQUÍ, con la interfaz correcta
+  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [activeConversationId, setActiveConversationId] =
     useState(conversationId);
@@ -49,7 +57,7 @@ const Chat: React.FC<ChatProps> = ({
     console.log(`🔗 Usuario ${userId} unido a su sala privada.`);
 
     // Escuchar mensajes entrantes
-    const handleNewMessage = (message: any) => {
+    const handleNewMessage = (message: Message) => {
       console.log("📩 Mensaje recibido del backend:", message);
 
       setMessages((prevMessages) => {
@@ -154,7 +162,7 @@ const Chat: React.FC<ChatProps> = ({
       <div className="p-4 h-80 overflow-y-auto">
         {messages.map((message, index) => (
           <div key={index} className="mb-2">
-            <strong>{message.senderId === userId ? "Tú" : "Otro"}:</strong>{" "}
+            <strong>{message.senderId === userId ? "Tú" : "Modelo"}:</strong>{" "}
             {message.content}
           </div>
         ))}
@@ -184,11 +192,24 @@ const Chat: React.FC<ChatProps> = ({
       </div>
       {/* Mostrar notificación de usuario desconectado */}
       {offlineNotification && (
-        <div className="offline-notification">
-          <p className="text-red-800 text-center">
-            El usuario dueño de la publicidad no está conectado... intenta mas
-            tarde o por whatsapp
+        // He añadido clases de estilo para que la notificación sea más visible y esté mejor posicionada
+        <div
+          className="offline-notification bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 m-4 rounded-md relative"
+          role="alert"
+        >
+          <p>
+            {offlineNotification.message ||
+              "El usuario no está conectado en este momento."}
           </p>
+
+          {/* 👇 ESTE ES EL BOTÓN QUE SOLUCIONA EL ERROR 👇 */}
+          <button
+            onClick={clearOfflineNotification} // Llama a la función que limpia la notificación
+            className="absolute top-0 right-0 mt-1 mr-2 text-yellow-800 hover:text-yellow-600 font-bold text-lg"
+            aria-label="Cerrar notificación"
+          >
+            × {/* Este es el caracter de la 'X' para cerrar */}
+          </button>
         </div>
       )}
     </div>

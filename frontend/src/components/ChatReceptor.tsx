@@ -12,10 +12,26 @@ interface ChatProps {
   userId: string; // El dueño de la publicidad (receptor)
 }
 
-interface Message {
+// Interfaz para la respuesta del callback del socket
+interface SocketResponse {
+  success: boolean;
+  error?: string; // La '?' hace que la propiedad 'error' sea opcional
+}
+
+// Esta es la forma del mensaje que llega por el socket
+interface IncomingMessage {
+  conversationId: string;
+  senderId: string;
+  receiverId: string;
+  content: string;
+  timestamp: string;
+}
+
+// Esta es la forma del mensaje que guardaremos en nuestro estado local
+interface StoredMessage {
   senderId: string;
   content: string;
-  timestamp: Date;
+  timestamp: Date; // Guardarlo como objeto Date es más útil
 }
 
 const ChatReceptor: React.FC<ChatProps> = ({ userId }) => {
@@ -25,7 +41,7 @@ const ChatReceptor: React.FC<ChatProps> = ({ userId }) => {
   // --- FIN DEL AÑADIDO ---
 
   const [conversations, setConversations] = useState<{
-    [conversationId: string]: Message[];
+    [conversationId: string]: StoredMessage[];
   }>({});
   const [openConversations, setOpenConversations] = useState<string[]>([]); // IDs de conversaciones abiertas
   const [inputMessages, setInputMessages] = useState<{
@@ -73,7 +89,7 @@ const ChatReceptor: React.FC<ChatProps> = ({ userId }) => {
 
   // Escuchar mensajes entrantes
   useEffect(() => {
-    const handleMessage = (message: any) => {
+    const handleMessage = (message: IncomingMessage) => {
       if (message.receiverId === userId) {
         console.log("Mensaje recibido:", message);
 
@@ -136,7 +152,7 @@ const ChatReceptor: React.FC<ChatProps> = ({ userId }) => {
     }));
 
     // Enviar el mensaje al servidor
-    socket.emit("sendMessage", messageData, (response: any) => {
+    socket.emit("sendMessage", messageData, (response: SocketResponse) => {
       if (response && response.success) {
         console.log("✅ Mensaje enviado correctamente.");
       } else {

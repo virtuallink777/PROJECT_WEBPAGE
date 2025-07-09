@@ -156,7 +156,8 @@ export const configureSockets = (io: Server) => {
         );
         socket.emit("userOffline", {
           receiverId: receiverId,
-          message: "El usuario no está conectado actualmente",
+          message:
+            "El usuario no está conectado actualmente en la plataforma, intenta por whatsapp.",
         });
       }
     });

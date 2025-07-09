@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import ChargerVideosPubEdit from "@/components/ChargerVideosPub";
 import Link from "next/link";
 import api from "@/lib/api";
-
+import { isAxiosError } from "axios";
 import { useParams, useRouter } from "next/navigation";
 import React, { useState, useEffect } from "react";
 
@@ -169,7 +169,7 @@ const EditPublication: React.FC = () => {
           fotoPrincipal: data.fotoPrincipal || null,
           videos: data.videos || [],
         });
-      } catch (error: any) {
+      } catch (error) {
         // Este bloque 'catch' se ejecutará si:
         // 1. El interceptor de Axios manejó un 401 y RECHAZÓ la promesa.
         // 2. Hubo otro error HTTP (404 Not Found, 500 Internal Server Error, etc.).
@@ -180,19 +180,26 @@ const EditPublication: React.FC = () => {
           error
         );
 
-        // Si el error es 401, el interceptor ya mostró un alert y redirigió.
-        // No necesitamos mostrar otro alert aquí para el 401.
-        // Para otros errores, sí es útil mostrar un mensaje.
-        if (error.response?.status !== 401) {
-          const errorMessage =
-            error.response?.data?.message || // Mensaje específico del backend
-            error.message || // Mensaje genérico del error de Axios
-            "Ocurrió un error al obtener los detalles de la publicación.";
-          alert(errorMessage);
-          // Podrías querer limpiar el estado de 'publicacion' o establecer un estado de error aquí
-          // setPublicacion(null);
-          // setErrorState(errorMessage);
+        // --- INICIO DE LA SOLUCIÓN ---
+        if (isAxiosError(error)) {
+          // DENTRO DE ESTE IF, TypeScript sabe que 'error' es un AxiosError
+          // y puedes acceder a sus propiedades sin problemas.
+
+          if (error.response?.status !== 401) {
+            const errorMessage =
+              error.response?.data?.message || // Mensaje específico del backend
+              error.message || // Mensaje genérico del error de Axios
+              "Ocurrió un error al obtener los detalles de la publicación.";
+            alert(errorMessage);
+          }
+          // Si es un 401, no hacemos nada porque el interceptor ya se encargó.
+        } else {
+          // Si NO es un error de Axios, es otro tipo de error inesperado.
+          // Aquí puedes manejarlo de forma genérica.
+          alert("Ocurrió un error inesperado. Por favor, intente de nuevo.");
+          console.error("Error no relacionado con Axios:", error);
         }
+        // --- FIN DE LA SOLUCIÓN ---
       } finally {
         setIsLoading(false);
       }
@@ -269,9 +276,19 @@ const EditPublication: React.FC = () => {
       // Opcional: mostrar un mensaje de éxito antes de redirigir
       // alert("Publicación actualizada con éxito!");
       router.push("/dashboard/viewPublications");
-    } catch (err: any) {
-      console.error("Error al actualizar la publicación:", err);
-      setError(err.message || "Ocurrió un error al guardar los cambios.");
+    } catch (error) {
+      console.error("Error al actualizar la publicación:", error);
+      // --- INICIO DE LA SOLUCIÓN ---
+      if (error instanceof Error) {
+        // DENTRO DE ESTE IF, TypeScript sabe que 'error' es un objeto Error
+        // y podemos acceder a su propiedad .message de forma segura.
+        setError(error.message);
+      } else {
+        // Si el error no es una instancia de Error, es algo inesperado.
+        // Le pasamos un mensaje genérico a nuestro estado de error.
+        setError("Ocurrió un error inesperado al guardar los cambios.");
+      }
+      // --- FIN DE LA SOLUCILÓN ---
     } finally {
       setIsSubmitting(false);
     }
