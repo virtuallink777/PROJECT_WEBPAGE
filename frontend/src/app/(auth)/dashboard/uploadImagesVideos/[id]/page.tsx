@@ -3,18 +3,11 @@
 import React, { useEffect, useState } from "react";
 import HandleFileChangeEditPhotosUpload from "@/components/UploadImagesVideosEdit";
 import { Button } from "@/components/ui/button";
-import { useMediaCounts } from "@/hooks/useFetchMediaCounts";
+import { CountImagesVideos } from "@/components/CountImagesVideos";
 import VideoUploadComponentEdit from "@/components/UploadVideosEdit";
 import { useParams, useRouter } from "next/navigation";
 import DuplicateFilesPopup from "@/components/ShowImageVideoCreatePub";
-
-// SPINNER
-const SimpleSpinner: React.FC = () => (
-  <div className="flex flex-col items-center justify-center">
-    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
-    <p className="text-xl text-gray-700">Subiendo la información</p>
-  </div>
-);
+import { SimpleSpinner } from "@/components/Spinner";
 
 async function obtenerIdCliente() {
   try {
@@ -28,30 +21,6 @@ async function obtenerIdCliente() {
     return null;
   }
 }
-
-// Componente para mostrar el conteo de imágenes y videos
-export const CountImagesVideos: React.FC = () => {
-  const { imagesCount, videosCount } = useMediaCounts();
-
-  return (
-    <div className="container mx-auto mt-6">
-      <div className="text-center">
-        <h1 className="text-2xl">
-          En estos momentos tienes:
-          <span className="ml-2">
-            <b className="font-semibold">{imagesCount}</b> imágenes
-          </span>
-          <span className="ml-2">
-            <b className="font-semibold"> {videosCount}</b> videos guardados
-          </span>
-        </h1>
-        <h2 className="mt-4">
-          Recuerda que puedes tener máximo 12 imágenes y 4 videos
-        </h2>
-      </div>
-    </div>
-  );
-};
 
 interface FormData {
   userId: string;
