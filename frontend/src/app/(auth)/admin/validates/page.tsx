@@ -106,6 +106,22 @@ const AdminPanel = () => {
   // Estado para almacenar las URLs de las imágenes agrandadas
   const [activeImages, setActiveImages] = useState<string[]>([]);
 
+  const handleZoom = (imageUrl: string) => {
+    // Llama a setActiveImages para actualizar el estado
+    setActiveImages((prevActiveImages) => {
+      // Comprueba si la imagen ya está en el array de imágenes activas
+      if (prevActiveImages.includes(imageUrl)) {
+        // SI YA ESTÁ: Devuelve un nuevo array filtrando (quitando) esa imagen.
+        // Esto hará que la imagen vuelva a su tamaño normal.
+        return prevActiveImages.filter((url) => url !== imageUrl);
+      } else {
+        // SI NO ESTÁ: Devuelve un nuevo array con la imagen añadida.
+        // Esto hará que la imagen se agrande.
+        return [...prevActiveImages, imageUrl];
+      }
+    });
+  };
+
   useEffect(() => {
     // NUEVO -> Condición de seguridad, no hacer nada si el socket no está listo
     if (!socket) return;
@@ -518,7 +534,10 @@ const AdminPanel = () => {
                       className="text-center group relative"
                       //={() => handleImageClick(imageUrl)}
                     >
-                      <div className="mx-auto rounded-lg min-w-0 min-h-0">
+                      <div
+                        className="mx-auto rounded-lg min-w-0 min-h-0  cursor-pointer"
+                        onClick={() => handleZoom(imageUrl)} // <-- VINCULA LA FUNCIÓN AQUÍ
+                      >
                         <Image
                           src={imageUrl}
                           alt={`Imagen ${index + 1}`}
