@@ -114,6 +114,15 @@ const Chat: React.FC<ChatProps> = ({
 
     let receiverId = ownerId;
 
+    // Guarda de seguridad #2: El usuario DEBE tener un ID para poder enviar un mensaje.
+    // Si userId es null, no hacemos nada y salimos de la función.
+    if (!userId) {
+      console.error(
+        "Error: No se puede enviar un mensaje sin un ID de usuario."
+      );
+      return;
+    }
+
     if (userId === ownerId) {
       const otherMessage = messages.find((msg) => msg.senderId !== userId);
       if (otherMessage) {
