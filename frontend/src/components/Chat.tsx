@@ -7,9 +7,11 @@ import React, { useEffect, useState } from "react";
 
 interface ChatProps {
   conversationId: string; // ID de la conversación
-  userId: string; // ID del usuario actual (anónimo o dueño)
+  userId: string | null; // ID del usuario actual (anónimo o dueño)
   ownerId: string; // ID del dueño de la publicidad
   onClose: () => void; // Función para cerrar el chat
+  postId?: string; // ID del post (opcional, si es necesario)
+  onliveChatClicks: () => void; // Función opcional para manejar clicks en el chat en vivo
 }
 
 interface Message {
