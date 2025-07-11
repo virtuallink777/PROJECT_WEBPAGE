@@ -7,7 +7,17 @@ import { buttonVariants } from "./ui/button";
 import Cities from "./NavItem";
 import UserAccountNav from "./UserAccountNav";
 
-export const MobileNav = ({ user }) => {
+interface User {
+  id: string;
+  email: string;
+  userId?: string; // El nombre puede ser opcional
+}
+
+interface MobileNavProps {
+  user: User | null; // El usuario puede ser nulo si no está autenticado
+}
+
+export const MobileNav: React.FC<MobileNavProps> = ({ user }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const toggleMenu = () => {
