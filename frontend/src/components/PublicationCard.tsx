@@ -26,13 +26,13 @@ export interface IPublication {
   telefono: string;
   status: boolean;
   transactionDate: string;
-  selectedTime: string;
+  selectedTime?: string;
   selectedPricing: {
     days: string;
     hours: string;
     price: string;
   };
-  transactionTime: string;
+  transactionTime?: string | Date;
 }
 
 interface PublicationCardProps {

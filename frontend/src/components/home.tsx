@@ -90,7 +90,7 @@ export default function Home() {
       const [day, month, year] = pub.transactionDate.split("/").map(Number);
 
       // Función para convertir formato de hora
-      const startHour = (timeStr) => {
+      const startHour = (timeStr: string) => {
         const [hourStr, period] = timeStr.split(" ");
         const hour = parseInt(hourStr);
 
@@ -252,7 +252,7 @@ export default function Home() {
         }
 
         const topData = await topRes.json();
-        const allTopPublications = topData.error ? [] : topData;
+        const allTopPublications: IPublication[] = topData.error ? [] : topData;
         console.log("Publicaciones TOP cargadas:", allTopPublications.length);
 
         // 2. Luego cargar todas las publicaciones NOTOP
@@ -273,7 +273,9 @@ export default function Home() {
         }
 
         const nonTopData = await nonTopRes.json();
-        const allNonTopPublications = nonTopData.error ? [] : nonTopData;
+        const allNonTopPublications: IPublication[] = nonTopData.error
+          ? []
+          : nonTopData;
         console.log(
           "Publicaciones NOTOP cargadas:",
           allNonTopPublications.length
