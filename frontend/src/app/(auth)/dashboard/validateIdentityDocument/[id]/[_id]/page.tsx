@@ -243,6 +243,8 @@ export default function ValidateIdentityDocumentPage() {
                       src={previewFront}
                       alt="Vista previa frontal"
                       className="mx-auto h-48 w-auto object-contain mb-2"
+                      width={200} // <-- AÑADIDO: Un ancho razonable para la preview
+                      height={200}
                     />
                   ) : (
                     <svg
@@ -305,6 +307,8 @@ export default function ValidateIdentityDocumentPage() {
                       src={previewBack}
                       alt="Vista previa trasera"
                       className="mx-auto h-48 w-auto object-contain mb-2"
+                      width={200} // <-- AÑADIDO: Un ancho razonable para la preview
+                      height={200}
                     />
                   ) : (
                     <svg

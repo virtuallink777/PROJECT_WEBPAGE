@@ -20,7 +20,7 @@ interface PublicationForValidation {
   // Renombré para mayor claridad
   userId: string;
   id: string; // Este es el ID de la publicación
-  images: { url: string }[]; // Imágenes originales de la publicidad
+  images: { url: string | AnidatedImageURL }[]; // Imágenes originales de la publicidad
   videos?: { url: string }[]; // Opcional: si tienes videos, los añadimos aquí
   email: string;
   shippingDateValidate: string;
@@ -36,6 +36,13 @@ interface PublicationForValidation {
   // validationType?: "PUBLICITY" | "IDENTITY_DOCUMENT";
 }
 
+// Primero, definimos la forma anidada que a veces recibes
+interface AnidatedImageURL {
+  url: string;
+  isPrincipal?: boolean; // Opcional, pero bueno tenerlo
+  // ... otras propiedades que pueda tener
+}
+
 interface Payload {
   userId: string;
   publicationId: string; // ID de la publicación a la que pertenecen estos documentos
@@ -44,7 +51,7 @@ interface Payload {
     documentFront: string;
     documentBack: string;
   };
-  images?: { url: string }[]; // Imágenes originales de la publicación
+  images?: { url: string | AnidatedImageURL }[]; // Imágenes originales de la publicación
   videos?: { url: string }[]; // Si tienes videos, los añadimos aquí
   email?: string; // Email del usuario, opcional
   shippingDateValidate?: string; // Fecha de envío para validar, opcional
@@ -526,7 +533,10 @@ const AdminPanel = () => {
               <h3 className="text-lg font-semibold mt-2">Imágenes:</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-2">
                 {publicacion.images.map((img, index) => {
-                  const imageUrl = img.url; // Simplemente usa img.url directamente
+                  const imageUrl =
+                    typeof img.url === "string"
+                      ? img.url // Si es la estructura simple
+                      : img.url.url; // Si es la estructura anidada
 
                   return (
                     <div
@@ -702,13 +712,14 @@ const AdminPanel = () => {
                   className="text-xl"
                   onClick={async () => {
                     const razonesRechazo = [
-                      "la imagen del cartel está muy borrosa",
-                      "la fecha del cartel no corresponde",
-                      "la imagen está muy lejos",
-                      "debe salir medio cuerpo",
-                      "el rostro no coincide",
-                      "la cara no se distingue bien",
-                      "la imagen del rostro es borrosa",
+                      "la imagen del cartel está muy borrosa, por favor repite el proceso de validación con una imagen más clara",
+                      "la fecha del cartel no corresponde, por favor repite el proceso de validación con la fecha correcta",
+                      "la imagen está muy lejos, por favor repite el proceso de validación con una imagen más cercana",
+                      "debes salir medio cuerpo, por favor repite el proceso de validación con una de medio cuerpo",
+                      "el rostro no coincide, por favor toma una foto de tu rostro clara y distinguible y repite el proceso de validación",
+                      "la cara no se distingue bien, por favor repite el proceso de validación con una imagen más clara",
+                      "la imagen del rostro es borrosa, por favor repite el proceso de validación con una imagen más clara",
+                      "Nos dijiste que en las fotos se te veia el rostro, pero no es así, por favor repite el proceso de validación, si no deseas mostrar el rostro debes apliacar al no y seguir las instrucciones",
                       "Por favor envia una foto legible por lado y lado de tu documento de identidad original (no fotocopia)",
                     ];
 
