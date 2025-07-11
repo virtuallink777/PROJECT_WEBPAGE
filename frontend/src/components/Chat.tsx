@@ -5,13 +5,18 @@ import React, { useEffect, useState } from "react";
 // Inicializar el socket una sola vez
 //const socket = io(process.env.NEXT_PUBLIC_SOCKET_UR);
 
+// Primero, definamos el tipo para el evento para que sea reutilizable
+type MetricEventType = "click" | "whatsappClicks" | "liveChatClicks";
+
 interface ChatProps {
   conversationId: string; // ID de la conversación
   userId: string | null; // ID del usuario actual (anónimo o dueño)
   ownerId: string; // ID del dueño de la publicidad
   onClose: () => void; // Función para cerrar el chat
   postId?: string; // ID del post (opcional, si es necesario)
-  onliveChatClicks: () => void; // Función opcional para manejar clicks en el chat en vivo
+  // 👇 ESTA ES LA LÍNEA CORREGIDA 👇
+  // La función espera el ID del post y el tipo de evento
+  onliveChatClicks: (postId: string, eventType: MetricEventType) => void;
 }
 
 interface Message {
