@@ -53,6 +53,13 @@ type Publication = {
   status: boolean;
 };
 
+interface DataPayPayload {
+  id: string;
+  userId: string;
+  transactionDate: string;
+  transactionTime: string;
+}
+
 // Función para obtener el ID del cliente
 async function obtenerIdCliente() {
   try {
@@ -226,7 +233,7 @@ const ViewPublications = () => {
   // alimentar la informacion del pago y de la rotacion de las publicaciones
   useEffect(() => {
     if (!socket) return; // NUEVO -> Usamos el socket del contexto
-    const handleDataPayPublication = (data) => {
+    const handleDataPayPublication = (data: DataPayPayload) => {
       if (data.id) {
         console.log("dataPayPublication:", data);
         setDataPay((prevDataPay) => ({

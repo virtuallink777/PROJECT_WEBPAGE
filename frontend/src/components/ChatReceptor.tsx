@@ -10,6 +10,7 @@ const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL, {
 
 interface ChatProps {
   userId: string; // El dueño de la publicidad (receptor)
+  clientId: string | null; // Opcional, si se necesita para el cliente
 }
 
 // Interfaz para la respuesta del callback del socket
