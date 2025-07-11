@@ -2,7 +2,12 @@ import React from "react";
 import countries from "country-telephone-data";
 import Image from "next/image";
 
-const PhoneNumberWithFlag = ({ pais, telefono }) => {
+interface PhoneNumberWithFlagProps {
+  pais: string; // Nombre del país
+  telefono: string; // Teléfono
+}
+
+const PhoneNumberWithFlag = ({ pais, telefono }: PhoneNumberWithFlagProps) => {
   // Validar que pais y telefono estén definidos
   if (!pais || !telefono) {
     return <span>{telefono || "N/A"}</span>; // Muestra el teléfono o un valor por defecto
