@@ -10,6 +10,7 @@ import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { JSX, useState } from "react";
+import { isAxiosError } from "axios";
 
 const SignUp = () => {
   const [errors, setErrors] = useState<Partial<RegisterInput>>({});
@@ -58,14 +59,26 @@ const SignUp = () => {
 
       router.push(`/verifyEmail?email=${encodeURIComponent(formData.email)}`);
     } catch (error) {
-      if (error.response && error.response.status === 409) {
-        setServerError(
-          <p className="text-sm text-red-500 text-center">
-            El correo {""}
-            <span className="text-blue-500 text-xl">{formData.email}</span>
-            ya esta registrado, por favor ingrese otro correo o logueate
-          </p>
-        );
+      // PASO 1: Usamos el type guard de Axios
+      if (isAxiosError(error)) {
+        // DENTRO de este bloque, TypeScript sabe que 'error' es un AxiosError.
+        if (error.response && error.response.status === 409) {
+          // Tu lógica original para el error de conflicto (409)
+          setServerError(
+            <p className="text-sm text-red-500 text-center">
+              El correo {""}
+              <span className="text-blue-500 text-xl">{formData.email}</span>
+              ya esta registrado, por favor ingrese otro correo o logueate
+            </p>
+          );
+        } else {
+          // Manejar otros errores de Axios (ej. 500, error de red)
+          const errorMessage =
+            error.response?.data?.message || // Mensaje específico del backend
+            error.message || // Mensaje genérico del error
+            "Ocurrió un error en el servidor.";
+          setServerError(errorMessage);
+        }
       } else {
         setServerError(
           error instanceof Error ? error.message : "Error en el registro"
