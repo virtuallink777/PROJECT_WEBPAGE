@@ -19,6 +19,15 @@ import axios from "axios";
 // El socket para la comunicación en tiempo real no relacionada con 'api' de Axios// revisar primero
 //const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL); // Renombrado para evitar confusión con el hook useSocket
 
+export type PublicationStatus = "PENDIENTE" | "APROBADA" | "RECHAZADA";
+
+// Interfaz para el payload del evento 'actualizar-publicacion'
+interface UpdatePayload {
+  id: string;
+  estado: PublicationStatus;
+  razon: string;
+}
+
 type Publication = {
   _id: string;
   id: string;
@@ -31,7 +40,7 @@ type Publication = {
   images: {
     url: string;
   }[];
-  estado: "PENDIENTE" | "APROBADA" | "RECHAZADA"; // 👈 Agregado
+  estado: PublicationStatus;
   razon?: string; // 👈 Agregado (opcional)
   selectedPricing: {
     days: string;
@@ -131,7 +140,7 @@ const ViewPublications = () => {
     console.log(`Paso 2: Identificando usuario ${userId} con el socket.`);
 
     // 2. El handler para la actualización
-    const handleUpdate = ({ id, estado, razon }) => {
+    const handleUpdate = ({ id, estado, razon }: UpdatePayload) => {
       // --- MICRÓFONO DEL FRONTEND ---
       console.log(
         "VERIFICACIÓN FRONTEND: ¡RECIBIDO! El evento 'actualizar-publicacion' ha llegado."
