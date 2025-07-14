@@ -44,7 +44,7 @@ const server = http.createServer(app); // ⚡ Crear servidor HTTP
 
 const allowedOrigins = [
   "http://localhost:3000", // Para tu desarrollo local
-  "https://project-webpage-9lp2.vercel.app/", // Para tu frontend en producción en Vercel
+  "https://project-webpage-9lp2.vercel.app", // Para tu frontend en producción en Vercel
   // Si tienes otros dominios personalizados en Vercel, añádelos aquí también.
 ];
 
