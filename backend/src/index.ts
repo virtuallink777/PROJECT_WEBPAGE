@@ -42,8 +42,14 @@ const app = express();
 
 const server = http.createServer(app); // ⚡ Crear servidor HTTP
 
+const allowedOrigins = [
+  "http://localhost:3000", // Para tu desarrollo local
+  "https://project-webpage-9lp2.vercel.app/", // Para tu frontend en producción en Vercel
+  // Si tienes otros dominios personalizados en Vercel, añádelos aquí también.
+];
+
 export const io = new Server(server, {
-  cors: { origin: "http://localhost:3000", credentials: true }, // Permitir conexiones desde cualquier origen
+  cors: { origin: allowedOrigins, credentials: true }, // Permitir conexiones desde cualquier origen
 });
 
 // Configurar WebSockets con la función importada
@@ -70,7 +76,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: function (origin, callback) {
+      // Permite peticiones sin origen (como las de Postman o apps móviles) o si el origen está en la lista blanca
+      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error("No permitido por CORS"));
+      }
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"], // Métodos permitidos
     allowedHeaders: ["Content-Type", "Authorization"], // Encabezados permitidos
