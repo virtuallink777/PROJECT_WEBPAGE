@@ -82,7 +82,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/3d3.png" type="image/png" sizes="180x180" />
+        <link rel="icon" href="/3d3.png" type="image/png" />
         {/* Puedes añadir más cosas aquí */}
       </head>
 

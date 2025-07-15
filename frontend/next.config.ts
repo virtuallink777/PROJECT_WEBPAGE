@@ -23,8 +23,12 @@ const nextConfig = {
       },
     ],
   },
-  // ELIMINAMOS LA FUNCIÓN REWRITES COMPLETAMENTE.
-  // async rewrites() { ... } <-- ¡FUERA!
+
+  compiler: {
+    // Esto le dice al compilador de Next.js que elimine todos los console.log
+    // únicamente en los builds de producción.
+    removeConsole: process.env.NODE_ENV === "production",
+  },
 };
 
 module.exports = nextConfig;

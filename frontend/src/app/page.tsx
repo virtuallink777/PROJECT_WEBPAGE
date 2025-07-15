@@ -68,10 +68,12 @@ export const metadata = {
 };
 
 import Home from "@/components/home";
+import FilterBar from "@/components/FilterBar";
 
 export default function HomePage() {
   return (
     <div>
+      <FilterBar />
       <Home />
     </div>
   );

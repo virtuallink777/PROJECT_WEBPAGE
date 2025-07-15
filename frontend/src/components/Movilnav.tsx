@@ -29,7 +29,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({ user }) => {
       {/* Botón de hamburguesa */}
       <button onClick={toggleMenu} className="text-gray-700 focus:outline-none">
         <svg
-          className="w-6 h-6"
+          className="w-10 h-10"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"

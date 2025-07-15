@@ -398,7 +398,7 @@ export default function Home() {
         <h1 className="text-4xl font-bold tracking-tight">
           Bienvenidos a{" "}
           <span className={`${playfair.className} text-4xl text-red-800`}>
-            soporte
+            LUJURIA
           </span>
         </h1>
         <p className="mt-4 text-lg text-gray-600">
