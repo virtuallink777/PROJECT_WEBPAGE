@@ -408,7 +408,7 @@ export default function Home() {
         {/* Publicaciones TOP */}
         <div className="mt-8 flex flex-col">
           <h2 className="text-2xl font-semibold mb-4">Publicaciones TOP</h2>
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {topPublications.length > 0 ? (
               filterPublications(topPublications).map((data) => (
                 <div
