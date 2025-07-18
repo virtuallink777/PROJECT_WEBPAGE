@@ -394,7 +394,7 @@ export default function Home() {
 
   return (
     <MaxWidthWrapper>
-      <div className="py-4 mx-auto text-center flex flex-col items-center w-full">
+      <div className="py-4 mx-auto text-center flex flex-col items-center w-full px-4 sm:px-6">
         <h1 className="text-4xl font-bold tracking-tight">
           Bienvenidos a{" "}
           <span className={`${playfair.className} text-4xl text-red-800`}>
