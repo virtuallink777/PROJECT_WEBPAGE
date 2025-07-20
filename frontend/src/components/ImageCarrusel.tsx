@@ -38,13 +38,13 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({
     >
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 text-white text-2xl bg-red-500 rounded-full w-10 h-10 flex items-center justify-center"
+        className="absolute top-4 right-4 text-white text-2xl bg-red-500 rounded-full w-10 h-10 flex items-center justify-center z-10"
       >
         &times;
       </button>
       <button
         onClick={handlePrev}
-        className="absolute left-4 text-white text-2xl bg-gray-800 rounded-full w-10 h-10 flex items-center justify-center"
+        className="absolute left-4 text-white text-2xl bg-gray-800 rounded-full w-10 h-10 flex items-center justify-center z-10"
       >
         &lt;
       </button>
@@ -59,7 +59,7 @@ const ImageCarousel: React.FC<ImageCarouselProps> = ({
       </div>
       <button
         onClick={handleNext}
-        className="absolute right-4 text-white text-2xl bg-gray-800 rounded-full w-10 h-10 flex items-center justify-center"
+        className="absolute right-4 text-white text-2xl bg-gray-800 rounded-full w-10 h-10 flex items-center justify-center z-10"
       >
         &gt;
       </button>

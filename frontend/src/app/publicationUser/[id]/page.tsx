@@ -155,10 +155,12 @@ const PublicacionDetalle = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
+    <div className="max-w-5xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden px-4 lg:px-6 py-2 ">
       {/* Encabezado de la publicación */}
-      <div className="bg-gradient-to-r from-rose-500 to-purple-400 p-6 text-white">
-        <h1 className="text-2xl font-bold">{publicacion?.titulo}</h1>
+      <div className="bg-gradient-to-r from-rose-500 to-purple-400 p-6 text-white rounded-r-sm rounded-s-sm">
+        <h1 className="text-2xl font-bold break-words">
+          {publicacion?.titulo}
+        </h1>
         <div className="flex items-center mt-2 text-sm opacity-90">
           <a
             href={`https://www.google.com/maps?q=${publicacion?.direccion},${publicacion?.Localidad},${publicacion?.ciudad},${publicacion?.Departamento},${publicacion?.Pais}`}
@@ -181,11 +183,12 @@ const PublicacionDetalle = () => {
               Información Personal
             </h2>
             <div className="space-y-2">
-              <div className="flex justify-between">
+              <div className="flex justify-between gap-2">
                 <span className="text-gray-500">Nombre:</span>
-                <span className="font-medium">
-                  {publicacion?.nombre && publicacion.nombre.length > 40
-                    ? `${publicacion.nombre.slice(0, 40)}...`
+
+                <span className="font-medium break-words text-right">
+                  {publicacion?.nombre && publicacion.nombre.length > 30
+                    ? `${publicacion.nombre.slice(0, 30)}...`
                     : publicacion?.nombre}
                 </span>
               </div>
