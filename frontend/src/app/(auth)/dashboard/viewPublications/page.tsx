@@ -54,6 +54,20 @@ type Publication = {
   status: boolean;
 };
 
+interface IncomingMessage {
+  conversationId: string;
+  senderId: string;
+  receiverId: string;
+  content: string;
+  timestamp: string;
+}
+
+interface StoredMessage {
+  senderId: string;
+  content: string;
+  timestamp: Date;
+}
+
 interface DataPayPayload {
   id: string;
   userId: string;
@@ -103,6 +117,21 @@ const ViewPublications = () => {
   //);
   const [clientId, setClientId] = useState<string | null>(null);
   const [ownerId, setOwnerId] = useState<string | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
+  const [conversations, setConversations] = useState<{
+    [conversationId: string]: StoredMessage[];
+  }>({});
+  const [inputMessages, setInputMessages] = useState<{
+    [conversationId: string]: string;
+  }>({});
+  const [activeConversationId, setActiveConversationId] = useState<
+    string | null
+  >(null);
+
+  const [unreadConversations, setUnreadConversations] = useState<{
+    [convoId: string]: boolean;
+  }>({});
 
   useEffect(() => {
     guardarUserId();
@@ -230,6 +259,136 @@ const ViewPublications = () => {
   useEffect(() => {
     console.log("Publicaciones actualizadas:", publications);
   }, [publications]);
+
+  // --- LÓGICA DE SOCKETS (AHORA VIVE AQUÍ) ---
+  useEffect(() => {
+    if (!socket || !ownerId) return;
+
+    console.log(`Socket conectado. Uniendo al usuario ${ownerId} a su sala.`);
+    socket.emit("joinRoom", ownerId);
+
+    const handleNewMessage = (message: IncomingMessage) => {
+      if (message.receiverId === ownerId) {
+        console.log("Mensaje recibido para el dueño:", message);
+        setConversations((prev) => {
+          const current = prev[message.conversationId] || [];
+          const newMessage: StoredMessage = {
+            senderId: message.senderId,
+            content: message.content,
+            timestamp: new Date(message.timestamp),
+          };
+          return {
+            ...prev,
+            [message.conversationId]: [...current, newMessage],
+          };
+        });
+
+        // 2. LÓGICA PARA MARCAR COMO NO LEÍDO (LA PARTE NUEVA)
+        // Usamos 'setIsChatOpen' y 'setActiveConversationId' en su forma de callback
+        // para obtener su valor más reciente sin necesidad de añadirlos como dependencias.
+        setIsChatOpen((isCurrentlyOpen) => {
+          setActiveConversationId((currentConvoId) => {
+            // La conversación se marca como no leída SI:
+            // a) La ventana principal del chat está cerrada (isCurrentlyOpen es false)
+            // O b) La ventana está abierta, PERO se está viendo una conversación DIFERENTE.
+            if (!isCurrentlyOpen || currentConvoId !== message.conversationId) {
+              console.log(
+                `Marcando conversación ${message.conversationId} como no leída.`
+              );
+              setUnreadConversations((prevUnread) => ({
+                ...prevUnread,
+                [message.conversationId]: true,
+              }));
+            }
+
+            // Devolvemos el estado sin cambios ya que solo estamos leyendo
+            return currentConvoId;
+          });
+          return isCurrentlyOpen;
+        });
+      }
+    };
+
+    const handleUpdate = ({ id, estado, razon }: UpdatePayload) => {
+      console.log(`Evento 'actualizar-publicacion' recibido para id ${id}.`);
+      setPublications((prev) =>
+        prev.map((pub) => (pub._id === id ? { ...pub, estado, razon } : pub))
+      );
+    };
+
+    socket.on("newMessage", handleNewMessage);
+    socket.on("actualizar-publicacion", handleUpdate);
+
+    return () => {
+      console.log("Limpiando listeners de socket en ViewPublications.");
+      socket.off("newMessage", handleNewMessage);
+      socket.off("actualizar-publicacion", handleUpdate);
+    };
+  }, [socket, ownerId]);
+
+  // --- FUNCIONES CONTROLADORAS DEL CHAT (AHORA VIVEN AQUÍ) ---
+  const sendMessage = (conversationId: string) => {
+    const messageContent = inputMessages[conversationId];
+    if (!socket || !messageContent?.trim() || !ownerId) return;
+
+    // Lógica para encontrar el receiverId
+    const firstMessage = conversations[conversationId]?.[0];
+    if (!firstMessage) {
+      console.error("No se puede determinar el destinatario.");
+      return;
+    }
+    const receiverId = firstMessage.senderId;
+
+    const messageData = {
+      conversationId,
+      senderId: ownerId,
+      receiverId,
+      content: messageContent,
+      timestamp: new Date().toISOString(),
+    };
+
+    console.log("Enviando mensaje:", messageData);
+    socket.emit("sendMessage", messageData);
+
+    // Actualización optimista del UI
+    const newMessage: StoredMessage = {
+      senderId: ownerId,
+      content: messageContent,
+      timestamp: new Date(),
+    };
+    setConversations((prev) => ({
+      ...prev,
+      [conversationId]: [...(prev[conversationId] || []), newMessage],
+    }));
+    setInputMessages((prev) => ({ ...prev, [conversationId]: "" }));
+  };
+
+  const handleInputChange = (conversationId: string, value: string) => {
+    setInputMessages((prev) => ({ ...prev, [conversationId]: value }));
+  };
+
+  const clearChat = (conversationId: string) => {
+    setConversations((prev) => {
+      const newConversations = { ...prev };
+      delete newConversations[conversationId];
+      return newConversations;
+    });
+  };
+
+  // Nueva función para manejar el clic en una conversación
+  const handleConversationSelect = (convoId: string | null) => {
+    setActiveConversationId(convoId);
+
+    // Si estamos abriendo una conversación (no volviendo a la lista)
+    if (convoId) {
+      // Marcamos la conversación como LEÍDA
+      setUnreadConversations((prev) => {
+        const newUnread = { ...prev };
+        delete newUnread[convoId]; // Quitamos el ID de la lista de no leídos
+        return newUnread;
+      });
+    }
+  };
 
   // alimentar la informacion del pago y de la rotacion de las publicaciones
   useEffect(() => {
@@ -626,16 +785,46 @@ const ViewPublications = () => {
             </Card>
           ))}
         </div>
-        <div className="container relative flex pt-10 flex-col items-center justify-center lg:px-0">
-          <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
-            <div className="text-center ">
-              {ownerId && <ChatManager userId={ownerId} clientId={clientId} />}
-            </div>
+        {/* --- SECCIÓN DEL CHAT FLOTANTE --- */}
+        {/* --- RENDERIZADO DEL CHAT FLOTANTE --- */}
+        {!isChatOpen && ownerId && (
+          <button
+            onClick={() => setIsChatOpen(true)}
+            className={`fixed bottom-4 right-4 z-40 bg-blue-500 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-lg hover:bg-blue-600 ${
+              Object.keys(unreadConversations).length > 0 ? "animate-pulse" : ""
+            }`}
+            aria-label="Abrir chat"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+          </button>
+        )}
 
-            <div className="text-center"></div>
-            <div className="flex flex-col items-center space-y-4 mt-4"></div>
-          </div>
-        </div>
+        {isChatOpen && ownerId && (
+          <ChatManager
+            currentUserId={ownerId}
+            conversations={conversations}
+            activeConversationId={activeConversationId}
+            inputMessages={inputMessages}
+            onClose={() => setIsChatOpen(false)}
+            onSendMessage={sendMessage}
+            onSetActiveConversation={handleConversationSelect}
+            unreadConversations={unreadConversations} // <-- Pasamos el estado de no leídos
+            onInputChange={handleInputChange}
+            onClearChat={clearChat}
+          />
+        )}
       </div>
     </>
   );
