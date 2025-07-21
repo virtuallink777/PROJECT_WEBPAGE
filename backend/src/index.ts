@@ -40,6 +40,8 @@ import { isUserOnlineForChat } from "./routes/socketHandler"; // Importar la fun
 
 const app = express();
 
+app.set("trust proxy", 1); // Para que Express confíe en el proxy y pueda leer las cookies correctamente
+
 const server = http.createServer(app); // ⚡ Crear servidor HTTP
 
 const allowedOrigins = [
