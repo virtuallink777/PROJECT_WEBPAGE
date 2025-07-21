@@ -1,69 +1,55 @@
 export const metadata = {
-  title: "Las mejores compañias",
-  description: "Un mundo de placeres.",
+  // --- SEO BÁSICO (Lo más importante para Google) ---
+  title: "Lujuria: Damas de Compañía, Escorts y Prepagos en Colombia",
+  description:
+    "Encuentra las mejores damas de compañía, escorts, travestis y prepagos en tu ciudad. Perfiles verificados, fotos reales y contacto directo en Lujuria.",
   keywords: [
-    "putas",
+    "damas de compañía",
+    "escorts",
     "prepagos",
-    "sexo",
-    "webcam",
-    "damas de compañia",
-    "mujeres",
     "travestis",
-    "putas en linea",
-    "putas en vivo",
-    "putas webcam",
-    "putas prepagos",
-    "putas en tu ciudad",
-    "putas en tu pais",
-    "putas en tu zona",
-    "putas en tu barrio",
-    "putas en tu casa",
-    "putas en tu cama",
-    "prepagos en linea",
-    "prepagos en vivo",
-    "prepagos webcam",
-    "prepagos en tu ciudad",
-    "prepagos en tu pais",
-    "prepagos en tu zona",
-    "prepagos en tu barrio",
-    "prepagos en tu casa",
-    "prepagos en tu cama",
-    "sexo en linea",
-    "sexo en vivo",
-    "sexo webcam",
-    "sexo en tu ciudad",
-    "sexo en tu pais",
-    "sexo en tu zona",
-    "sexo en tu barrio",
-    "sexo en tu casa",
-    "sexo en tu cama",
+    "agencias de escorts",
+    "prepagos colombia",
+    "escorts bogotá",
+    "prepagos medellín",
+    "damas de compañía cali",
+    "sexo en colombia",
+    "webcam colombia",
   ],
-  authors: [{ name: "Lujuria", url: "https://lujuria.com" }],
-  creator: "Mi Agencia",
-  metadataBase: new URL("https://lujuria.com"),
-  openGraph: {
-    title: "Las mejores compañias",
-    description: "Un mundo de placeres",
-    url: "https://lujuria.com",
-    siteName: "Las mejores compañias",
 
+  // --- INFORMACIÓN DEL SITIO (Importante y corregido) ---
+  authors: [{ name: "Lujuria", url: "https://prepagoslujuria.com" }],
+  creator: "Lujuria",
+  // La URL base para todas las URLs relativas en los metadatos. ¡CRÍTICO!
+  metadataBase: new URL("https://prepagoslujuria.com"),
+
+  // --- OPEN GRAPH (Para compartir en Facebook, WhatsApp, etc.) ---
+  openGraph: {
+    title: "Lujuria: Damas de Compañía, Escorts y Prepagos en Colombia", // Título consistente
+    description:
+      "Perfiles verificados, fotos reales y contacto directo en las principales ciudades de Colombia.", // Descripción concisa y atractiva
+    url: "https://prepagoslujuria.com", // La URL canónica
+    siteName: "Lujuria", // El nombre de tu sitio/marca
     images: [
       {
-        url: "/3d3.png",
+        url: "/3d3.png", // URL a una imagen específica para compartir (idealmente 1200x630px)
         width: 1200,
         height: 630,
-        alt: "las mejor compañia",
+        alt: "Lujuria - Damas de Compañía y Escorts en Colombia",
       },
     ],
-    locale: "es_ES",
+    locale: "es_CO", // Más específico para Colombia
     type: "website",
   },
+
+  // --- TWITTER CARD (Para compartir en Twitter/X) ---
   twitter: {
     card: "summary_large_image",
-    title: "Las mejores compañias",
-    description: "Un mundo de placeres",
-    images: ["/3d3.png"],
-    creator: "@lujuria",
+    title: "Lujuria: Damas de Compañía, Escorts y Prepagos en Colombia", // Título consistente
+    description:
+      "Perfiles verificados y contacto directo. Encuentra damas de compañía, escorts y prepagos en tu ciudad.",
+    images: ["/3d3.png"], // URL a una imagen específica para Twitter (idealmente 1200x675px)
+    creator: "@TuUsuarioDeTwitter", // Opcional: si tienes un usuario de Twitter para la marca
   },
 };
 
