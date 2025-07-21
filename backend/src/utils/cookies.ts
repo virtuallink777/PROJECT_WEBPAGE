@@ -10,6 +10,7 @@ const defaults: CookieOptions = {
   sameSite: isProduction ? "none" : "lax",
   httpOnly: true,
   secure: isProduction, // Usa secure=true solo en producción
+  domain: isProduction ? ".prepagoslujuria.com" : undefined,
 };
 
 export const getAccessTokenCookieOptions = (): CookieOptions => ({
