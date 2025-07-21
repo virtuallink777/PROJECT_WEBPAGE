@@ -10,11 +10,12 @@ import Link from "next/link";
 import calculateRotationTime from "@/components/calculateRotationTime";
 import calculateEndDate from "@/components/calculateEndDate";
 import { Button } from "@/components/ui/button";
-import ChatReceptor from "@/components/ChatReceptor";
+
 import parseBackendDate from "@/lib/parseBackendDate";
 import { useRouter } from "next/navigation";
 import { useSocketContext } from "@/context/SocketContext"; // NUEVO -> Importamos nuestro hook del contexto
 import axios from "axios";
+import ChatManager from "@/components/ChatManager";
 
 // El socket para la comunicación en tiempo real no relacionada con 'api' de Axios// revisar primero
 //const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL); // Renombrado para evitar confusión con el hook useSocket
@@ -628,7 +629,7 @@ const ViewPublications = () => {
         <div className="container relative flex pt-10 flex-col items-center justify-center lg:px-0">
           <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
             <div className="text-center ">
-              {ownerId && <ChatReceptor userId={ownerId} clientId={clientId} />}
+              {ownerId && <ChatManager userId={ownerId} clientId={clientId} />}
             </div>
 
             <div className="text-center"></div>
