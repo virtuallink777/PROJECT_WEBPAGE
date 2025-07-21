@@ -45,6 +45,8 @@ const server = http.createServer(app); // ⚡ Crear servidor HTTP
 const allowedOrigins = [
   "http://localhost:3000", // Para tu desarrollo local
   "https://project-webpage-9lp2.vercel.app", // Para tu frontend en producción en Vercel
+  "https://prepagoslujuria.com", // 2. Tu nuevo dominio principal
+  "https://www.prepagoslujuria.com", // 3. Tu nuevo dominio principal con "www"
   // Si tienes otros dominios personalizados en Vercel, añádelos aquí también.
 ];
 
