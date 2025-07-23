@@ -19,8 +19,7 @@ export async function sendEmail({ to, subject, html }: EmailOptions) {
     console.log(`[Email Service] Preparando para enviar correo a: ${to}`);
 
     const { data, error } = await resend.emails.send({
-      // Por ahora, usamos el remitente de prueba de Resend.
-      from: "onboarding@resend.dev",
+      from: "Lujuria <no-reply@prepagoslujuria.com>",
       to: [to],
       subject: subject,
       html: html,

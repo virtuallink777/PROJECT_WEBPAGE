@@ -33,8 +33,7 @@ contactRouter.post("/", async (req: Request, res: Response) => {
 
     // 4. Usamos nuestro servicio 'sendEmail' para enviar el correo
     await sendEmail({
-      // ¡OJO! El 'to' es TU correo, a donde quieres que lleguen los mensajes de contacto.
-      to: "virtuallink777@gmail.com", // O el correo que prefieras para recibir notificaciones
+      to: "soporte@prepagoslujuria.com",
       subject: emailSubject,
       html: emailHtml,
     });
